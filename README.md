@@ -32,6 +32,7 @@
 | --- | --- | --- |
 | **Language** | Kotlin | v2.0.x 기반 (Modern Android Development) |
 | **UI Framework** | Jetpack Compose | 완전한 선언형 UI 프레임워크 기반 설계 |
+| **Design System** | Compose Theme (M3) | Figma Variable 기반 Color/Type/Shape 토큰화 (`ui/theme`), Pretendard·Inter 서체 |
 | **Architecture** | Clean Architecture + MVVM | Domain 중심 설계 및 Single Source of Truth(SSOT) 지향 |
 | **Asynchronous** | Coroutines & Flow | 비동기 데이터 스트림 처리 및 상태 관리 |
 | **DI** | Hilt | 의존성 주입 최적화 |
@@ -74,6 +75,50 @@
         │   ├── screen/            #   타임테이블 · AI 제안 · 리포트 요약
         │   └── component/         #   포인트 적립, 사용 이유 입력 등 하위 컴포넌트
         └── mypage/                # 08. 마이페이지 (본체 · 사이드 슬라이드 · 탈퇴 팝업)
+```
+
+> `ui/theme/` 는 Figma Variable 을 그대로 옮긴 디자인 시스템 레이어입니다. 자세한 내용은 아래 4-1 참고.
+
+### 4-1. 🎨 디자인 시스템 (`ui/theme/`)
+
+Figma **"폰쉼 Design Pages"** 의 Variable(Color / Text Style) 정의를 코드 토큰으로 1:1 이관했습니다. 모든 화면은 하드코딩된 값 대신 이 토큰을 사용합니다.
+
+| **파일** | **역할** |
+| --- | --- |
+| `Color.kt` | 원시 팔레트(`PhoneShimPalette`) + 역할 기반 시맨틱 컬러(`PhoneShimColors`) |
+| `Type.kt` | Pretendard(한글)·Inter(영문/숫자) 텍스트 스타일 + M3 `Typography` 매핑 |
+| `Font.kt` | 서체 `FontFamily` 정의 (실제 폰트 리소스 연결 지점) |
+| `Shape.kt` | 라운드 스케일(4~24dp)을 M3 `Shapes` 로 매핑 |
+| `Dimens.kt` | 간격·컴포넌트 사이즈 토큰 (화면 여백 16dp 기준) |
+| `Theme.kt` | `PhoneShimTheme` 프로바이더 + `PhoneShimTheme.colors` 접근자 |
+
+**컬러 토큰**
+
+| 그룹 | 토큰 | 값 |
+| --- | --- | --- |
+| Primary | `Primary100 ~ 600` | `#F4F8F1` · `#DCE7D4` · `#B2C69D` · **`#8CAB7A`(메인)** · `#6D8B5E` |
+| Neutral | `White ~ Gray900` | `#FFFFFF` · `#ECECEC` · `#CCCCCC` · `#888888` · `#555555` · `#262626` |
+| Background | `SoftCream` / `Cream` | `#FFFDF7` · `#FCFAF2` |
+| Semantic | `Error` | `#E56767` |
+
+**타이포그래피** — 한글 `Pretendard`, 영문·숫자 `Inter`
+
+- KOR: `H3(18/SemiBold)` · `Body L(16)` · `Body M(14)` · `Caption(12)` · `Label(10)` · `Micro(8)`
+- ENG·NUM: `H1(24/Bold)` · `H2(20/SemiBold)` · `Body M(14)` · `Caption(12)` · `Label(10)`
+
+> ⚠️ Pretendard·Inter 폰트 파일은 저작권상 저장소에 포함하지 않았습니다. `app/src/main/res/font/` 에 `.ttf` 를 추가한 뒤 `Font.kt` 의 `FontFamily` 를 연결하세요. (미연결 시 시스템 기본 서체로 폴백)
+
+**사용 예시**
+
+```kotlin
+@Composable
+fun Sample() {
+    Text(
+        text = "폰을 쉬다",
+        style = MaterialTheme.typography.titleLarge,      // KOR H3
+        color = PhoneShimTheme.colors.brandStrong,        // Primary 600
+    )
+}
 ```
 
 ---
