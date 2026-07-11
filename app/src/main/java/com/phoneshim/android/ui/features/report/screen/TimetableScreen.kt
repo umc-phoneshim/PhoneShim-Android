@@ -19,11 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.features.report.component.BottomNavTab
+import com.phoneshim.android.ui.common.BottomNavTab
+import com.phoneshim.android.ui.common.LineIconType
+import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.report.component.DailyReportHeader
 import com.phoneshim.android.ui.features.report.component.HourUsage
-import com.phoneshim.android.ui.features.report.component.LineIconType
-import com.phoneshim.android.ui.features.report.component.ReportBottomNavBar
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
 import com.phoneshim.android.ui.features.report.component.ReportColorYellow
@@ -50,6 +50,8 @@ fun TimetableScreen(
     onNavigateToReminder: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
+    // TODO: viewModel.uiState.report.timetable(List<TimetableEntry>) 을 시간대별 HourUsage 로
+    //  변환해 아래 mock 데이터를 대체하세요. (00~23시 버킷팅 + 색상은 usageReason 기준 매핑)
     TimetableContent(
         modifier = modifier,
         dateLabel = "7.11",
@@ -117,7 +119,7 @@ private fun TimetableContent(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         bottomBar = {
-            ReportBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
+            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
         },
     ) { innerPadding ->
         Column(

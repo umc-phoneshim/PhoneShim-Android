@@ -1,13 +1,9 @@
 package com.phoneshim.android.ui.features.report.screen
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.features.report.viewmodel.ReportViewModel
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,19 +11,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.common.BottomNavTab
+import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
-import com.phoneshim.android.ui.features.report.component.BottomNavTab
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageRow
 import com.phoneshim.android.ui.features.report.component.DailyReportHeader
-import com.phoneshim.android.ui.features.report.component.ReportBottomNavBar
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -38,6 +37,7 @@ import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.UsageLegendDots
 import com.phoneshim.android.ui.features.report.component.UsageSegment
+import com.phoneshim.android.ui.features.report.viewmodel.ReportViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -51,6 +51,8 @@ fun ReportSummaryScreen(
     onNavigateToReminder: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
+    // TODO: viewModel.uiState 의 DailyReport/AppUsage 를 AppBubble·CategoryUsageRow 로 매핑해
+    //  아래 mock 데이터를 대체하세요. (기간 토글 변경 시 loadReport 재호출 등)
     ReportSummaryContent(
         modifier = modifier,
         dateLabel = "7.11",
@@ -108,7 +110,7 @@ private fun ReportSummaryContent(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         bottomBar = {
-            ReportBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
+            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
         },
     ) { innerPadding ->
         Column(
