@@ -5,6 +5,7 @@ object Routes {
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val SIGN_UP = "sign_up"
+    const val PERMISSION = "permission"
 
     // 04. setgoal
     const val SET_GOAL_START = "set_goal_start"

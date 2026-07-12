@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.phoneshim.android.ui.features.auth.screen.LoginScreen
+import com.phoneshim.android.ui.features.auth.screen.PermissionScreen
 import com.phoneshim.android.ui.features.auth.screen.SignUpScreen
 import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.features.main.screen.MainScreen
@@ -33,8 +34,14 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = { navController.navigate(Routes.MAIN) },
+                onLoginSuccess = { navController.navigate(Routes.PERMISSION) },
                 onNavigateToSignUp = { navController.navigate(Routes.SIGN_UP) },
+            )
+        }
+        composable(Routes.PERMISSION) {
+            PermissionScreen(
+                onAllowAll = { navController.navigate(Routes.SET_GOAL_START) },
+                onSkip = { navController.navigate(Routes.MAIN) },
             )
         }
         composable(Routes.SIGN_UP) {
