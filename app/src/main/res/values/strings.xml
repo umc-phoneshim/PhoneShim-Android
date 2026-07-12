@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">폰쉼</string>
+    <string name="login_welcome_placeholder">캐릭터 및 환영 문구가 들어갈 예정</string>
+    <string name="login_with_google">구글로 계속하기</string>
+    <string name="login_with_kakao">카카오톡으로 계속하기</string>
+    <string name="login_terms_notice">로그인하면 이용약관 및 개인정보 처리방침에 동의하게 됩니다.</string>
 </resources>
