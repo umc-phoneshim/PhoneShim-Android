@@ -8,10 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 import kotlinx.coroutines.delay
-
 // 스플래시 노출 시간 (ms)
 private const val SPLASH_DURATION_MILLIS = 1_500L
 
@@ -26,17 +26,12 @@ fun SplashScreen(
         onSplashFinished()
     }
 
-    // TODO: 캐릭터/로고 에셋 확정 시 텍스트를 이미지로 교체
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(PhoneShimTheme.colors.background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "폰쉼",
-            style = PhoneShimType.EngH1,
-            color = PhoneShimTheme.colors.brand,
-        )
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun SplashScreenPreview() {
+    PhoneShimTheme {
+        SplashScreen(onSplashFinished = {})
     }
 }

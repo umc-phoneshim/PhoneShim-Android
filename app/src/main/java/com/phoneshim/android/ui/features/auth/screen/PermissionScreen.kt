@@ -16,8 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.PhoneShimButton
+import com.phoneshim.android.ui.features.setgoal.screen.SetGoalStartScreen
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -35,8 +36,11 @@ fun PermissionScreen(
             .fillMaxSize()
             .background(PhoneShimTheme.colors.brandSubtle),
     ) {
-        // 뒤에 깔리는 목표 설정 시작 안내 (40% 투명도)
-        GoalStartBackground(
+        // 뒤에 깔리는 목표 설정 시작 화면(Figma 04)을 40% 투명도로 재사용
+        // "나중에 설정하기"도 이 배경 레이어의 위치 그대로 노출되고, 탭하면 onSkip 처리
+        SetGoalStartScreen(
+            onStart = {},
+            onSkip = onSkip,
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(0.4f),
@@ -47,66 +51,6 @@ fun PermissionScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
-        )
-
-        Text(
-            text = "나중에 설정하기",
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.textTertiary,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 100.dp)
-                .clickable(onClick = onSkip),
-        )
-    }
-}
-
-// 팝업 뒤로 흐리게 보이는 목표 설정 시작 안내 콘텐츠
-@Composable
-private fun GoalStartBackground(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(PhoneShimDimens.spacing16),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
-    ) {
-        // 캐릭터 영역 (에셋 확정 전 placeholder)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "캐릭터의 목표 설정 페이지로 넘어가는 문구",
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PhoneShimDimens.spacing12),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-        ) {
-            Text(
-                text = "쉼이와 함께 목표 설정을 해볼까요?",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "처음부터 차근차근 설정해나가봐요!",
-                style = PhoneShimType.KorBodyM,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
-
-        // "나중에 설정하기" 는 팝업과 함께 실제 터치 대상으로 하단에 별도 배치
-        PhoneShimButton(
-            text = "목표 설정하기",
-            onClick = { },
-            modifier = Modifier.padding(bottom = PhoneShimDimens.spacing32),
         )
     }
 }
@@ -186,5 +130,13 @@ private fun ConsentSection(
                 color = PhoneShimTheme.colors.textPrimary,
             )
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun PermissionScreenPreview() {
+    PhoneShimTheme {
+        PermissionScreen(onAllowAll = {}, onSkip = {})
     }
 }
