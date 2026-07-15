@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -40,6 +42,7 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
+import com.phoneshim.android.ui.features.setgoal.viewmodel.MAX_SELECTABLE_APPS
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -78,6 +81,8 @@ private fun AppSelectContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -127,7 +132,19 @@ private fun AppSelectContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
-                                .clickable { onToggleApp(app) },
+                                .clickable {
+                                    val addingBeyondLimit = !selectedApps.contains(app) &&
+                                        selectedApps.size >= MAX_SELECTABLE_APPS
+                                    if (addingBeyondLimit) {
+                                        Toast.makeText(
+                                            context,
+                                            "주의 앱은 최대 ${MAX_SELECTABLE_APPS}개까지 선택할 수 있어요",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } else {
+                                        onToggleApp(app)
+                                    }
+                                },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             AppLabel(name = app)
@@ -175,8 +192,17 @@ private fun AppSelectContent(
             // Figma 04-2: 버튼은 하단 고정이 아니라 카드 아래 24dp 간격(컬럼 gap)으로 배치
             SetGoalBottomButtons(
                 onBack = onBack,
-                onNext = onNext,
-                nextEnabled = selectedApps.isNotEmpty(),
+                onNext = {
+                    if (selectedApps.isEmpty()) {
+                        Toast.makeText(
+                            context,
+                            "관리할 주의 앱을 최소 1개 선택해주세요",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        onNext()
+                    }
+                },
             )
         }
     }

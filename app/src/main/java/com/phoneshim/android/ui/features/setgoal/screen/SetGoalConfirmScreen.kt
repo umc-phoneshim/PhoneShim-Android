@@ -12,9 +12,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
@@ -38,11 +42,12 @@ fun SetGoalConfirmScreen(
 ) {
     // 04-1~04-4에서 설정한 값을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
+    var countEditingApp by remember { mutableStateOf<String?>(null) }
 
     SetGoalConfirmContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
-        onToggleAccessLimit = viewModel::toggleAccessLimit,
+        onEditAccessCount = { countEditingApp = it },
         onConfirm = {
             viewModel.submitGoal()
             onConfirm()
@@ -50,13 +55,24 @@ fun SetGoalConfirmScreen(
         onBack = onBack,
         modifier = modifier,
     )
+
+    countEditingApp?.let { app ->
+        AccessCountPopup(
+            initialCount = uiState.appSettings[app]?.accessCount ?: 0,
+            onConfirm = { count ->
+                viewModel.setAccessCount(app, count)
+                countEditingApp = null
+            },
+            onDismiss = { countEditingApp = null },
+        )
+    }
 }
 
 @Composable
 private fun SetGoalConfirmContent(
     apps: List<String>,
     settings: Map<String, AppGoalSetting>,
-    onToggleAccessLimit: (String) -> Unit,
+    onEditAccessCount: (String) -> Unit,
     onConfirm: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -93,7 +109,7 @@ private fun SetGoalConfirmContent(
                     AppGoalRow(
                         app = app,
                         setting = setting,
-                        onToggleAccessLimit = { onToggleAccessLimit(app) },
+                        onEditAccessCount = { onEditAccessCount(app) },
                         onEditGoal = { },
                     )
                     if (index != apps.lastIndex) {
@@ -127,7 +143,7 @@ private fun SetGoalConfirmScreenPreview() {
                 "페이스북" to AppGoalSetting(AppTimeInput("01", "30")),
                 "틱톡" to AppGoalSetting(AppTimeInput("01", "00")),
             ),
-            onToggleAccessLimit = {},
+            onEditAccessCount = {},
             onConfirm = {},
             onBack = {},
         )

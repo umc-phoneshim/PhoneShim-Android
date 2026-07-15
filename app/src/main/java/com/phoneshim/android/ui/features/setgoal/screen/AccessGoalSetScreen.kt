@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
@@ -63,11 +64,12 @@ fun AccessGoalSetScreen(
     // 04-2/04-3에서 설정한 앱 목록과 시간을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
     var editingApp by remember { mutableStateOf<String?>(null) }
+    var countEditingApp by remember { mutableStateOf<String?>(null) }
 
     AccessGoalSetContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
-        onToggleAccessLimit = viewModel::toggleAccessLimit,
+        onEditAccessCount = { countEditingApp = it },
         onEditGoal = { editingApp = it },
         onNext = onNext,
         onBack = onBack,
@@ -84,13 +86,24 @@ fun AccessGoalSetScreen(
             onDismiss = { editingApp = null },
         )
     }
+
+    countEditingApp?.let { app ->
+        AccessCountPopup(
+            initialCount = uiState.appSettings[app]?.accessCount ?: 0,
+            onConfirm = { count ->
+                viewModel.setAccessCount(app, count)
+                countEditingApp = null
+            },
+            onDismiss = { countEditingApp = null },
+        )
+    }
 }
 
 @Composable
 private fun AccessGoalSetContent(
     apps: List<String>,
     settings: Map<String, AppGoalSetting>,
-    onToggleAccessLimit: (String) -> Unit,
+    onEditAccessCount: (String) -> Unit,
     onEditGoal: (String) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit,
@@ -132,7 +145,7 @@ private fun AccessGoalSetContent(
                     AppGoalRow(
                         app = app,
                         setting = setting,
-                        onToggleAccessLimit = { onToggleAccessLimit(app) },
+                        onEditAccessCount = { onEditAccessCount(app) },
                         onEditGoal = { onEditGoal(app) },
                     )
                     if (index != apps.lastIndex) {
@@ -160,7 +173,7 @@ private fun AccessGoalSetContent(
 fun AppGoalRow(
     app: String,
     setting: AppGoalSetting,
-    onToggleAccessLimit: () -> Unit,
+    onEditAccessCount: () -> Unit,
     onEditGoal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,7 +193,7 @@ fun AppGoalRow(
         Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
         AccessLimitIcon(
             active = setting.accessLimited,
-            onClick = onToggleAccessLimit,
+            onClick = onEditAccessCount,
         )
         Spacer(modifier = Modifier.width(PhoneShimDimens.spacing4))
         GoalEditIcon(onClick = onEditGoal)
@@ -329,7 +342,7 @@ private fun AccessGoalSetScreenPreview() {
                 "페이스북" to AppGoalSetting(AppTimeInput("01", "30")),
                 "틱톡" to AppGoalSetting(AppTimeInput("01", "00")),
             ),
-            onToggleAccessLimit = {},
+            onEditAccessCount = {},
             onEditGoal = {},
             onNext = {},
             onBack = {},

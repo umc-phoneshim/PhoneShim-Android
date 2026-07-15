@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,6 +47,9 @@ import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
+
+// 허용되는 최소 목표 사용 시간 (분). 미만이면 다음 단계로 넘어갈 수 없습니다.
+private const val MIN_GOAL_MINUTES = 10
 
 // 앱별 하루 목표 사용 시간을 설정하는 화면 (Figma 04-3. 목표 사용 시간 설정)
 @Composable
@@ -80,6 +85,7 @@ private fun UsageTimeSetContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val totalMinutes = apps.sumOf { timeInputs[it]?.totalMinutes ?: 0 }
 
     Column(
@@ -185,8 +191,17 @@ private fun UsageTimeSetContent(
             TotalTimeCard(totalMinutes = totalMinutes)
             SetGoalBottomButtons(
                 onBack = onBack,
-                onNext = onNext,
-                nextEnabled = totalMinutes > 0,
+                onNext = {
+                    if (totalMinutes < MIN_GOAL_MINUTES) {
+                        Toast.makeText(
+                            context,
+                            "목표 시간은 최소 ${MIN_GOAL_MINUTES}분 이상으로 설정해주세요",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        onNext()
+                    }
+                },
             )
         }
     }
