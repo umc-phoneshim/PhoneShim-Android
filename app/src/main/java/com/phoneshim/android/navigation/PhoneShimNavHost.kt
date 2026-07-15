@@ -12,7 +12,7 @@ import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.features.main.screen.MainScreen
 import com.phoneshim.android.ui.features.mypage.screen.MyScreen
 import com.phoneshim.android.ui.features.mypage.screen.MySideMenuScreen
-import com.phoneshim.android.ui.features.reminder.screen.ReminderScreen
+import com.phoneshim.android.ui.features.reminder.screen.ReminderRoute
 import com.phoneshim.android.ui.features.report.screen.ReportAiSuggestScreen
 import com.phoneshim.android.ui.features.report.screen.ReportSummaryScreen
 import com.phoneshim.android.ui.features.report.screen.TimetableScreen
@@ -71,7 +71,13 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
 
         composable(Routes.REMINDER) {
-            ReminderScreen(onAddReminder = { })
+            ReminderRoute(
+                onNavigateToSettings = { },
+                onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
+                onNavigateToMain = { navController.navigate(Routes.MAIN) },
+                onNavigateToReminder = { },
+                onNavigateToReport = { navController.navigate(Routes.TIMETABLE) },
+            )
         }
 
         composable(Routes.TIMETABLE) {
