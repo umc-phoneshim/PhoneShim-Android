@@ -160,7 +160,7 @@ fun SetGoalCard(
             .clip(MaterialTheme.shapes.medium)
             .background(PhoneShimTheme.colors.surface)
             .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
-            .padding(PhoneShimDimens.spacing12),
+            .padding(PhoneShimDimens.spacing16),
         content = content,
     )
 }

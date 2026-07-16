@@ -62,125 +62,110 @@ private fun SetGoalCompleteContent(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Figma Maincontainer: padding 16, 섹션 간 간격 24, 가로 중앙 정렬
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(PhoneShimTheme.colors.brandSubtle)
-            .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
+            .verticalScroll(rememberScrollState())
+            .padding(PhoneShimDimens.spacing16),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
     ) {
-        Column(
+        // 캐릭터 영역 (에셋 확정 전 placeholder)
+        Box(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxWidth()
+                .height(180.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            // 캐릭터 영역 (에셋 확정 전 placeholder)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "캐릭터의 목표 설정 페이지로 넘어가는 문구",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textPrimary,
-                )
-            }
+            Text(
+                text = "캐릭터의 목표 설정 페이지로 넘어가는 문구",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+        }
 
-            Column(
-                modifier = Modifier.padding(vertical = PhoneShimDimens.spacing12),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+        Column(
+            modifier = Modifier.padding(vertical = PhoneShimDimens.spacing12),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+        ) {
+            Text(
+                text = "목표 설정이\n완료되었어요!",
+                style = PhoneShimType.KorH3.copy(fontSize = 24.sp, lineHeight = 31.sp),
+                fontWeight = FontWeight.Bold,
+                color = PhoneShimTheme.colors.brandStrong,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "이제 더 건강한 디지털 습관을 만들어봐요!",
+                style = PhoneShimType.KorBodyM,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+        }
+
+        SetGoalCard {
+            Text(
+                text = "총 목표 시간",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+                modifier = Modifier.padding(top = PhoneShimDimens.spacing12),
             ) {
                 Text(
-                    text = "목표 설정이\n완료되었어요!",
-                    style = PhoneShimType.KorH3.copy(fontSize = 24.sp, lineHeight = 31.sp),
+                    text = "${totalMinutes / 60}",
+                    style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
                     fontWeight = FontWeight.Bold,
-                    color = PhoneShimTheme.colors.brandStrong,
-                    textAlign = TextAlign.Center,
+                    color = PhoneShimTheme.colors.textPrimary,
                 )
                 Text(
-                    text = "이제 더 건강한 디지털 습관을 만들어봐요!",
-                    style = PhoneShimType.KorBodyM,
+                    text = "시간",
+                    style = PhoneShimType.KorH3,
+                    color = PhoneShimTheme.colors.textPrimary,
+                )
+                Text(
+                    text = "${totalMinutes % 60}",
+                    style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = PhoneShimTheme.colors.textPrimary,
+                    modifier = Modifier.padding(start = PhoneShimDimens.spacing8),
+                )
+                Text(
+                    text = "분",
+                    style = PhoneShimType.KorH3,
                     color = PhoneShimTheme.colors.textPrimary,
                 )
             }
 
-            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
+            SetGoalCardDivider()
 
-            SetGoalCard {
-                Text(
-                    text = "총 목표 시간",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textPrimary,
-                    modifier = Modifier.padding(
-                        start = PhoneShimDimens.spacing4,
-                        top = PhoneShimDimens.spacing4,
-                    ),
-                )
+            Text(
+                text = "어플 별 목표 시간",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textPrimary,
+                modifier = Modifier.padding(bottom = PhoneShimDimens.spacing12),
+            )
+            apps.forEach { (app, hour, minute) ->
                 Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
-                    modifier = Modifier.padding(
-                        start = PhoneShimDimens.spacing4,
-                        top = PhoneShimDimens.spacing12,
-                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    AppLabel(name = app)
+                    Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "${totalMinutes / 60}",
-                        style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = PhoneShimTheme.colors.textPrimary,
-                    )
-                    Text(
-                        text = "시간",
-                        style = PhoneShimType.KorH3,
-                        color = PhoneShimTheme.colors.textPrimary,
-                    )
-                    Text(
-                        text = "${totalMinutes % 60}",
-                        style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = PhoneShimTheme.colors.textPrimary,
-                        modifier = Modifier.padding(start = PhoneShimDimens.spacing8),
-                    )
-                    Text(
-                        text = "분",
-                        style = PhoneShimType.KorH3,
+                        text = "$hour 시간 $minute 분",
+                        style = PhoneShimType.KorLabel,
                         color = PhoneShimTheme.colors.textPrimary,
                     )
                 }
-
-                SetGoalCardDivider()
-
-                Text(
-                    text = "어플 별 목표 시간",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textPrimary,
-                    modifier = Modifier.padding(
-                        start = PhoneShimDimens.spacing4,
-                        bottom = PhoneShimDimens.spacing12,
-                    ),
-                )
-                apps.forEach { (app, hour, minute) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = PhoneShimDimens.spacing4,
-                                vertical = PhoneShimDimens.spacing8,
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AppLabel(name = app)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "$hour 시간 $minute 분",
-                            style = PhoneShimType.KorLabel,
-                            color = PhoneShimTheme.colors.textPrimary,
-                        )
-                    }
+                if (app != apps.last().first) {
+                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
                 }
             }
         }
@@ -188,7 +173,6 @@ private fun SetGoalCompleteContent(
         PhoneShimButton(
             text = "메인으로 이동",
             onClick = onFinish,
-            modifier = Modifier.padding(vertical = PhoneShimDimens.spacing24),
         )
     }
 }
