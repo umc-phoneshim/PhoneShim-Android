@@ -18,6 +18,7 @@ object PhoneShimDimens {
     val spacing32 = 32.dp
 
     val screenHorizontalPadding = 16.dp
-    val buttonHeight = 52.dp
+    val primaryButtonHeight = 56.dp
+    val buttonHeight = primaryButtonHeight
     val textFieldHeight = 46.dp
 }
