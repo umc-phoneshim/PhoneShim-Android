@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.auth.component
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,7 +21,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.phoneshim.android.R
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -52,16 +49,17 @@ fun PermissionConsentDialog(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24)) {
                 ConsentSection(
-                    title = R.string.permission_personal_data_title,
-                    description = R.string.permission_personal_data_description,
+                    title = "개인정보 수집 및 이용 동의",
+                    description = "서비스 제공 및 원활한 이용을 위해 필요한 개인 정보를 수집 및 이용합니다.",
                 )
                 ConsentSection(
-                    title = R.string.permission_usage_data_title,
-                    description = R.string.permission_usage_data_description,
+                    title = "설치된 앱 목록 /스크린타임 수집 권한 동의",
+                    description = "맞춤형 서비스 제공을 위해 앱 사용 시간 및 설치된 앱 정보를 수집합니다. " +
+                        "수집된 정보는 서비스 제공 목적으로만 사용됩니다.",
                 )
             }
             PrimaryAction(
-                text = R.string.permission_allow_all,
+                text = "모두 허용하기",
                 onClick = onAllowAll,
                 modifier = Modifier.height(42.dp),
                 cornerRadius = 8.dp,
@@ -73,17 +71,17 @@ fun PermissionConsentDialog(
 
 @Composable
 private fun ConsentSection(
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: String,
+    description: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12)) {
         Text(
-            text = stringResource(title),
+            text = title,
             color = PhoneShimPalette.Gray900,
             style = PhoneShimType.KorBodyM,
         )
         Text(
-            text = stringResource(description),
+            text = description,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(PhoneShimPalette.Primary100, RoundedCornerShape(8.dp))
@@ -96,7 +94,7 @@ private fun ConsentSection(
 
 @Composable
 private fun PrimaryAction(
-    @StringRes text: Int,
+    text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     cornerRadius: Dp = PhoneShimDimens.spacing12,
@@ -111,7 +109,7 @@ private fun PrimaryAction(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(text),
+            text = text,
             color = PhoneShimPalette.White,
             style = textStyle,
         )

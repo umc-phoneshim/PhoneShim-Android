@@ -1,13 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">폰쉼</string>
-    <string name="login_welcome_placeholder">캐릭터 및 환영 문구가 들어갈 예정</string>
-    <string name="login_with_google">구글로 계속하기</string>
-    <string name="login_with_kakao">카카오톡으로 계속하기</string>
-    <string name="login_terms_notice">로그인하면 이용약관 및 개인정보 처리방침에 동의하게 됩니다.</string>
-    <string name="permission_personal_data_title">개인정보 수집 및 이용 동의</string>
-    <string name="permission_personal_data_description">서비스 제공 및 원활한 이용을 위해 필요한 개인 정보를 수집 및 이용합니다.</string>
-    <string name="permission_usage_data_title">설치된 앱 목록 /스크린타임 수집 권한 동의</string>
-    <string name="permission_usage_data_description">맞춤형 서비스 제공을 위해 앱 사용 시간 및 설치된 앱 정보를 수집합니다. 수집된 정보는 서비스 제공 목적으로만 사용됩니다.</string>
-    <string name="permission_allow_all">모두 허용하기</string>
 </resources>
