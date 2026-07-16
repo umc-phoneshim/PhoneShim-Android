@@ -262,8 +262,8 @@ fun GoalWriteDialog(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.medium)
                 .background(PhoneShimTheme.colors.surface)
-                .padding(PhoneShimDimens.spacing16),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
+                .padding(PhoneShimDimens.spacing24),
+            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -271,7 +271,7 @@ fun GoalWriteDialog(
             ) {
                 Text(
                     text = "어플 목표 설정",
-                    style = PhoneShimType.KorBodyM,
+                    style = PhoneShimType.KorCaption,
                     color = PhoneShimTheme.colors.textPrimary,
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -280,7 +280,7 @@ fun GoalWriteDialog(
                     contentDescription = "닫기",
                     tint = PhoneShimTheme.colors.textPrimary,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(16.dp)
                         .clickable(onClick = onDismiss),
                 )
             }
@@ -288,7 +288,7 @@ fun GoalWriteDialog(
             BasicTextField(
                 value = text,
                 onValueChange = { text = it },
-                textStyle = PhoneShimType.KorBodyM.copy(
+                textStyle = PhoneShimType.KorCaption.copy(
                     color = PhoneShimTheme.colors.textPrimary,
                 ),
                 modifier = Modifier.fillMaxWidth(),
@@ -298,12 +298,12 @@ fun GoalWriteDialog(
                             .fillMaxWidth()
                             .clip(MaterialTheme.shapes.small)
                             .background(PhoneShimTheme.colors.brandSubtle)
-                            .padding(PhoneShimDimens.spacing12),
+                            .padding(horizontal = PhoneShimDimens.spacing12, vertical = 10.dp),
                     ) {
                         if (text.isEmpty()) {
                             Text(
                                 text = "이 어플에 대한 목표를 작성해보세요.",
-                                style = PhoneShimType.KorBodyM,
+                                style = PhoneShimType.KorCaption,
                                 color = PhoneShimTheme.colors.textTertiary,
                             )
                         }
@@ -315,7 +315,8 @@ fun GoalWriteDialog(
             Box(
                 modifier = Modifier
                     .align(Alignment.End)
-                    .size(width = 100.dp, height = 36.dp)
+                    .padding(top = PhoneShimDimens.spacing12)
+                    .size(width = 120.dp, height = 36.dp)
                     .clip(MaterialTheme.shapes.small)
                     .background(PhoneShimTheme.colors.brand)
                     .clickable { onSave(text) },
@@ -323,7 +324,7 @@ fun GoalWriteDialog(
             ) {
                 Text(
                     text = "저장",
-                    style = PhoneShimType.KorBodyM,
+                    style = PhoneShimType.KorCaption,
                     color = PhoneShimTheme.colors.onBrand,
                 )
             }

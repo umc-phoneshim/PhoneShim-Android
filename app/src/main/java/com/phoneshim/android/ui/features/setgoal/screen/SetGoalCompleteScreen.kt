@@ -65,7 +65,7 @@ private fun SetGoalCompleteContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PhoneShimTheme.colors.background)
+            .background(PhoneShimTheme.colors.brandSubtle)
             .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
     ) {
         Column(
@@ -95,7 +95,7 @@ private fun SetGoalCompleteContent(
             ) {
                 Text(
                     text = "목표 설정이\n완료되었어요!",
-                    style = PhoneShimType.KorH3.copy(fontSize = 22.sp, lineHeight = 31.sp),
+                    style = PhoneShimType.KorH3.copy(fontSize = 24.sp, lineHeight = 31.sp),
                     fontWeight = FontWeight.Bold,
                     color = PhoneShimTheme.colors.brandStrong,
                     textAlign = TextAlign.Center,
