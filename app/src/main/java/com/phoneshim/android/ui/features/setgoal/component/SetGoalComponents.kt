@@ -135,6 +135,7 @@ fun SetGoalTitle(
         Text(
             text = title,
             style = PhoneShimType.KorH3,
+            fontWeight = FontWeight.Bold,
             color = PhoneShimTheme.colors.textPrimary,
             textAlign = TextAlign.Center,
         )

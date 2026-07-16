@@ -2,11 +2,10 @@ package com.phoneshim.android.navigation
 
 // 네비게이션에서 사용하는 화면별 경로(route) 상수 모음
 object Routes {
-    // 01~03. auth
+    // 01~02. auth
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val SIGN_UP = "sign_up"
-    const val PERMISSION = "permission"
 
     // 04. setgoal
     const val SET_GOAL_GRAPH = "set_goal_graph"

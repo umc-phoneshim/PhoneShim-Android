@@ -12,7 +12,6 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.features.auth.screen.LoginScreen
-import com.phoneshim.android.ui.features.auth.screen.PermissionScreen
 import com.phoneshim.android.ui.features.auth.screen.SignUpScreen
 import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.features.main.screen.MainScreen
@@ -42,14 +41,9 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = { navController.navigate(Routes.PERMISSION) },
+                // 로그인 직후 목표 설정 시작 화면으로 진입 (접근 권한 동의 팝업이 그 위에 표시됨)
+                onLoginSuccess = { navController.navigate(Routes.SET_GOAL_START) },
                 onNavigateToSignUp = { navController.navigate(Routes.SIGN_UP) },
-            )
-        }
-        composable(Routes.PERMISSION) {
-            PermissionScreen(
-                onAllowAll = { navController.navigate(Routes.SET_GOAL_START) },
-                onSkip = { navController.navigate(Routes.MAIN) },
             )
         }
         composable(Routes.SIGN_UP) {
