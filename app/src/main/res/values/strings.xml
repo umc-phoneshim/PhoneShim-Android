@@ -1,4 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">폰쉼</string>
+
+    <string name="pref_title">설정</string>
+    <string name="pref_back">뒤로가기</string>
+    <string name="pref_user_info">사용자 정보</string>
+    <string name="pref_goal_settings">목표 설정</string>
+    <string name="pref_gender_male">남</string>
+    <string name="pref_gender_female">여</string>
+    <string name="pref_age_teens">10대</string>
+    <string name="pref_age_twenties">20대</string>
+    <string name="pref_age_thirties">30대</string>
+    <string name="pref_age_forties">40대</string>
+    <string name="pref_age_fifties_or_more">50대 이상</string>
+    <string name="pref_total_goal_time">전체 폰 목표 시간</string>
+    <string name="pref_app_goal_time_title">어플 별 목표 시간</string>
+    <string name="pref_total_time_format">%1$d시간  %2$d분</string>
+    <string name="pref_app_time_format">%1$02d 시간  %2$02d 분</string>
+    <string name="pref_no_limit">제한 없음</string>
+    <string name="pref_disable_limit">%1$s 사용 제한 비활성화</string>
+    <string name="pref_enable_limit">%1$s 사용 제한 활성화</string>
+    <string name="pref_edit_app_goal">%1$s 목표 문구 편집</string>
+    <string name="pref_edit_total_time">전체 폰 목표 시간 수정</string>
+    <string name="pref_total_time_dialog_title">전체 폰 목표 시간 설정</string>
+    <string name="pref_app_time_dialog_title">앱별 목표 시간 설정</string>
+    <string name="pref_hours">시간</string>
+    <string name="pref_minutes">분</string>
+    <string name="pref_cancel">취소</string>
+    <string name="pref_confirm">확인</string>
+    <string name="pref_save">저장</string>
+    <string name="pref_close">닫기</string>
+    <string name="pref_app_goal_dialog_title">어플 목표 설정</string>
+    <string name="pref_default_goal_description">숏폼 이용이 잦아 관련 어플에 대해 강한 제한이 필요합니다.</string>
+    <string name="pref_invalid_minute_range">분은 0부터 59까지 입력해 주세요.</string>
+    <string name="pref_minimum_time_error">목표 사용 시간은 10분 이상 입력해 주세요.</string>
+    <string name="pref_invalid_app_time">목표 시간이 10분 미만입니다.</string>
+    <string name="pref_mock_kakao">카카오톡</string>
+    <string name="pref_mock_facebook">페이스북</string>
+    <string name="pref_mock_tiktok">틱톡</string>
 </resources>
