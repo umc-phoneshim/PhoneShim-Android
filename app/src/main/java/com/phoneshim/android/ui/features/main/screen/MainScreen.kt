@@ -176,7 +176,7 @@ fun MainScreen(
                 title = "MAIN",
                 leftIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.mynaui_target_solid),
+                        painter = painterResource(id = R.drawable.ic_goal),
                         contentDescription = "설정",
                         tint = PhoneShimTheme.colors.textPrimary,
                         modifier = Modifier.clickable(
@@ -188,7 +188,7 @@ fun MainScreen(
                 },
                 rightIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.my),
+                        painter = painterResource(id = R.drawable.ic_my),
                         contentDescription = "마이페이지",
                         tint = PhoneShimTheme.colors.textPrimary,
                         modifier = Modifier.clickable(

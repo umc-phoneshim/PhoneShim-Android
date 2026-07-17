@@ -28,6 +28,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phoneshim.android.ui.common.PhoneShimIcon
+import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -249,7 +251,7 @@ fun TimetableChart(
 @Composable
 fun ReportSideActionButton(
     text: String,
-    icon: LineIconType,
+    icon: PhoneShimIconType,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -261,7 +263,11 @@ fun ReportSideActionButton(
             .padding(PhoneShimDimens.spacing12),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LineIcon(type = icon, tint = PhoneShimTheme.colors.brandStrong)
+        PhoneShimIcon(
+            type = icon,
+            contentDescription = text,
+            tint = PhoneShimTheme.colors.brandStrong,
+        )
         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
         Text(text = text, style = PhoneShimType.KorLabel, color = PhoneShimTheme.colors.brandStrong)
     }

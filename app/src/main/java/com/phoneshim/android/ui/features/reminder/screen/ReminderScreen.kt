@@ -197,11 +197,11 @@ private fun ReminderTopBar(onSettings: () -> Unit, onMyPage: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         IconButton(onClick = onSettings, modifier = Modifier.align(Alignment.CenterStart).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_reminder_settings), null, tint = PhoneShimTheme.colors.textPrimary, modifier = Modifier.size(24.dp))
+            Icon(painterResource(R.drawable.ic_setting), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
         }
         Text("REMINDER", style = PhoneShimType.KorH3, color = PhoneShimTheme.colors.textPrimary)
         IconButton(onClick = onMyPage, modifier = Modifier.align(Alignment.CenterEnd).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_reminder_profile), null, tint = PhoneShimTheme.colors.textPrimary, modifier = Modifier.size(24.dp))
+            Icon(painterResource(R.drawable.ic_my), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -236,9 +236,9 @@ private fun ReminderCalendar(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(42.dp)) {
-            CalendarArrow(R.drawable.ic_reminder_chevron_left, onPreviousMonth)
+            CalendarArrow(R.drawable.ic_chevron_left, onPreviousMonth)
             Text(visibleMonth.format(DateTimeFormatter.ofPattern("yyyy.MM")), style = PhoneShimType.KorH3, color = PhoneShimTheme.colors.brandStrong)
-            CalendarArrow(R.drawable.ic_reminder_chevron_right, onNextMonth)
+            CalendarArrow(R.drawable.ic_chevron_right, onNextMonth)
         }
         CalendarWeekHeader()
         calendarDates(visibleMonth).chunked(7).forEach { week ->
@@ -295,7 +295,7 @@ private fun CalendarDay(date: LocalDate, month: YearMonth, today: LocalDate, sel
 private fun ReminderTaskSection(tasks: List<ReminderTaskUiModel>, onAddTask: () -> Unit, onEditTask: (ReminderTaskUiModel) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_reminder_goal), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
+            Icon(painterResource(R.drawable.ic_goal), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(4.dp))
             // TODO: 선택 날짜에 따라 섹션 제목을 변경할지 기획 확인 필요
             Text("오늘 할 일 설정", style = PhoneShimType.KorBodyM.copy(fontWeight = FontWeight.SemiBold), color = PhoneShimTheme.colors.textPrimary)
@@ -331,7 +331,7 @@ private fun ReminderTaskItem(task: ReminderTaskUiModel, onEditTask: (ReminderTas
         }
         Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.size(40.dp).clickable { onEditTask(task) }, contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_reminder_edit), null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
+                Icon(painterResource(R.drawable.ic_modify), null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -344,7 +344,7 @@ private fun ReminderEmptyTaskCard(compact: Boolean, onClick: () -> Unit) {
             .background(PhoneShimTheme.colors.brandSubtle).clickable(onClick = onClick).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(R.drawable.ic_reminder_add), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
+        Icon(painterResource(R.drawable.ic_plus), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(16.dp))
         Text("할 일을 추가하세요", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.brand)
     }

@@ -94,7 +94,7 @@ fun ReminderSetPopup(
             ) {
                 Text(draft.title.ifBlank { "과제" }, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
                 Spacer(Modifier.width(4.dp))
-                Icon(painterResource(R.drawable.ic_reminder_popup_chevron), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
+                Icon(painterResource(R.drawable.ic_chevron_right_small), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
             }
             PopupSelectionRow(
                 label = "제한 선택",
@@ -105,7 +105,7 @@ fun ReminderSetPopup(
                     if (next == RestrictionMode.SPECIFIC_APPS && "kakao" !in draft.restrictedAppIds) onToggleApp("kakao")
                 },
             ) {
-                Icon(painterResource(R.drawable.ic_reminder_target_app), null, tint = Color.Unspecified, modifier = Modifier.size(PopupIconSize))
+                Icon(painterResource(R.drawable.ic_target_app), null, tint = Color.Unspecified, modifier = Modifier.size(PopupIconSize))
                 Spacer(Modifier.width(8.dp))
                 Icon(painterResource(R.drawable.ic_reminder_app_kakao), null, tint = Color.Unspecified, modifier = Modifier.size(PopupIconSize))
             }

@@ -67,7 +67,7 @@ fun PrefSectionTitle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_section_indicator),
+            painter = painterResource(R.drawable.ic_goal),
             contentDescription = null,
             modifier = Modifier.size(PrefSectionDefaults.sectionIconSize),
             tint = PhoneShimTheme.colors.textPrimary,
@@ -370,7 +370,13 @@ private fun AppGoalItem(
             modifier = Modifier.size(PrefSectionDefaults.actionTouchSize),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_limit_remove),
+                painter = painterResource(
+                    if (appGoal.isLimitEnabled) {
+                        R.drawable.ic_access_restriction
+                    } else {
+                        R.drawable.ic_access_restriction_disabled
+                    },
+                ),
                 contentDescription = if (appGoal.isLimitEnabled) {
                     "${appGoal.appName} 사용 제한 비활성화"
                 } else {
@@ -389,7 +395,7 @@ private fun AppGoalItem(
             modifier = Modifier.size(PrefSectionDefaults.actionTouchSize),
         ) {
             Image(
-                painter = painterResource(R.drawable.ic_edit),
+                painter = painterResource(R.drawable.ic_modify),
                 contentDescription = "${appGoal.appName} 목표 문구 편집",
                 modifier = Modifier.size(PrefSectionDefaults.actionIconSize),
             )

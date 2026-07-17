@@ -27,8 +27,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomNavTab
-import com.phoneshim.android.ui.common.LineIcon
-import com.phoneshim.android.ui.common.LineIconType
+import com.phoneshim.android.ui.common.PhoneShimIcon
+import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -100,8 +100,9 @@ private fun MyContent(
                     color = PhoneShimTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f),
                 )
-                LineIcon(
-                    type = LineIconType.ChevronRight,
+                PhoneShimIcon(
+                    type = PhoneShimIconType.ChevronRight,
+                    contentDescription = "사이드 메뉴",
                     modifier = Modifier.clickable(onClick = onMenuClick),
                 )
             }

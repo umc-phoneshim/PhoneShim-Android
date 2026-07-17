@@ -20,7 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomNavTab
-import com.phoneshim.android.ui.common.LineIconType
+import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.report.component.DailyReportHeader
 import com.phoneshim.android.ui.features.report.component.HourUsage
@@ -154,8 +154,8 @@ private fun TimetableContent(
                         modifier = Modifier.width(84.dp),
                         verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
                     ) {
-                        ReportSideActionButton(text = "재편 보기", icon = LineIconType.Info, onClick = onEditView)
-                        ReportSideActionButton(text = "알림 설정", icon = LineIconType.Bell, onClick = onAlarmSettings)
+                        ReportSideActionButton(text = "재편 보기", icon = PhoneShimIconType.Info, onClick = onEditView)
+                        ReportSideActionButton(text = "알림 설정", icon = PhoneShimIconType.Bell, onClick = onAlarmSettings)
                         UsageReasonLegendCard(items = legend)
                     }
                 }

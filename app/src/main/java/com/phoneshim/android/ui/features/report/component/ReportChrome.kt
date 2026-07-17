@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.LineIcon
-import com.phoneshim.android.ui.common.LineIconType
+import com.phoneshim.android.ui.common.PhoneShimIcon
+import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -49,7 +49,7 @@ fun DailyReportHeader(
                 .padding(top = PhoneShimDimens.spacing12),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LineIcon(type = LineIconType.Target)
+            PhoneShimIcon(type = PhoneShimIconType.Target, contentDescription = null)
             Text(
                 text = "DAILY REPORT",
                 style = PhoneShimType.KorH3,
@@ -57,8 +57,9 @@ fun DailyReportHeader(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
-            LineIcon(
-                type = LineIconType.Person,
+            PhoneShimIcon(
+                type = PhoneShimIconType.Person,
+                contentDescription = "마이페이지",
                 modifier = Modifier.clickable(onClick = onProfileClick),
             )
         }

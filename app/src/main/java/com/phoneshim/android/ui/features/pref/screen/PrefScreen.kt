@@ -127,7 +127,7 @@ private fun PrefTopBar(onBack: () -> Unit) {
                 .padding(start = PrefScreenDefaults.topBarStartPadding),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_arrow_back),
+                painter = painterResource(R.drawable.ic_back),
                 contentDescription = "뒤로가기",
                 tint = PhoneShimTheme.colors.textPrimary,
             )
