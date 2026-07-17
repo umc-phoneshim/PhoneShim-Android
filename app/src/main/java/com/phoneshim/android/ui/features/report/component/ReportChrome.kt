@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,10 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.PhoneShimIcon
-import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -31,67 +27,40 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 
 @Composable
-fun DailyReportHeader(
+fun ReportDateNavigator(
     dateLabel: String,
     onPrevDate: () -> Unit,
     onNextDate: () -> Unit,
     modifier: Modifier = Modifier,
-    onProfileClick: () -> Unit = {},
 ) {
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
+            .padding(vertical = PhoneShimDimens.spacing16),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        Text(
+            text = "‹",
+            style = PhoneShimType.EngH2,
+            color = PhoneShimTheme.colors.textTertiary,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = PhoneShimDimens.spacing12),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PhoneShimIcon(type = PhoneShimIconType.Target, contentDescription = null)
-            Text(
-                text = "DAILY REPORT",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            PhoneShimIcon(
-                type = PhoneShimIconType.Person,
-                contentDescription = "마이페이지",
-                modifier = Modifier.clickable(onClick = onProfileClick),
-            )
-        }
-        Row(
+                .clickable(onClick = onPrevDate)
+                .padding(horizontal = PhoneShimDimens.spacing16),
+        )
+        Text(
+            text = dateLabel,
+            style = PhoneShimType.EngH2,
+            color = PhoneShimTheme.colors.textPrimary,
+        )
+        Text(
+            text = "›",
+            style = PhoneShimType.EngH2,
+            color = PhoneShimTheme.colors.textTertiary,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PhoneShimDimens.spacing16),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "‹",
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textTertiary,
-                modifier = Modifier
-                    .clickable(onClick = onPrevDate)
-                    .padding(horizontal = PhoneShimDimens.spacing16),
-            )
-            Text(
-                text = dateLabel,
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "›",
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textTertiary,
-                modifier = Modifier
-                    .clickable(onClick = onNextDate)
-                    .padding(horizontal = PhoneShimDimens.spacing16),
-            )
-        }
+                .clickable(onClick = onNextDate)
+                .padding(horizontal = PhoneShimDimens.spacing16),
+        )
     }
 }
 

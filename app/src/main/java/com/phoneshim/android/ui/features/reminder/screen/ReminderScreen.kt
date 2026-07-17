@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.reminder.component.ReminderSetPopup
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderTaskUiModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiState
@@ -62,7 +63,6 @@ private val CalendarCornerRadius = 12.dp
 private val CalendarHeight = 337.dp
 private val CalendarDayCellSize = 42.dp
 private val TaskRowHeight = 56.dp
-private val TopBarHeight = 49.dp
 private val MainSectionSpacing = 24.dp
 private val BottomNavigationSpacing = 55.dp
 private val TaskCardPadding = 12.dp
@@ -142,7 +142,30 @@ fun ReminderScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { ReminderTopBar(onNavigateToSettings, onNavigateToMyPage) },
+        topBar = {
+            TopAppBar(
+                title = "REMINDER",
+                titleStyle = PhoneShimType.KorH3,
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_topbar_goal),
+                            contentDescription = "목표 설정",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToMyPage, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                },
+            )
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -187,22 +210,6 @@ fun ReminderScreen(
             onSave = onSaveTask,
             onDelete = onDeleteTask,
         )
-    }
-}
-
-@Composable
-private fun ReminderTopBar(onSettings: () -> Unit, onMyPage: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        IconButton(onClick = onSettings, modifier = Modifier.align(Alignment.CenterStart).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_setting), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
-        }
-        Text("REMINDER", style = PhoneShimType.KorH3, color = PhoneShimTheme.colors.textPrimary)
-        IconButton(onClick = onMyPage, modifier = Modifier.align(Alignment.CenterEnd).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_my), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
-        }
     }
 }
 

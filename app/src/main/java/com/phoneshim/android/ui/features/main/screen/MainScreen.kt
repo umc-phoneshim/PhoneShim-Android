@@ -126,7 +126,7 @@ fun MainScreen(
                 titleStyle = PhoneShimType.EngH3,
                 navigationIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_goal),
+                        painter = painterResource(id = R.drawable.ic_topbar_goal),
                         contentDescription = "설정",
                         tint = PhoneShimTheme.colors.textPrimary,
                         modifier = Modifier.clickable(

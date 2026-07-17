@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,16 +19,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageRow
-import com.phoneshim.android.ui.features.report.component.DailyReportHeader
+import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -49,6 +54,7 @@ fun ReportSummaryScreen(
     onNavigateToTimetable: () -> Unit = {},
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     // TODO: viewModel.uiState 의 DailyReport/AppUsage 를 AppBubble·CategoryUsageRow 로 매핑해
@@ -56,6 +62,7 @@ fun ReportSummaryScreen(
     ReportSummaryContent(
         modifier = modifier,
         dateLabel = "7.11",
+        onNavigateToMyPage = onNavigateToMyPage,
         onTabSelected = { tab -> if (tab == ReportTab.TIMETABLE) onNavigateToTimetable() },
         onBottomNavSelected = { tab ->
             when (tab) {
@@ -72,6 +79,7 @@ private fun ReportSummaryContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
     onBottomNavSelected: (BottomBarTab) -> Unit,
+    onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var period by remember { mutableStateOf(ReportPeriod.DAY) }
@@ -119,7 +127,25 @@ private fun ReportSummaryContent(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            DailyReportHeader(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
+            TopAppBar(
+                title = "DAILY REPORT",
+                titleStyle = PhoneShimType.KorH3,
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_topbar_goal),
+                        contentDescription = null,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToMyPage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                        )
+                    }
+                },
+            )
+            ReportDateNavigator(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
             ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
 
             Column(
@@ -172,6 +198,7 @@ private fun ReportSummaryContentPreview() {
             dateLabel = "7.11",
             onTabSelected = {},
             onBottomNavSelected = {},
+            onNavigateToMyPage = {},
         )
     }
 }

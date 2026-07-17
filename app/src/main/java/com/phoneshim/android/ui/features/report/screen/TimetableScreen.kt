@@ -12,17 +12,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimIconType
-import com.phoneshim.android.ui.features.report.component.DailyReportHeader
+import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.HourUsage
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -48,6 +53,7 @@ fun TimetableScreen(
     onNavigateToSummary: () -> Unit = {},
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     // TODO: viewModel.uiState.report.timetable(List<TimetableEntry>) 을 시간대별 HourUsage 로
@@ -55,6 +61,7 @@ fun TimetableScreen(
     TimetableContent(
         modifier = modifier,
         dateLabel = "7.11",
+        onNavigateToMyPage = onNavigateToMyPage,
         onTabSelected = { tab -> if (tab == ReportTab.SUMMARY) onNavigateToSummary() },
         onBottomNavSelected = { tab ->
             when (tab) {
@@ -77,6 +84,7 @@ private fun TimetableContent(
     onEntryClick: (String) -> Unit,
     onEditView: () -> Unit,
     onAlarmSettings: () -> Unit,
+    onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hours = remember {
@@ -128,7 +136,25 @@ private fun TimetableContent(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            DailyReportHeader(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
+            TopAppBar(
+                title = "DAILY REPORT",
+                titleStyle = PhoneShimType.KorH3,
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_topbar_goal),
+                        contentDescription = null,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToMyPage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                        )
+                    }
+                },
+            )
+            ReportDateNavigator(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
             ReportTabRow(selected = ReportTab.TIMETABLE, onTabSelected = onTabSelected)
 
             Column(
@@ -175,6 +201,7 @@ private fun TimetableContentPreview() {
             onEntryClick = {},
             onEditView = {},
             onAlarmSettings = {},
+            onNavigateToMyPage = {},
         )
     }
 }
