@@ -20,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.BottomNavTab
-import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
@@ -59,9 +59,9 @@ fun ReportSummaryScreen(
         onTabSelected = { tab -> if (tab == ReportTab.TIMETABLE) onNavigateToTimetable() },
         onBottomNavSelected = { tab ->
             when (tab) {
-                BottomNavTab.MAIN -> onNavigateToMain()
-                BottomNavTab.REMINDER -> onNavigateToReminder()
-                BottomNavTab.REPORT -> Unit
+                BottomBarTab.MAIN -> onNavigateToMain()
+                BottomBarTab.REMINDER -> onNavigateToReminder()
+                BottomBarTab.REPORT -> Unit
             }
         },
     )
@@ -71,7 +71,7 @@ fun ReportSummaryScreen(
 private fun ReportSummaryContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
-    onBottomNavSelected: (BottomNavTab) -> Unit,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var period by remember { mutableStateOf(ReportPeriod.DAY) }
@@ -110,7 +110,7 @@ private fun ReportSummaryContent(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         bottomBar = {
-            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
+            BottomBar(selectedTab = BottomBarTab.REPORT, onTabSelected = onBottomNavSelected)
         },
     ) { innerPadding ->
         Column(

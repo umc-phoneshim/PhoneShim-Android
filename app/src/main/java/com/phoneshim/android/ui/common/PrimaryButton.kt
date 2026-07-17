@@ -16,13 +16,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.theme.PhoneShimPalette
+import com.phoneshim.android.ui.theme.PhoneShimTheme
 
 enum class PrimaryButtonSize(
     val height: Dp,
 ) {
     Large(56.dp),
     Small(36.dp),
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PrimaryButtonPreview() {
+    PhoneShimTheme { PrimaryButton(text = "로그인", onClick = {}) }
 }
 
 /** Primary action button used throughout the app. */

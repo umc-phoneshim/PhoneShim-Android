@@ -43,13 +43,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.common.PhoneShimBottomBar
-import com.phoneshim.android.ui.common.PhoneShimTab
-import com.phoneshim.android.ui.common.PhoneShimTopAppBar
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
 import com.phoneshim.android.ui.theme.PhoneShimPalette
-import com.phoneshim.android.ui.theme.PhoneShimText
-import com.phoneshim.android.ui.theme.PhoneShimTextTokens
+import androidx.compose.material3.Text
+import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 
 /* ============================================================
@@ -63,8 +63,8 @@ private val KakaoYellow = Color(0xFFF7E600)
 // 디자인 시스템 담당자 확인 후 Color.kt/Theme.kt에 정식 토큰으로 추가되면 이 로컬 상수는 제거하세요.
 private val BackgroundCream = Color(0xFFFAF7F0)
 
-// 섹션 타이틀: 피그마 시안 기준 KorBodyL 크기 + SemiBold 웨이트 (진짜 PhoneShimTextTokens.bodyL 기반)
-private val SectionTitleStyle = PhoneShimTextTokens.bodyL.copy(fontWeight = FontWeight.SemiBold)
+// 섹션 타이틀: 피그마 시안 기준 KorBodyL 크기 + SemiBold 웨이트
+private val SectionTitleStyle = PhoneShimType.KorBodyL.copy(fontWeight = FontWeight.SemiBold)
 
 /* ============================================================
  * 2. SVG PATH DATA (Figma export 원본)
@@ -171,10 +171,10 @@ fun MainScreen(
         Column(modifier = Modifier.fillMaxSize()) {
 
             // NOTE: 피그마엔 KOR/H3(Pretendard)로 찍혀 있으나 영문이므로 디자인 시스템 규칙(ENG=Inter)을 따름.
-            // PhoneShimText의 자동 스크립트 분리가 처리. 디자이너 확인 대기 중.
-            PhoneShimTopAppBar(
+            TopAppBar(
                 title = "MAIN",
-                leftIcon = {
+                titleStyle = PhoneShimType.EngH3,
+                navigationIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_goal),
                         contentDescription = "설정",
@@ -186,7 +186,7 @@ fun MainScreen(
                         )
                     )
                 },
-                rightIcon = {
+                actions = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_my),
                         contentDescription = "마이페이지",
@@ -231,8 +231,8 @@ fun MainScreen(
             }
         }
 
-        PhoneShimBottomBar(
-            currentTab = PhoneShimTab.MAIN,
+        BottomBar(
+            selectedTab = BottomBarTab.MAIN,
             onTabSelected = {},
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -261,7 +261,7 @@ fun SectionTitle(title: String) {
             }
             drawPath(path = triangle, color = textPrimary)
         }
-        PhoneShimText(
+        Text(
             text = title,
             style = SectionTitleStyle,
             color = textPrimary
@@ -282,18 +282,18 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
             .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        PhoneShimText(
+        Text(
             text = "${userName}님, 오늘 하루 힘차게 시작 해봐요!",
-            style = PhoneShimTextTokens.caption,
+            style = PhoneShimType.KorCaption,
             color = PhoneShimTheme.colors.brandStrong
         )
-        PhoneShimText(
+        Text(
             text = if (isSetupCompleted) {
                 "오늘도 좋은 습관 만들어\n봐요!"
             } else {
                 "아직 초기 설정이 완료되\n지 않았어요!"
             },
-            style = PhoneShimTextTokens.h2,
+            style = PhoneShimType.KorH2,
             color = PhoneShimTheme.colors.textPrimary
         )
     }
@@ -324,9 +324,9 @@ fun EmptySetupCard(onSettingsClick: () -> Unit) {
             // TODO: 피그마에 실제 들어갈 아이콘/일러스트 에셋 확인 필요 (현재 빈 박스로 표시)
             Box(modifier = Modifier.size(72.dp))
 
-            PhoneShimText(
+        Text(
                 text = "아직 설정되지 않았어요",
-                style = PhoneShimTextTokens.caption,
+                style = PhoneShimType.KorCaption,
                 // NOTE: 피그마 순정값 #000. 디자인 시스템 textPrimary(#262626)와 다른 값이라
                 // 디자이너 확인 필요, 확인 전까지 피그마 값 그대로 반영
                 color = Color(0xFF000000)
@@ -345,9 +345,9 @@ fun EmptySetupCard(onSettingsClick: () -> Unit) {
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                PhoneShimText(
+                Text(
                     text = "설정하러 가기",
-                    style = PhoneShimTextTokens.label,
+                    style = PhoneShimType.KorLabel,
                     color = PhoneShimTheme.colors.textSecondary
                 )
             }
@@ -373,17 +373,17 @@ private fun DailyUsageSection(uiState: MainUiState) {
         ) {
             // "01 시간 30 분" : 숫자 Display / 단위 BodyM, 베이스라인 정렬
             Row(verticalAlignment = Alignment.Bottom) {
-                PhoneShimText(text = uiState.usedHour, style = PhoneShimTextTokens.display, color = PhoneShimTheme.colors.textPrimary)
-                PhoneShimText(
+                Text(text = uiState.usedHour, style = PhoneShimType.EngDisplay, color = PhoneShimTheme.colors.textPrimary)
+                Text(
                     text = " 시간 ",
-                    style = PhoneShimTextTokens.bodyM,
+                    style = PhoneShimType.KorBodyM,
                     color = PhoneShimTheme.colors.textSecondary,
                     modifier = Modifier.padding(bottom = 3.dp)
                 )
-                PhoneShimText(text = uiState.usedMinute, style = PhoneShimTextTokens.display, color = PhoneShimTheme.colors.textPrimary)
-                PhoneShimText(
+                Text(text = uiState.usedMinute, style = PhoneShimType.EngDisplay, color = PhoneShimTheme.colors.textPrimary)
+                Text(
                     text = " 분",
-                    style = PhoneShimTextTokens.bodyM,
+                    style = PhoneShimType.KorBodyM,
                     color = PhoneShimTheme.colors.textSecondary,
                     modifier = Modifier.padding(bottom = 3.dp)
                 )
@@ -395,8 +395,8 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PhoneShimText(text = "남은 시간", style = PhoneShimTextTokens.label, color = PhoneShimTheme.colors.textTertiary)
-                PhoneShimText(text = uiState.remainingTime, style = PhoneShimTextTokens.label, color = PhoneShimTheme.colors.textSecondary)
+                Text(text = "남은 시간", style = PhoneShimType.KorLabel, color = PhoneShimTheme.colors.textTertiary)
+                Text(text = uiState.remainingTime, style = PhoneShimType.EngLabel, color = PhoneShimTheme.colors.textSecondary)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -417,9 +417,9 @@ private fun DailyUsageSection(uiState: MainUiState) {
                         .padding(horizontal = 6.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
-                    PhoneShimText(
+                    Text(
                         text = "${(uiState.totalTimeProgress * 100).toInt()}%",
-                        style = PhoneShimTextTokens.micro,
+                        style = PhoneShimType.EngMicro,
                         color = PhoneShimTheme.colors.surface
                     )
                 }
@@ -499,9 +499,9 @@ private fun CautionAppItem(app: MainCautionAppItem) {
             )
         }
 
-        PhoneShimText(
+        Text(
             text = app.usedTime,
-            style = PhoneShimTextTokens.label,
+            style = PhoneShimType.EngLabel,
             color = PhoneShimTheme.colors.textSecondary
         )
 
@@ -533,7 +533,7 @@ private fun Badge(text: String, backgroundColor: Color, textColor: Color) {
             .padding(horizontal = 8.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
-        PhoneShimText(text = text, style = PhoneShimTextTokens.micro, color = textColor)
+        Text(text = text, style = PhoneShimType.KorMicro, color = textColor)
     }
 }
 
@@ -590,14 +590,14 @@ private fun TodoCard(todo: MainTodoItem) {
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            PhoneShimText(
+            Text(
                 text = todo.title,
-                style = PhoneShimTextTokens.bodyM,
+                style = PhoneShimType.KorBodyM,
                 color = PhoneShimTheme.colors.textPrimary
             )
-            PhoneShimText(
+            Text(
                 text = todo.timeRange,
-                style = PhoneShimTextTokens.caption,
+                style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.textTertiary
             )
         }

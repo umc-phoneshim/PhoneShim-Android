@@ -14,8 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
+import com.phoneshim.android.ui.theme.PhoneShimTheme
 
 /** Secondary action button used throughout the app. */
 @Composable
@@ -53,4 +55,10 @@ fun SecondaryButton(
             style = MaterialTheme.typography.titleLarge,
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SecondaryButtonPreview() {
+    PhoneShimTheme { SecondaryButton(text = "나중에", onClick = {}) }
 }

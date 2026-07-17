@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ripple
@@ -20,7 +21,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.theme.PhoneShimPalette
+import com.phoneshim.android.ui.theme.PhoneShimTheme
 
 /** Circular checkbox matching the PhoneShim design system. */
 @Composable
@@ -61,6 +64,17 @@ fun Checkbox(
                     style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
                 )
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CheckboxPreview() {
+    PhoneShimTheme {
+        Row {
+            Checkbox(checked = false, onCheckedChange = {})
+            Checkbox(checked = true, onCheckedChange = {})
         }
     }
 }

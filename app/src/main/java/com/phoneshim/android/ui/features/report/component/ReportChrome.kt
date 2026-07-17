@@ -27,7 +27,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 /**
  * "07. 데일리 리포트" 화면군(ReportSummaryScreen / TimetableScreen)이 공유하는
  * 상단바, 날짜 네비게이터, 탭. 하단 네비게이션 바는 여러 피처에서 공통으로 쓰여
- * [com.phoneshim.android.ui.common.PhoneShimBottomNavBar] 로 옮겼습니다.
+ * 공통 [com.phoneshim.android.ui.common.BottomBar]로 옮겼습니다.
  */
 
 @Composable

@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.BottomNavTab
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.PhoneShimIconType
-import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.report.component.DailyReportHeader
 import com.phoneshim.android.ui.features.report.component.HourUsage
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
@@ -58,9 +58,9 @@ fun TimetableScreen(
         onTabSelected = { tab -> if (tab == ReportTab.SUMMARY) onNavigateToSummary() },
         onBottomNavSelected = { tab ->
             when (tab) {
-                BottomNavTab.MAIN -> onNavigateToMain()
-                BottomNavTab.REMINDER -> onNavigateToReminder()
-                BottomNavTab.REPORT -> Unit
+                BottomBarTab.MAIN -> onNavigateToMain()
+                BottomBarTab.REMINDER -> onNavigateToReminder()
+                BottomBarTab.REPORT -> Unit
             }
         },
         onEntryClick = onEntryClick,
@@ -73,7 +73,7 @@ fun TimetableScreen(
 private fun TimetableContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
-    onBottomNavSelected: (BottomNavTab) -> Unit,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
     onEntryClick: (String) -> Unit,
     onEditView: () -> Unit,
     onAlarmSettings: () -> Unit,
@@ -119,7 +119,7 @@ private fun TimetableContent(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         bottomBar = {
-            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
+            BottomBar(selectedTab = BottomBarTab.REPORT, onTabSelected = onBottomNavSelected)
         },
     ) { innerPadding ->
         Column(

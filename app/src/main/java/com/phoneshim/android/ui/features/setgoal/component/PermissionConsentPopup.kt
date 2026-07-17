@@ -14,7 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.phoneshim.android.ui.common.PhoneShimButton
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -48,7 +48,7 @@ fun PermissionConsentPopup(
                 )
             }
 
-            PhoneShimButton(
+            PrimaryButton(
                 text = "모두 허용하기",
                 onClick = onAllowAll,
             )

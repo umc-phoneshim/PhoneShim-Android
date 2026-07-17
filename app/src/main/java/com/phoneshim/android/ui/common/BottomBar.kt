@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,77 +23,52 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.theme.PhoneShimText
-import com.phoneshim.android.ui.theme.PhoneShimTextTokens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
+import com.phoneshim.android.ui.theme.PhoneShimType
 
-/**
- * 폰쉼 플로팅 하단 탭 바.
- *
- * Scaffold의 bottomBar 슬롯용이 아니라 화면 콘텐츠 위에 떠 있는 플로팅 바이다.
- * 사용 예시:
- * ```
- * Box {
- *     // 화면 콘텐츠
- *     PhoneShimBottomBar(
- *         currentTab = currentTab,
- *         onTabSelected = { tab -> ... },
- *         modifier = Modifier
- *             .align(Alignment.BottomCenter)
- *             .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
- *     )
- * }
- * ```
- */
 @Composable
-fun PhoneShimBottomBar(
-    currentTab: PhoneShimTab,
-    onTabSelected: (PhoneShimTab) -> Unit,
+fun BottomBar(
+    selectedTab: BottomBarTab,
+    onTabSelected: (BottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(12.dp)
-                // NOTE: 피그마 box-shadow 0 4 4 rgba(0,0,0,0.25). Compose shadow와 1:1 매핑 불가, 실기기 확인 후 조정
-            )
+            .shadow(4.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
             .background(PhoneShimTheme.colors.surface)
             .padding(horizontal = 24.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(36.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            PhoneShimTab.entries.forEach { tab ->
-                val isSelected = currentTab == tab
-                val tint = if (isSelected) PhoneShimTheme.colors.brandStrong else PhoneShimTheme.colors.brand
-
+            BottomBarTab.entries.forEach { tab ->
+                val selected = selectedTab == tab
+                val tint = if (selected) {
+                    PhoneShimTheme.colors.brandStrong
+                } else {
+                    PhoneShimTheme.colors.brand
+                }
                 Column(
                     modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { onTabSelected(tab) }
+                        onClick = { onTabSelected(tab) },
                     ),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = tab.iconRes),
+                        painter = painterResource(tab.iconRes),
                         contentDescription = tab.label,
                         tint = tint,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    PhoneShimText(
-                        text = tab.label,
-                        style = PhoneShimTextTokens.label,
-                        color = tint
-                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(text = tab.label, style = PhoneShimType.KorLabel, color = tint)
                 }
             }
         }

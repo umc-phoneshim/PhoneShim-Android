@@ -24,7 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.PhoneShimButton
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
@@ -170,7 +170,7 @@ private fun SetGoalCompleteContent(
             }
         }
 
-        PhoneShimButton(
+        PrimaryButton(
             text = "메인으로 이동",
             onClick = onFinish,
         )

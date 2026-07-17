@@ -26,10 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.BottomNavTab
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
-import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -56,9 +56,9 @@ fun MyScreen(
         onMenuClick = onNavigateToSideMenu,
         onBottomNavSelected = { tab ->
             when (tab) {
-                BottomNavTab.MAIN -> onNavigateToMain()
-                BottomNavTab.REMINDER -> onNavigateToReminder()
-                BottomNavTab.REPORT -> onNavigateToReport()
+                BottomBarTab.MAIN -> onNavigateToMain()
+                BottomBarTab.REMINDER -> onNavigateToReminder()
+                BottomBarTab.REPORT -> onNavigateToReport()
             }
         },
     )
@@ -69,17 +69,17 @@ private fun MyContent(
     nickname: String,
     email: String,
     onMenuClick: () -> Unit,
-    onBottomNavSelected: (BottomNavTab) -> Unit,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
     // 마이페이지엔 전용 하단 탭이 없어, 진입 직전 탭을 그대로 보여줍니다.
     // TODO: 실제로는 상위 네비게이션에서 "마지막으로 선택된 탭"을 전달받아야 합니다.
-    selectedBottomTab: BottomNavTab = BottomNavTab.REPORT,
+    selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         bottomBar = {
-            PhoneShimBottomNavBar(selected = selectedBottomTab, onTabSelected = onBottomNavSelected)
+            BottomBar(selectedTab = selectedBottomTab, onTabSelected = onBottomNavSelected)
         },
     ) { innerPadding ->
         Column(
