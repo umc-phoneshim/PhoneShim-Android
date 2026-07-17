@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
@@ -95,7 +94,7 @@ fun PrefUserInfoSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        PrefSectionTitle(title = stringResource(R.string.pref_user_info))
+        PrefSectionTitle(title = "사용자 정보")
         Spacer(Modifier.height(PrefSectionDefaults.selectorTopSpacing))
         Row(
             modifier = Modifier.padding(horizontal = PhoneShimDimens.spacing12),
@@ -219,7 +218,7 @@ fun PrefGoalSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        PrefSectionTitle(title = stringResource(R.string.pref_goal_settings))
+        PrefSectionTitle(title = "목표 설정")
         Spacer(Modifier.height(PhoneShimDimens.spacing24))
         TotalGoalCard(
             totalMinutes = totalGoalMinutes,
@@ -228,7 +227,7 @@ fun PrefGoalSection(
         )
         Spacer(Modifier.height(PhoneShimDimens.spacing24))
         Text(
-            text = stringResource(R.string.pref_app_goal_time_title),
+            text = "어플 별 목표 시간",
             style = MaterialTheme.typography.bodySmall,
             color = PhoneShimTheme.colors.brand,
         )
@@ -284,17 +283,13 @@ private fun TotalGoalCard(
                     .padding(PhoneShimDimens.spacing16),
             ) {
                 Text(
-                    text = stringResource(R.string.pref_total_goal_time),
+                    text = "전체 폰 목표 시간",
                     style = MaterialTheme.typography.bodySmall,
                     color = PhoneShimTheme.colors.brand,
                 )
                 Spacer(Modifier.height(PhoneShimDimens.spacing8))
                 Text(
-                    text = stringResource(
-                        R.string.pref_total_time_format,
-                        totalMinutes / 60,
-                        totalMinutes % 60,
-                    ),
+                    text = "${totalMinutes / 60}시간  ${totalMinutes % 60}분",
                     style = PhoneShimType.EngH1,
                     color = PhoneShimTheme.colors.textPrimary,
                 )
@@ -302,7 +297,7 @@ private fun TotalGoalCard(
         }
         if (isError) {
             Text(
-                text = stringResource(R.string.pref_minimum_time_error),
+                text = "목표 사용 시간은 10분 이상 입력해 주세요.",
                 style = MaterialTheme.typography.bodySmall,
                 color = PhoneShimTheme.colors.error,
                 modifier = Modifier.padding(top = PhoneShimDimens.spacing4),
@@ -351,15 +346,14 @@ private fun AppGoalItem(
                 )
                 if (isError) {
                     Text(
-                        text = stringResource(R.string.pref_invalid_app_time),
+                        text = "목표 시간이 10분 미만입니다.",
                         style = PhoneShimType.KorLabel,
                         color = PhoneShimTheme.colors.error,
                     )
                 }
             }
             Text(
-                text = stringResource(
-                    R.string.pref_app_time_format,
+                text = "%02d 시간  %02d 분".format(
                     appGoal.goalMinutes / 60,
                     appGoal.goalMinutes % 60,
                 ),
@@ -378,9 +372,9 @@ private fun AppGoalItem(
             Icon(
                 painter = painterResource(R.drawable.ic_limit_remove),
                 contentDescription = if (appGoal.isLimitEnabled) {
-                    stringResource(R.string.pref_disable_limit, appGoal.appName)
+                    "${appGoal.appName} 사용 제한 비활성화"
                 } else {
-                    stringResource(R.string.pref_enable_limit, appGoal.appName)
+                    "${appGoal.appName} 사용 제한 활성화"
                 },
                 modifier = Modifier.size(PrefSectionDefaults.actionIconSize),
                 tint = if (appGoal.isLimitEnabled) {
@@ -396,7 +390,7 @@ private fun AppGoalItem(
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_edit),
-                contentDescription = stringResource(R.string.pref_edit_app_goal, appGoal.appName),
+                contentDescription = "${appGoal.appName} 목표 문구 편집",
                 modifier = Modifier.size(PrefSectionDefaults.actionIconSize),
             )
         }
@@ -405,15 +399,15 @@ private fun AppGoalItem(
 
 @Composable
 fun genderLabel(gender: Gender): String = when (gender) {
-    Gender.MALE -> stringResource(R.string.pref_gender_male)
-    Gender.FEMALE -> stringResource(R.string.pref_gender_female)
+    Gender.MALE -> "남"
+    Gender.FEMALE -> "여"
 }
 
 @Composable
 fun ageGroupLabel(ageGroup: AgeGroup): String = when (ageGroup) {
-    AgeGroup.TEENS -> stringResource(R.string.pref_age_teens)
-    AgeGroup.TWENTIES -> stringResource(R.string.pref_age_twenties)
-    AgeGroup.THIRTIES -> stringResource(R.string.pref_age_thirties)
-    AgeGroup.FORTIES -> stringResource(R.string.pref_age_forties)
-    AgeGroup.FIFTIES_OR_MORE -> stringResource(R.string.pref_age_fifties_or_more)
+    AgeGroup.TEENS -> "10대"
+    AgeGroup.TWENTIES -> "20대"
+    AgeGroup.THIRTIES -> "30대"
+    AgeGroup.FORTIES -> "40대"
+    AgeGroup.FIFTIES_OR_MORE -> "50대 이상"
 }

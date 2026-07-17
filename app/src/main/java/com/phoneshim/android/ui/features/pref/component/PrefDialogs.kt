@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -68,8 +67,8 @@ fun GoalTimeDialog(
         ) {
             Text(
                 text = when (state.target) {
-                    TimeEditTarget.TotalGoal -> stringResource(R.string.pref_total_time_dialog_title)
-                    is TimeEditTarget.AppGoal -> stringResource(R.string.pref_app_time_dialog_title)
+                    TimeEditTarget.TotalGoal -> "전체 폰 목표 시간 설정"
+                    is TimeEditTarget.AppGoal -> "앱별 목표 시간 설정"
                 },
                 style = MaterialTheme.typography.titleLarge,
                 color = PhoneShimTheme.colors.textPrimary,
@@ -81,13 +80,13 @@ fun GoalTimeDialog(
             ) {
                 TimeInput(
                     value = state.hoursInput,
-                    label = stringResource(R.string.pref_hours),
+                    label = "시간",
                     onValueChange = onHoursChanged,
                     modifier = Modifier.weight(1f),
                 )
                 TimeInput(
                     value = state.minutesInput,
-                    label = stringResource(R.string.pref_minutes),
+                    label = "분",
                     onValueChange = onMinutesChanged,
                     modifier = Modifier.weight(1f),
                 )
@@ -97,9 +96,9 @@ fun GoalTimeDialog(
                 Text(
                     text = when (error) {
                         TimeInputError.INVALID_MINUTE_RANGE ->
-                            stringResource(R.string.pref_invalid_minute_range)
+                            "분은 0부터 59까지 입력해 주세요."
                         TimeInputError.BELOW_MINIMUM ->
-                            stringResource(R.string.pref_minimum_time_error)
+                            "목표 사용 시간은 10분 이상 입력해 주세요."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = PhoneShimTheme.colors.error,
@@ -112,7 +111,7 @@ fun GoalTimeDialog(
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(
-                        text = stringResource(R.string.pref_cancel),
+                        text = "취소",
                         style = MaterialTheme.typography.bodyMedium,
                         color = PhoneShimTheme.colors.textSecondary,
                     )
@@ -126,7 +125,7 @@ fun GoalTimeDialog(
                     shape = MaterialTheme.shapes.small,
                 ) {
                     Text(
-                        text = stringResource(R.string.pref_confirm),
+                        text = "확인",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -188,7 +187,7 @@ fun AppGoalDescriptionDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.pref_app_goal_dialog_title),
+                    text = "어플 목표 설정",
                     style = MaterialTheme.typography.bodySmall,
                     color = PhoneShimTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f),
@@ -199,7 +198,7 @@ fun AppGoalDescriptionDialog(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_close),
-                        contentDescription = stringResource(R.string.pref_close),
+                        contentDescription = "닫기",
                         tint = PhoneShimTheme.colors.textPrimary,
                     )
                 }
@@ -239,7 +238,7 @@ fun AppGoalDescriptionDialog(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
                 ) {
                     Text(
-                        text = stringResource(R.string.pref_save),
+                        text = "저장",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
