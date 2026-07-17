@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * 폰쉼 디자인 토큰 - 색상
  *
- * Figma "폰쉼 Design Pages" 의 Variable 정의를 그대로 옮긴 원시 팔레트입니다.
+ * Figma "폰쉼 Design Pages" 의 Color System(17색) 스와치를 그대로 옮긴 원시 팔레트입니다.
  * 화면에서는 가급적 [PhoneShimColors] 의 시맨틱 별칭을 사용하고,
  * 이 원시 토큰은 시맨틱 매핑에서만 참조하세요.
  */
@@ -27,11 +27,12 @@ object PhoneShimPalette {
 
     // Background
     val SoftCream = Color(0xFFFFFDF7)
-    val Cream = Color(0xFFFAF7F0)
+    val Cream = Color(0xFFFAF7F0) // Figma Color System 명세에 맞춰 수정 (기존 #FCFAF2)
 
     // Semantic
     val Success = Color(0xFF7DAA64)
     val Warning = Color(0xFFFFD5CE)
+    val Info = Color(0xFFB7D4FF)
     val Error = Color(0xFFE56767)
     val Info = Color(0xFFB7D4FF)
 }
@@ -54,6 +55,9 @@ data class PhoneShimColors(
     val textTertiary: Color = PhoneShimPalette.Gray500,
     val border: Color = PhoneShimPalette.Gray300,
     val divider: Color = PhoneShimPalette.Gray100,
+    val success: Color = PhoneShimPalette.Success,
+    val warning: Color = PhoneShimPalette.Warning,
+    val info: Color = PhoneShimPalette.Info,
     val error: Color = PhoneShimPalette.Error,
     val onBrand: Color = PhoneShimPalette.White,
 )
