@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.main.screen
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,11 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,52 +62,7 @@ private val BackgroundCream = Color(0xFFFAF7F0)
 private val SectionTitleStyle = PhoneShimType.KorBodyL.copy(fontWeight = FontWeight.SemiBold)
 
 /* ============================================================
- * 2. SVG PATH DATA (Figma export 원본)
- * ============================================================ */
-private const val PATH_KAKAO =
-    "M8 14.0644C12.418 14.0644 16 10.916 16 7.03222C16 3.14842 12.418 0 8 0C3.582 0 0 3.14842 0 " +
-            "7.03222C0 8.80031 0.743 10.4177 1.97 11.6534C1.873 12.6741 1.553 13.7932 1.199 14.633C1.12 " +
-            "14.8199 1.273 15.0288 1.472 14.9967C3.728 14.625 5.069 14.0544 5.652 13.757C6.41777 13.9629 " +
-            "7.20727 14.0663 8 14.0644Z"
-
-private const val PATH_MENU_LINE =
-    "M16.6667 15.0002C16.8791 15.0004 17.0834 15.0817 17.2378 15.2275C17.3923 15.3733 17.4852 15.5726 " +
-            "17.4976 15.7847C17.5101 15.9967 17.4411 16.2055 17.3048 16.3684C17.1685 16.5312 16.9751 16.6359 " +
-            "16.7642 16.661L16.6667 16.6668H3.33333C3.12093 16.6666 2.91664 16.5853 2.76219 16.4395C2.60775 " +
-            "16.2936 2.5148 16.0944 2.50236 15.8823C2.48991 15.6703 2.5589 15.4615 2.69522 15.2986C2.83155 " +
-            "15.1358 3.02492 15.0311 3.23583 15.006L3.33333 15.0002H16.6667ZM16.6667 9.16683C16.8877 9.16683 " +
-            "17.0996 9.25463 17.2559 9.41091C17.4122 9.56719 17.5 9.77915 17.5 10.0002C17.5 10.2212 17.4122 " +
-            "10.4331 17.2559 10.5894C17.0996 10.7457 16.8877 10.8335 16.6667 10.8335H3.33333C3.11232 10.8335 " +
-            "2.90036 10.7457 2.74408 10.5894C2.5878 10.4331 2.5 10.2212 2.5 10.0002C2.5 9.77915 2.5878 " +
-            "9.56719 2.74408 9.41091C2.90036 9.25463 3.11232 9.16683 3.33333 9.16683H16.6667ZM16.6667 " +
-            "3.3335C16.8877 3.3335 17.0996 3.42129 17.2559 3.57757C17.4122 3.73385 17.5 3.94582 17.5 " +
-            "4.16683C17.5 4.38784 17.4122 4.5998 17.2559 4.75608C17.0996 4.91237 16.8877 5.00016 16.6667 " +
-            "5.00016H3.33333C3.11232 5.00016 2.90036 4.91237 2.74408 4.75608C2.5878 4.5998 2.5 4.38784 2.5 " +
-            "4.16683C2.5 3.94582 2.5878 3.73385 2.74408 3.57757C2.90036 3.42129 3.11232 3.3335 3.33333 " +
-            "3.3335H16.6667Z"
-
-@Composable
-private fun VectorPath(
-    pathData: String,
-    viewportWidth: Float,
-    viewportHeight: Float,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val path = remember(pathData) { PathParser().parsePathString(pathData).toPath() }
-    Canvas(modifier = modifier) {
-        scale(
-            scaleX = size.width / viewportWidth,
-            scaleY = size.height / viewportHeight,
-            pivot = Offset.Zero
-        ) {
-            drawPath(path = path, color = color)
-        }
-    }
-}
-
-/* ============================================================
- * 3. DATA MODEL
+ * 2. DATA MODEL
  *
  * TODO: 로컬 프로젝트에서 그대로 이식한 더미 UI 상태입니다. 실제로는
  * MainViewModel의 MainUiState(isGoalSet/todayUsage/isLoading)와 합쳐져야 하며,
@@ -252,15 +202,12 @@ fun SectionTitle(title: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Canvas(modifier = Modifier.size(width = 8.dp, height = 10.dp)) {
-            val triangle = Path().apply {
-                moveTo(0f, 0f)
-                lineTo(size.width, size.height / 2f)
-                lineTo(0f, size.height)
-                close()
-            }
-            drawPath(path = triangle, color = textPrimary)
-        }
+        Icon(
+            painter = painterResource(R.drawable.ic_section_indicator),
+            contentDescription = null,
+            tint = textPrimary,
+            modifier = Modifier.size(width = 8.dp, height = 10.dp),
+        )
         Text(
             text = title,
             style = SectionTitleStyle,
@@ -490,12 +437,11 @@ private fun CautionAppItem(app: MainCautionAppItem) {
                 .background(PhoneShimTheme.colors.surfaceCream),
             contentAlignment = Alignment.Center
         ) {
-            VectorPath(
-                pathData = PATH_KAKAO,
-                viewportWidth = 16f,
-                viewportHeight = 15f,
-                color = KakaoYellow,          // 카카오 말풍선은 KakaoYellow
-                modifier = Modifier.size(width = 16.dp, height = 15.dp)
+            Icon(
+                painter = painterResource(R.drawable.kakao_logo),
+                contentDescription = null,
+                tint = KakaoYellow,
+                modifier = Modifier.size(width = 16.dp, height = 15.dp),
             )
         }
 
@@ -581,12 +527,11 @@ private fun TodoCard(todo: MainTodoItem) {
         horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // 좌측 드래그 핸들 (mingcute menu line, 20x20)
-        VectorPath(
-            pathData = PATH_MENU_LINE,
-            viewportWidth = 20f,
-            viewportHeight = 20f,
-            color = PhoneShimTheme.colors.brandStrong,
-            modifier = Modifier.size(20.dp)
+        Icon(
+            painter = painterResource(R.drawable.ic_reminder_drag_handle),
+            contentDescription = null,
+            tint = PhoneShimTheme.colors.brandStrong,
+            modifier = Modifier.size(20.dp),
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

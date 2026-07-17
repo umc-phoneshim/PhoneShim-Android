@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.common
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,18 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ripple
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import com.phoneshim.android.R
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 
@@ -52,18 +52,12 @@ fun Checkbox(
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {
-            Canvas(modifier = Modifier.size(width = 14.dp, height = 10.dp)) {
-                val path = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(size.width * 0.08f, size.height * 0.48f)
-                    lineTo(size.width * 0.38f, size.height * 0.82f)
-                    lineTo(size.width * 0.92f, size.height * 0.16f)
-                }
-                drawPath(
-                    path = path,
-                    color = PhoneShimPalette.White,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
+            Icon(
+                painter = painterResource(R.drawable.ic_check),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(width = 14.dp, height = 10.dp),
+            )
         }
     }
 }
