@@ -1,13 +1,16 @@
 package com.phoneshim.android.navigation
 
+// 네비게이션에서 사용하는 화면별 경로(route) 상수 모음
 object Routes {
-    // 01~03. auth
+    // 01~02. auth
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val SIGN_UP = "sign_up"
 
     // 04. setgoal
+    const val SET_GOAL_GRAPH = "set_goal_graph"
     const val SET_GOAL_START = "set_goal_start"
+    const val GENDER_AGE_SELECT = "gender_age_select"
     const val APP_SELECT = "app_select"
     const val USAGE_TIME_SET = "usage_time_set"
     const val ACCESS_GOAL_SET = "access_goal_set"
@@ -30,5 +33,6 @@ object Routes {
     const val MY_PAGE = "my_page"
     const val MY_SIDE_MENU = "my_side_menu"
 
+    // entryId를 채워 넣은 사용 이유 입력 화면 경로 생성
     fun usageReasonInput(entryId: String) = "usage_reason_input/$entryId"
 }
