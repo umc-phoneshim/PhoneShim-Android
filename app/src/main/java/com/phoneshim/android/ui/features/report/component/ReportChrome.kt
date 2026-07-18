@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
+import com.phoneshim.android.ui.common.DateNavigator
 
 /**
  * "07. 데일리 리포트" 화면군(ReportSummaryScreen / TimetableScreen)이 공유하는
@@ -33,35 +34,14 @@ fun ReportDateNavigator(
     onNextDate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    DateNavigator(
+        label = dateLabel,
+        onPrevious = onPrevDate,
+        onNext = onNextDate,
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = PhoneShimDimens.spacing16),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "‹",
-            style = PhoneShimType.EngH2,
-            color = PhoneShimTheme.colors.textTertiary,
-            modifier = Modifier
-                .clickable(onClick = onPrevDate)
-                .padding(horizontal = PhoneShimDimens.spacing16),
-        )
-        Text(
-            text = dateLabel,
-            style = PhoneShimType.EngH2,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
-        Text(
-            text = "›",
-            style = PhoneShimType.EngH2,
-            color = PhoneShimTheme.colors.textTertiary,
-            modifier = Modifier
-                .clickable(onClick = onNextDate)
-                .padding(horizontal = PhoneShimDimens.spacing16),
-        )
-    }
+    )
 }
 
 enum class ReportTab(val label: String) {

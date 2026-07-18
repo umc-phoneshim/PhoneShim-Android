@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -61,12 +62,10 @@ fun ReportCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(PhoneShimTheme.colors.surface, RoundedCornerShape(16.dp))
-            .border(1.dp, PhoneShimTheme.colors.divider, RoundedCornerShape(16.dp))
-            .padding(PhoneShimDimens.spacing16),
+    SectionCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        borderColor = PhoneShimTheme.colors.divider,
         content = content,
     )
 }

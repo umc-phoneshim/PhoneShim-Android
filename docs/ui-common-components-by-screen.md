@@ -31,6 +31,39 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | `Toggle` | checked, enabled | `Toggle` | 목표 제한 설정에 재사용. 디자인의 on 색상과 현재 `error` 색상 일치 여부 확인 필요 |
 | `PhoneShimIcon` | `PhoneShimIconType`, description, tint | `Goal`, `My`, `Main`, `목표 입력` 등 일부 | 제공 enum에 해당하는 아이콘은 재사용. 편집·더보기·추가 등은 enum 확장 필요 |
 | `LoadingIndicator` | modifier | 직접 대응 없음 | 로딩 상태가 명시되지 않은 Prototype 화면에는 매핑 없음. 비동기 화면의 제품 로딩 정책 확정 후 사용 |
+| `SelectableChip`, `SelectionField`, `SelectionDropdown` | selected/enabled, outlined/filled variant, options, 선택 callback | `Context box`, 연령 선택 팝업 | 04-1과 09의 성별·연령 선택에 공통 사용 |
+| `TodoRow` | title, timeRange, plain/card variant, leading/trailing slot | `Todo List` | 05 메인과 06 리마인더에서 공통 사용 |
+| `AppInfoRow` | appName, icon/supporting/trailing slot | 앱 정보·목표 행 | 04 앱 선택·목표 설정과 09 설정에서 feature wrapper의 기반으로 사용 |
+| `DurationDisplay` | totalMinutes, default/compact variant, label slot | 시간/분 표시 | 04 목표 설정과 09 설정에서 공통 사용 |
+| `DateNavigator`, `CalendarGrid`, `CalendarDayCell` | 표시 월, 오늘·선택 날짜, enabled, 이동·선택 callback | `Local Calendar grid`, `Date`, `Side Button` | 06 달력과 07 리포트 날짜 이동 primitive로 공통 사용 |
+| `SectionCard`, `SectionHeader` | surface/border/shape/padding, title 및 content slot | 공통 카드·섹션 제목 | 04 목표 설정, 05 메인, 07 리포트 카드에 공통 사용 |
+| `PhoneShimDialog`, `ConfirmationDialog` | width/shape/padding/dismiss 정책, content slot, destructive action | 권한·입력·탈퇴 팝업 | 03, 04, 08, 09의 팝업 컨테이너와 확인 동작에 공통 사용 |
+| `TextInputDialog`, `PermissionNoticeItem` | 입력 상태·저장 callback, 권한 제목·설명 | 목표 작성, 권한 안내 | 04-4/09 목표 작성과 auth/setgoal 권한 안내 중복 제거 |
+| `BottomMessage` | `Info/Warning/Error`, message | `Bottom Popup` | 상태 노출 primitive 구현 완료. 현재 Toast 기반 화면은 상태 소유 정책 확정 후 교체 |
+
+## 공통화 최종 결정
+
+화면별 표의 **신규 후보** 가운데 아래 분류를 최종 기준으로 사용한다. `ui/common`에는 feature ViewModel이나 UI 모델을 받지 않는 primitive만 두고, feature 의미가 필요한 컴포넌트는 공통 primitive를 조합하는 wrapper로 유지한다.
+
+| 최종 분류 | 컴포넌트 | 재사용 근거 및 구현 원칙 |
+| --- | --- | --- |
+| **ui/common 공통화** | `CalendarGrid`, `CalendarDayCell`, `DateNavigator` | 06 리마인더와 07 리포트. 날짜 계산·선택 callback만 받고 report/reminder 상태를 참조하지 않는다. |
+| **ui/common 공통화** | `TodoRow` | 05 오늘 할 일과 06 할 일 목록. 수정·드래그·완료는 slot으로 조합한다. |
+| **ui/common 공통화** | `SelectableChip`, `SelectionField`, `SelectionDropdown` | 04-1과 09 사용자 정보 선택. selected/enabled 및 filled/outlined 상태를 지원한다. |
+| **ui/common 공통화** | `DurationDisplay` | 04-3~04-6과 09 목표 시간. 분 단위 입력을 일관된 시간·분 문자열로 표현한다. |
+| **ui/common 공통화** | `AppInfoRow` | 04 앱 선택·앱 목표와 09 앱 목표. `AppGoalRow`, `SelectableAppRow`는 feature wrapper로 둔다. |
+| **ui/common 공통화** | `SectionCard`, `SectionHeader` | 04 설정 카드, 05 섹션 제목, 07 리포트 카드. 콘텐츠와 의미는 slot으로 분리한다. |
+| **ui/common 공통화** | `PhoneShimDialog`, `ConfirmationDialog` | 03 권한, 04 입력, 08 탈퇴, 09 편집. dismiss 정책과 action은 호출 화면이 결정한다. |
+| **ui/common 공통화** | `TextInputDialog`, `PermissionNoticeItem` | 04-4/09 목표 작성과 auth/setgoal 권한 안내의 동일 구조를 통합한다. |
+| **ui/common 공통화** | `BottomMessage` | 04-1~04-4의 안내 UI. 노출 상태와 시간은 화면/ViewModel이 소유한다. |
+| **feature 내부 공통화** | `GoalSetupStepIndicator`, `SetGoalBottomButtons` | 목표 설정 wizard에서만 반복되므로 setgoal/component에 유지한다. |
+| **feature 내부 공통화** | `TodoEditorDialog` | 리마인더 생성·수정 정책과 상태에 결합되어 reminder/component에 유지한다. |
+| **feature 내부 공통화** | `ReportTabRow`, `TimetableCell`, `SuggestionCard` 및 차트 | report 화면군에서만 재사용하며 report/component에 유지한다. |
+| **feature 내부 공통화** | `GoalReachedPanel`, `AllowedAppShortcut` | 제한 상태와 허용 앱 정책에 결합되어 appblocking/component에 유지한다. |
+| **화면 전용** | `GoalProgressCard` | 메인의 진행 데이터와 표현에 결합되므로 main 내부에 유지한다. |
+| **기존 Material 사용** | `TextAction`, `PopupMenu` | 각각 `TextButton`, `DropdownMenu`로 표현하고 별도 wrapper를 만들지 않는다. |
+
+`BottomMessage`는 공통 primitive와 Preview까지 제공하지만 현재 setgoal 검증이 Android `Toast`로 직접 처리된다. 화면 상태와 노출 시간을 변경하지 않는 이번 공통화 범위에서는 Toast를 강제로 교체하지 않으며, validation message가 UI state로 승격될 때 연결한다.
 
 ## 01. 앱 클릭 직후
 

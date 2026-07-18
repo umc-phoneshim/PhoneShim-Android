@@ -33,6 +33,8 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
+import com.phoneshim.android.ui.common.DurationDisplay
+import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -158,13 +160,8 @@ fun SetGoalCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(PhoneShimTheme.colors.surface)
-            .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
-            .padding(PhoneShimDimens.spacing16),
+    SectionCard(
+        modifier = modifier.fillMaxWidth(),
         content = content,
     )
 }
@@ -265,34 +262,7 @@ fun TotalTimeCard(
             style = PhoneShimType.KorCaption,
             color = PhoneShimTheme.colors.brandStrong,
         )
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
-        ) {
-            Text(
-                text = "${totalMinutes / 60}",
-                style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                fontWeight = FontWeight.Bold,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "시간",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "${totalMinutes % 60}",
-                style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                fontWeight = FontWeight.Bold,
-                color = PhoneShimTheme.colors.textPrimary,
-                modifier = Modifier.padding(start = PhoneShimDimens.spacing8),
-            )
-            Text(
-                text = "분",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
+          DurationDisplay(totalMinutes = totalMinutes)
     }
 }
 

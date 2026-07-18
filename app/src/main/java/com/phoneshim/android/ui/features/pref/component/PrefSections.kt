@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.SelectableChip
+import com.phoneshim.android.ui.common.AppInfoRow
+import com.phoneshim.android.ui.common.DurationDisplay
+import com.phoneshim.android.ui.common.DurationDisplayVariant
+import com.phoneshim.android.ui.common.SelectableChipVariant
+import com.phoneshim.android.ui.common.SelectionDropdown
 import com.phoneshim.android.ui.features.pref.viewmodel.AgeGroup
 import com.phoneshim.android.ui.features.pref.viewmodel.AppGoal
 import com.phoneshim.android.ui.features.pref.viewmodel.Gender
@@ -101,9 +104,11 @@ fun PrefUserInfoSection(
             horizontalArrangement = Arrangement.spacedBy(PrefSectionDefaults.selectorSpacing),
         ) {
             Box {
-                SelectionChip(
+                SelectableChip(
                     text = genderLabel(gender),
-                    width = PrefSectionDefaults.genderChipWidth,
+                    selected = true,
+                    variant = SelectableChipVariant.Filled,
+                    modifier = Modifier.width(PrefSectionDefaults.genderChipWidth),
                     onClick = onGenderClick,
                 )
                 SingleSelectionMenu(
@@ -116,9 +121,11 @@ fun PrefUserInfoSection(
                 )
             }
             Box {
-                SelectionChip(
+                SelectableChip(
                     text = ageGroupLabel(ageGroup),
-                    width = PrefSectionDefaults.ageChipWidth,
+                    selected = true,
+                    variant = SelectableChipVariant.Filled,
+                    modifier = Modifier.width(PrefSectionDefaults.ageChipWidth),
                     onClick = onAgeGroupClick,
                 )
                 SingleSelectionMenu(
@@ -135,60 +142,25 @@ fun PrefUserInfoSection(
 }
 
 @Composable
-private fun SelectionChip(
-    text: String,
-    width: androidx.compose.ui.unit.Dp,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .height(PrefSectionDefaults.selectorChipHeight)
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(PhoneShimTheme.colors.brand)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = PhoneShimType.KorLabel,
-            color = PhoneShimTheme.colors.onBrand,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
 private fun <T> SingleSelectionMenu(
     expanded: Boolean,
     options: List<T>,
     selected: T,
-    label: @Composable (T) -> String,
+    label: (T) -> String,
     onSelected: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    DropdownMenu(
+    SelectionDropdown(
         expanded = expanded,
-        onDismissRequest = onDismiss,
-        modifier = Modifier.background(PhoneShimTheme.colors.surface),
-    ) {
-        options.forEach { option ->
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = label(option),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PhoneShimTheme.colors.textSecondary,
-                    )
-                },
-                trailingIcon = {
-                    SquareSelectionIndicator(selected = option == selected)
-                },
-                onClick = { onSelected(option) },
-                modifier = Modifier.height(36.dp),
-            )
-        }
-    }
+        options = options,
+        selected = selected,
+        optionLabel = label,
+        onSelected = onSelected,
+        onDismiss = onDismiss,
+        optionTrailingContent = { _, isSelected ->
+            SquareSelectionIndicator(selected = isSelected)
+        },
+    )
 }
 
 @Composable
@@ -288,10 +260,9 @@ private fun TotalGoalCard(
                     color = PhoneShimTheme.colors.brand,
                 )
                 Spacer(Modifier.height(PhoneShimDimens.spacing8))
-                Text(
-                    text = "${totalMinutes / 60}시간  ${totalMinutes % 60}분",
-                    style = PhoneShimType.EngH1,
-                    color = PhoneShimTheme.colors.textPrimary,
+                DurationDisplay(
+                    totalMinutes = totalMinutes,
+                    variant = DurationDisplayVariant.Compact,
                 )
             }
         }
@@ -323,27 +294,16 @@ private fun AppGoalItem(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        AppInfoRow(
+            appName = appGoal.appName,
+            appNameStyle = MaterialTheme.typography.bodySmall,
+            appNameColor = PhoneShimTheme.colors.textSecondary,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
                 .clickable(onClick = onTimeClick)
                 .padding(start = PhoneShimDimens.spacing12),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(PrefSectionDefaults.appIconSize)
-                    .clip(MaterialTheme.shapes.extraSmall)
-                    .background(PhoneShimTheme.colors.divider),
-            )
-            Spacer(Modifier.width(PhoneShimDimens.spacing12))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = appGoal.appName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PhoneShimTheme.colors.textSecondary,
-                )
+            supportingContent = {
                 if (isError) {
                     Text(
                         text = "목표 시간이 10분 미만입니다.",
@@ -351,20 +311,22 @@ private fun AppGoalItem(
                         color = PhoneShimTheme.colors.error,
                     )
                 }
-            }
-            Text(
-                text = "%02d 시간  %02d 분".format(
-                    appGoal.goalMinutes / 60,
-                    appGoal.goalMinutes % 60,
-                ),
-                style = PhoneShimType.EngLabel,
-                color = if (appGoal.isLimitEnabled) {
-                    PhoneShimTheme.colors.textPrimary
-                } else {
-                    PhoneShimTheme.colors.textTertiary
-                },
-            )
-        }
+            },
+            trailingContent = {
+                Text(
+                    text = "%02d 시간  %02d 분".format(
+                        appGoal.goalMinutes / 60,
+                        appGoal.goalMinutes % 60,
+                    ),
+                    style = PhoneShimType.EngLabel,
+                    color = if (appGoal.isLimitEnabled) {
+                        PhoneShimTheme.colors.textPrimary
+                    } else {
+                        PhoneShimTheme.colors.textTertiary
+                    },
+                )
+            },
+        )
         IconButton(
             onClick = onToggleLimit,
             modifier = Modifier.size(PrefSectionDefaults.actionTouchSize),
@@ -403,13 +365,11 @@ private fun AppGoalItem(
     }
 }
 
-@Composable
 fun genderLabel(gender: Gender): String = when (gender) {
     Gender.MALE -> "남"
     Gender.FEMALE -> "여"
 }
 
-@Composable
 fun ageGroupLabel(ageGroup: AgeGroup): String = when (ageGroup) {
     AgeGroup.TEENS -> "10대"
     AgeGroup.TWENTIES -> "20대"

@@ -41,6 +41,9 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.TodoRow
+import com.phoneshim.android.ui.common.TodoRowVariant
+import com.phoneshim.android.ui.common.SectionHeader
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import androidx.compose.material3.Text
@@ -196,24 +199,7 @@ fun MainScreen(
  * ============================================================ */
 @Composable
 fun SectionTitle(title: String) {
-    val textPrimary = PhoneShimTheme.colors.textPrimary
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_section_indicator),
-            contentDescription = null,
-            tint = textPrimary,
-            modifier = Modifier.size(width = 8.dp, height = 10.dp),
-        )
-        Text(
-            text = title,
-            style = SectionTitleStyle,
-            color = textPrimary
-        )
-    }
+    SectionHeader(title = title, titleStyle = SectionTitleStyle)
 }
 
 /* ============================================================
@@ -516,35 +502,18 @@ private fun TodoSection(todos: List<MainTodoItem>) {
 
 @Composable
 private fun TodoCard(todo: MainTodoItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(PhoneShimTheme.colors.surface)
-            .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        // 좌측 드래그 핸들 (mingcute menu line, 20x20)
-        Icon(
-            painter = painterResource(R.drawable.ic_reminder_drag_handle),
-            contentDescription = null,
-            tint = PhoneShimTheme.colors.brandStrong,
-            modifier = Modifier.size(20.dp),
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = todo.title,
-                style = PhoneShimType.KorBodyM,
-                color = PhoneShimTheme.colors.textPrimary
+    TodoRow(
+        title = todo.title,
+        timeRange = todo.timeRange,
+        modifier = Modifier.fillMaxWidth(),
+        variant = TodoRowVariant.Card,
+        leadingContent = {
+            Icon(
+                painter = painterResource(R.drawable.ic_reminder_drag_handle),
+                contentDescription = null,
+                tint = PhoneShimTheme.colors.brandStrong,
+                modifier = Modifier.size(20.dp),
             )
-            Text(
-                text = todo.timeRange,
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.textTertiary
-            )
-        }
-    }
+        },
+    )
 }

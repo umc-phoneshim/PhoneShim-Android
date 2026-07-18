@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
+import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
@@ -129,7 +130,8 @@ private fun AppSelectContent(
 
                 SetGoalCard {
                     apps.forEachIndexed { index, app ->
-                        Row(
+                        AppInfoRow(
+                            appName = app,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
@@ -146,12 +148,10 @@ private fun AppSelectContent(
                                         onToggleApp(app)
                                     }
                                 },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            AppLabel(name = app)
-                            Spacer(modifier = Modifier.weight(1f))
-                            AppCheckCircle(checked = selectedApps.contains(app))
-                        }
+                            trailingContent = {
+                                AppCheckCircle(checked = selectedApps.contains(app))
+                            },
+                        )
                         if (index != apps.lastIndex) {
                             SetGoalCardDivider()
                         }

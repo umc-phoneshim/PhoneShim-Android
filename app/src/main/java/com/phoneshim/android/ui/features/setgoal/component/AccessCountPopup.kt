@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import com.phoneshim.android.ui.common.PhoneShimDialog
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -48,15 +48,11 @@ fun AccessCountPopup(
         mutableStateOf(if (initialCount > 0) initialCount.toString() else "")
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(PhoneShimTheme.colors.surface)
-                .padding(PhoneShimDimens.spacing16),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
-        ) {
+    PhoneShimDialog(
+        onDismissRequest = onDismiss,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(PhoneShimDimens.spacing16),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
+    ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -136,7 +132,6 @@ fun AccessCountPopup(
                 shape = MaterialTheme.shapes.small,
                 labelStyle = PhoneShimType.KorBodyM,
             )
-        }
     }
 }
 
