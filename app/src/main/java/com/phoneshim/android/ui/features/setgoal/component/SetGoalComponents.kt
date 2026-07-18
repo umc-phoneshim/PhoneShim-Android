@@ -33,7 +33,6 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
-import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -238,30 +237,6 @@ fun SetGoalBottomButtons(
             fullWidth = false,
             labelStyle = PhoneShimType.KorCaption,
         )
-    }
-}
-
-// 총 목표 시간 표시 카드 (연녹 배경 + 큰 시간 표기)
-@Composable
-fun TotalTimeCard(
-    totalMinutes: Int,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(PhoneShimTheme.colors.brandSubtle)
-            .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
-            .padding(PhoneShimDimens.spacing16),
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-    ) {
-        Text(
-            text = "총 목표 시간",
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.brandStrong,
-        )
-          DurationDisplay(totalMinutes = totalMinutes)
     }
 }
 

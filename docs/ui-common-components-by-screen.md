@@ -34,7 +34,8 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | `SelectableChip`, `SelectionField`, `SelectionDropdown` | selected/enabled, outlined/filled variant, options, 선택 callback | `Context box`, 연령 선택 팝업 | 04-1과 09의 성별·연령 선택에 공통 사용 |
 | `TodoRow` | title, timeRange, plain/card variant, leading/trailing slot | `Todo List` | 05 메인과 06 리마인더에서 공통 사용 |
 | `AppInfoRow` | appName, icon/supporting/trailing slot | 앱 정보·목표 행 | 04 앱 선택·목표 설정과 09 설정에서 feature wrapper의 기반으로 사용 |
-| `DurationDisplay` | totalMinutes, default/compact variant, label slot | 시간/분 표시 | 04 목표 설정과 09 설정에서 공통 사용 |
+| `DurationDisplay` | totalMinutes | 숫자·단위를 분리한 시간/분 표시 | 04 목표 설정과 09 설정에서 공통 사용 |
+| `GoalTimeCard` | label, totalMinutes, isError, optional onClick | 목표 시간 요약 카드 | 04 목표 설정과 09 설정에서 동일한 카드 구조와 시간 표시를 사용 |
 | `DateNavigator`, `CalendarGrid`, `CalendarDayCell` | 표시 월, 오늘·선택 날짜, enabled, 이동·선택 callback | `Local Calendar grid`, `Date`, `Side Button` | 06 달력과 07 리포트 날짜 이동 primitive로 공통 사용 |
 | `SectionCard`, `SectionHeader` | surface/border/shape/padding, title 및 content slot | 공통 카드·섹션 제목 | 04 목표 설정, 05 메인, 07 리포트 카드에 공통 사용 |
 | `PhoneShimDialog`, `ConfirmationDialog` | width/shape/padding/dismiss 정책, content slot, destructive action | 권한·입력·탈퇴 팝업 | 03, 04, 08, 09의 팝업 컨테이너와 확인 동작에 공통 사용 |
@@ -51,6 +52,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | **ui/common 공통화** | `TodoRow` | 05 오늘 할 일과 06 할 일 목록. 수정·드래그·완료는 slot으로 조합한다. |
 | **ui/common 공통화** | `SelectableChip`, `SelectionField`, `SelectionDropdown` | 04-1과 09 사용자 정보 선택. selected/enabled 및 filled/outlined 상태를 지원한다. |
 | **ui/common 공통화** | `DurationDisplay` | 04-3~04-6과 09 목표 시간. 분 단위 입력을 일관된 시간·분 문자열로 표현한다. |
+| **ui/common 공통화** | `GoalTimeCard` | 04-4/04-5와 09 전체 목표 시간. 라벨·시간·클릭 및 오류 상태를 공통 카드로 표현한다. |
 | **ui/common 공통화** | `AppInfoRow` | 04 앱 선택·앱 목표와 09 앱 목표. `AppGoalRow`, `SelectableAppRow`는 feature wrapper로 둔다. |
 | **ui/common 공통화** | `SectionCard`, `SectionHeader` | 04 설정 카드, 05 섹션 제목, 07 리포트 카드. 콘텐츠와 의미는 slot으로 분리한다. |
 | **ui/common 공통화** | `PhoneShimDialog`, `ConfirmationDialog` | 03 권한, 04 입력, 08 탈퇴, 09 편집. dismiss 정책과 action은 호출 화면이 결정한다. |
@@ -140,7 +142,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 화면 영역/UI 요소 | 대응 Compose | 판정 | 확장 또는 신규 후보 | 구현 참고 |
 | --- | --- | --- | --- | --- |
 | 시간/분 입력 (`Text Field`) | `TextField` | **기존 확장** | 숫자 keyboard, 단위 suffix, 고정 폭 variant | 값 검증은 화면 state에 두고 `errorMessage`로 표시한다. |
-| 시간 요약 표시 | 없음 | **신규 후보** | `DurationDisplay` | 04-3, 04-4, 04-5, 05, 09에서 시간/분 포맷이 반복된다. |
+| 시간 요약 표시 | `DurationDisplay`, `GoalTimeCard` | **기존 재사용** | 없음 | 시간/분 표시는 `DurationDisplay`, 카드형 전체 목표 요약은 `GoalTimeCard`를 사용한다. |
 | 제한 알림 설정 (`Toggle`) | `Toggle` | **기존 재사용** | 색상 token 점검 | label과 설명은 화면에서 조합한다. |
 | 제한 알림 확인 팝업 | 없음 | **신규 후보** | `PhoneShimDialog` | 제목·본문·버튼 슬롯을 사용한다. |
 | 누락 안내 | 없음 | **신규 후보** | `BottomMessage` | validation type을 error/warning/info로 구분할 수 있게 한다. |
@@ -165,7 +167,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 화면 영역/UI 요소 | 대응 Compose | 판정 | 확장 또는 신규 후보 | 구현 참고 |
 | --- | --- | --- | --- | --- |
 | 설정 요약 카드 | 없음 | **신규 후보** | `SectionCard`, `SectionHeader` | 05 메인과 09 설정 카드에도 동일 surface/title 구조를 적용한다. |
-| 전체 목표 시간 | 없음 | **신규 후보** | `DurationDisplay` | 입력 UI가 아닌 읽기 전용 variant를 사용한다. |
+| 전체 목표 시간 | `GoalTimeCard`, `DurationDisplay` | **기존 재사용** | 없음 | `GoalTimeCard`에 화면별 라벨과 전체 목표 분을 전달한다. |
 | 앱별 목표 목록 | 없음 | **신규 후보** | `AppGoalRow` | 편집 action이 없는 read-only variant로 사용한다. |
 | 이전/완료 CTA | `SecondaryButton`, `PrimaryButton` | **기존 확장** | `Medium` size | 버튼 배치는 화면 내부 책임이다. |
 
@@ -241,7 +243,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 뒤로가기 상단 바·하단 내비게이션 | `TopAppBar`, `BottomBar` | **기존 재사용** | 없음 | Figma 구조대로 두 내비게이션의 동시 노출 여부를 제품 흐름에서 확인한다. |
 | 사용자 정보/목표 설정 카드 | `PhoneShimIcon(Target/Person)` 일부 | **신규 후보** | `SectionCard`, `SectionHeader` | 04-5와 05 메인 카드에 재사용한다. |
 | 성별/연령 chip 및 팝업 | `Checkbox` 일부 | **신규 후보 + 기존 확장** | `SelectableChip`, `SelectionField`, `SelectionDropdown`, mini size | 04-1과 동일한 선택 컴포넌트를 사용한다. |
-| 전체 목표 시간 | 없음 | **신규 후보** | `DurationDisplay` | 편집 action을 trailing slot으로 제공한다. |
+| 전체 목표 시간 | `GoalTimeCard`, `DurationDisplay` | **기존 재사용** | 없음 | 클릭 가능한 `GoalTimeCard`를 사용하고 검증 오류 상태는 `isError`로 전달한다. |
 | 앱별 목표 목록 | `PhoneShimIcon` 일부 | **신규 후보** | `AppGoalRow` | 04-4/04-5/05와 같은 모델을 사용한다. |
 | 목표 입력/접근 제한 액션 | `PhoneShimIcon` 일부 | **기존 확장** | icon enum 및 icon action wrapper | 아이콘만으로 상태가 불명확하지 않도록 접근성 라벨을 제공한다. |
 | 앱 사용 목표 작성 팝업 | `TextField`, `PrimaryButton` | **신규 후보** | `TextInputDialog` | 04-4 사용자 작성 팝업과 같은 컴포넌트를 사용한다. |
@@ -285,6 +287,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | P0 | `GoalSetupStepIndicator` | 04-1, 04-2, 04-3, 04-4, 04-5 | 현재 단계와 전체 단계 렌더링 |
 | P0 | `AppGoalRow` | 04-4, 04-5, 04-6, 05, 09 | 앱 정보, 목표 시간, 상태 및 trailing action |
 | P0 | `DurationDisplay` | 04-3, 04-4, 04-5, 04-6, 05, 09 | 시간/분 포맷 및 읽기 전용 표시 |
+| P0 | `GoalTimeCard` | 04-4, 04-5, 09 | 전체 목표 시간 카드, 화면별 라벨, 클릭 및 오류 상태 |
 | P0 | `PhoneShimDialog` | 03, 04-3/04-4, 08, 10 | 공통 surface, padding, 제목/본문/action 슬롯 |
 | P0 | `BottomMessage` | 04-1, 04-2, 04-3, 04-4 | 하단 validation/info 메시지 |
 | P1 | `SectionCard` / `SectionHeader` | 04-5, 05, 07, 09 | 카드 surface와 아이콘·제목 헤더 |

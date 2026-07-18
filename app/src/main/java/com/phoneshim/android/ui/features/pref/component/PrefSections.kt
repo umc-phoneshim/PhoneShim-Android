@@ -29,10 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.common.SelectableChip
 import com.phoneshim.android.ui.common.AppInfoRow
-import com.phoneshim.android.ui.common.DurationDisplay
-import com.phoneshim.android.ui.common.DurationDisplayVariant
+import com.phoneshim.android.ui.common.GoalTimeCard
+import com.phoneshim.android.ui.common.SelectableChip
 import com.phoneshim.android.ui.common.SelectableChipVariant
 import com.phoneshim.android.ui.common.SelectionDropdown
 import com.phoneshim.android.ui.features.pref.viewmodel.AgeGroup
@@ -238,34 +237,16 @@ private fun TotalGoalCard(
     isError: Boolean,
     onClick: () -> Unit,
 ) {
-    val borderColor = if (isError) PhoneShimTheme.colors.error else PhoneShimTheme.colors.brand
     Column {
-        Card(
+        GoalTimeCard(
+            label = "전체 폰 목표 시간",
+            totalMinutes = totalMinutes,
+            isError = isError,
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(PrefSectionDefaults.totalCardHeight),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = PhoneShimTheme.colors.brandSubtle),
-            border = BorderStroke(1.dp, borderColor),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(PhoneShimDimens.spacing16),
-            ) {
-                Text(
-                    text = "전체 폰 목표 시간",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PhoneShimTheme.colors.brand,
-                )
-                Spacer(Modifier.height(PhoneShimDimens.spacing8))
-                DurationDisplay(
-                    totalMinutes = totalMinutes,
-                    variant = DurationDisplayVariant.Compact,
-                )
-            }
-        }
+        )
         if (isError) {
             Text(
                 text = "목표 사용 시간은 10분 이상 입력해 주세요.",
