@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.common.Checkbox
 import com.phoneshim.android.ui.common.PrimaryButton
-import com.phoneshim.android.ui.common.PrimaryButtonSize
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.features.appblocking.component.BlockingOverlay
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -74,7 +74,7 @@ fun UsageReasonSelectionScreen(
                         .fillMaxWidth(.43f)
                         .padding(top = PhoneShimDimens.spacing12),
                     enabled = selectedReason != null,
-                    size = PrimaryButtonSize.Small,
+                    size = PhoneShimButtonSize.Small,
                 )
             }
         }

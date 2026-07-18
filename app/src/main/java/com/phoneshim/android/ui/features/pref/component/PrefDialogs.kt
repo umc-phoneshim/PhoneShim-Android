@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditorState
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditTarget
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeInputError
@@ -44,7 +44,6 @@ private object PrefDialogDefaults {
     val contentPadding = 24.dp
     val descriptionInputHeight = 56.dp
     val saveButtonWidth = 120.dp
-    val saveButtonHeight = 36.dp
 }
 
 @Composable
@@ -116,19 +115,14 @@ fun GoalTimeDialog(
                         color = PhoneShimTheme.colors.textSecondary,
                     )
                 }
-                Button(
+                PrimaryButton(
+                    text = "확인",
                     onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PhoneShimTheme.colors.brand,
-                        contentColor = PhoneShimTheme.colors.onBrand,
-                    ),
+                    size = PhoneShimButtonSize.Small,
+                    fullWidth = false,
                     shape = MaterialTheme.shapes.small,
-                ) {
-                    Text(
-                        text = "확인",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                    labelStyle = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
@@ -225,23 +219,16 @@ fun AppGoalDescriptionDialog(
             )
             Spacer(Modifier.height(PhoneShimDimens.spacing24))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                Button(
+                PrimaryButton(
+                    text = "저장",
                     onClick = onSave,
                     modifier = Modifier
-                        .width(PrefDialogDefaults.saveButtonWidth)
-                        .height(PrefDialogDefaults.saveButtonHeight),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PhoneShimTheme.colors.brand,
-                        contentColor = PhoneShimTheme.colors.onBrand,
-                    ),
+                        .width(PrefDialogDefaults.saveButtonWidth),
+                    size = PhoneShimButtonSize.Small,
+                    fullWidth = false,
                     shape = MaterialTheme.shapes.small,
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                ) {
-                    Text(
-                        text = "저장",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+                )
             }
         }
     }

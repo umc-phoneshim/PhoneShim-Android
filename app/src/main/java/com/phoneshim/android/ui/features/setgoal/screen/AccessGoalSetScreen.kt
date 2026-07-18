@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
@@ -314,22 +316,17 @@ fun GoalWriteDialog(
                 },
             )
 
-            Box(
+            PrimaryButton(
+                text = "저장",
+                onClick = { onSave(text) },
                 modifier = Modifier
                     .align(Alignment.End)
                     .padding(top = PhoneShimDimens.spacing12)
-                    .size(width = 120.dp, height = 36.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(PhoneShimTheme.colors.brand)
-                    .clickable { onSave(text) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "저장",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.onBrand,
-                )
-            }
+                    .width(120.dp),
+                size = PhoneShimButtonSize.Small,
+                fullWidth = false,
+                shape = MaterialTheme.shapes.small,
+            )
         }
     }
 }

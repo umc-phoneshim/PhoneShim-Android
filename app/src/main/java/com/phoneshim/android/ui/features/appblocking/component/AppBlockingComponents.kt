@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PrimaryButton
-import com.phoneshim.android.ui.common.PrimaryButtonSize
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -87,7 +87,7 @@ fun BlockingDialog(
             modifier = Modifier.padding(top = PhoneShimDimens.spacing12),
             text = buttonText,
             onClick = onConfirm,
-            size = PrimaryButtonSize.Small,
+            size = PhoneShimButtonSize.Small,
         )
     }
 }

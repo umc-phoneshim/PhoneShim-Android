@@ -2,7 +2,6 @@ package com.phoneshim.android.ui.features.setgoal.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +26,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -216,42 +219,29 @@ fun SetGoalBottomButtons(
         horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
     ) {
         if (showBack) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(42.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(PhoneShimTheme.colors.surface)
-                    .border(1.dp, PhoneShimPalette.Primary400, MaterialTheme.shapes.medium)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "뒤로가기",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimPalette.Primary400,
-                )
-            }
+            SecondaryButton(
+                text = "뒤로가기",
+                onClick = onBack,
+                modifier = Modifier.weight(1f),
+                size = PhoneShimButtonSize.Medium,
+                fullWidth = false,
+                containerColor = PhoneShimTheme.colors.surface,
+                accentColor = PhoneShimPalette.Primary400,
+                pressedAccentColor = PhoneShimPalette.Primary500,
+                labelStyle = PhoneShimType.KorCaption,
+            )
         } else {
             Box(modifier = Modifier.weight(1f))
         }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(42.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(
-                    if (nextEnabled) PhoneShimTheme.colors.brand else PhoneShimPalette.Primary300,
-                )
-                .clickable(enabled = nextEnabled, onClick = onNext),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = nextText,
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.onBrand,
-            )
-        }
+        PrimaryButton(
+            text = nextText,
+            onClick = onNext,
+            modifier = Modifier.weight(1f),
+            enabled = nextEnabled,
+            size = PhoneShimButtonSize.Medium,
+            fullWidth = false,
+            labelStyle = PhoneShimType.KorCaption,
+        )
     }
 }
 
@@ -302,6 +292,21 @@ fun TotalTimeCard(
                 style = PhoneShimType.KorH3,
                 color = PhoneShimTheme.colors.textPrimary,
             )
+        }
+    }
+}
+
+@Preview(name = "목표 설정 하단 버튼", showBackground = true, widthDp = 360)
+@Composable
+private fun SetGoalBottomButtonsPreview() {
+    PhoneShimTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SetGoalBottomButtons(onBack = {}, onNext = {})
+            SetGoalBottomButtons(onBack = {}, onNext = {}, nextEnabled = false)
+            SetGoalBottomButtons(onBack = {}, onNext = {}, showBack = false)
         }
     }
 }

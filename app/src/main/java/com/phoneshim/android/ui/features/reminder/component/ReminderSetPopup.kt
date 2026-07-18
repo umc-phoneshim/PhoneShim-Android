@@ -1,7 +1,6 @@
 package com.phoneshim.android.ui.features.reminder.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -40,7 +42,6 @@ private val PopupAfterHeight = 285.dp
 private val PopupPadding = 16.dp
 private val PopupCornerRadius = 12.dp
 private val PopupItemSpacing = 16.dp
-private val PopupButtonHeight = 36.dp
 private val PopupHorizontalItemPadding = 16.dp
 private val PopupIconSize = 24.dp
 
@@ -186,19 +187,22 @@ private fun PopupSelectionRow(
 @Composable
 private fun PopupActions(isEditing: Boolean, onCancel: () -> Unit, onDelete: () -> Unit, onSave: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(
-            modifier = Modifier.width(76.dp).height(PopupButtonHeight)
-                .background(PhoneShimTheme.colors.background, RoundedCornerShape(8.dp))
-                .border(1.dp, PhoneShimTheme.colors.brand, RoundedCornerShape(8.dp))
-                .clickable(onClick = if (isEditing) onDelete else onCancel),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(if (isEditing) "삭제" else "취소", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.brand)
-        }
-        Box(
-            modifier = Modifier.weight(1f).height(PopupButtonHeight).background(PhoneShimTheme.colors.brand, RoundedCornerShape(8.dp)).clickable(onClick = onSave),
-            contentAlignment = Alignment.Center,
-        ) { Text("할 일 저장", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.onBrand) }
+        SecondaryButton(
+            text = if (isEditing) "삭제" else "취소",
+            onClick = if (isEditing) onDelete else onCancel,
+            modifier = Modifier.width(76.dp),
+            size = PhoneShimButtonSize.Small,
+            fullWidth = false,
+            shape = RoundedCornerShape(8.dp),
+        )
+        PrimaryButton(
+            text = "할 일 저장",
+            onClick = onSave,
+            modifier = Modifier.weight(1f),
+            size = PhoneShimButtonSize.Small,
+            fullWidth = false,
+            shape = RoundedCornerShape(8.dp),
+        )
     }
 }
 
