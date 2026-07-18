@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,6 +47,9 @@ import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.CalendarGrid
 import com.phoneshim.android.ui.common.DateNavigator
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.features.reminder.component.ReminderSetPopup
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderTaskUiModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiState
@@ -67,7 +71,6 @@ private val CalendarHeight = 337.dp
 private val CalendarDayCellSize = 42.dp
 private val TaskRowHeight = 56.dp
 private val MainSectionSpacing = 24.dp
-private val BottomNavigationSpacing = 55.dp
 private val TaskCardPadding = 12.dp
 private val TaskItemSpacing = 12.dp
 private val TaskItemHorizontalPadding = 12.dp
@@ -141,64 +144,74 @@ fun ReminderScreen(
     onSaveTask: () -> Unit = {},
     onDeleteTask: () -> Unit = {},
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = "REMINDER",
-                titleStyle = PhoneShimType.KorH3,
-                navigationIcon = {
-                    IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_topbar_goal),
-                            contentDescription = "목표 설정",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToMyPage, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_my),
-                            contentDescription = "마이페이지",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = ScreenHorizontalPadding,
-                top = 16.dp,
-                end = ScreenHorizontalPadding,
-                bottom = BottomNavigationSpacing,
-            ),
-            verticalArrangement = Arrangement.spacedBy(MainSectionSpacing),
-        ) {
-            item { ReminderDateHeader(state.todayDate) }
-            item {
-                ReminderCalendar(
-                    visibleMonth = state.visibleMonth,
-                    todayDate = state.todayDate,
-                    selectedDate = state.selectedDate,
-                    onDateSelected = onSelectDate,
-                    onPreviousMonth = onPreviousMonth,
-                    onNextMonth = onNextMonth,
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = "REMINDER",
+                    titleStyle = PhoneShimType.KorH3,
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(40.dp)) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_topbar_goal),
+                                contentDescription = "목표 설정",
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onNavigateToMyPage, modifier = Modifier.size(40.dp)) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_my),
+                                contentDescription = "마이페이지",
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    },
                 )
-            }
-            item {
-                ReminderTaskSection(
-                    tasks = state.selectedTasks,
-                    onAddTask = onAddTask,
-                    onEditTask = onEditTask,
-                )
+            },
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .navigationBarsPadding(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = ScreenHorizontalPadding,
+                    top = 16.dp,
+                    end = ScreenHorizontalPadding,
+                    bottom = BottomBarDefaults.ContentBottomPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(MainSectionSpacing),
+            ) {
+                item { ReminderDateHeader(state.todayDate) }
+                item {
+                    ReminderCalendar(
+                        visibleMonth = state.visibleMonth,
+                        todayDate = state.todayDate,
+                        selectedDate = state.selectedDate,
+                        onDateSelected = onSelectDate,
+                        onPreviousMonth = onPreviousMonth,
+                        onNextMonth = onNextMonth,
+                    )
+                }
+                item {
+                    ReminderTaskSection(
+                        tasks = state.selectedTasks,
+                        onAddTask = onAddTask,
+                        onEditTask = onEditTask,
+                    )
+                }
             }
         }
+        BottomBar(
+            selectedTab = BottomBarTab.REMINDER,
+            onTabSelected = {},
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
     if (state.isTaskPopupVisible) {
         ReminderSetPopup(

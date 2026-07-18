@@ -222,7 +222,6 @@ fun SetGoalBottomButtons(
                 modifier = Modifier.weight(1f),
                 size = PhoneShimButtonSize.Medium,
                 fullWidth = false,
-                containerColor = PhoneShimTheme.colors.surface,
                 accentColor = PhoneShimPalette.Primary400,
                 pressedAccentColor = PhoneShimPalette.Primary500,
                 labelStyle = PhoneShimType.KorCaption,

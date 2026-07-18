@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -40,6 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
@@ -156,6 +158,7 @@ fun MainScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -179,17 +182,14 @@ fun MainScreen(
                     TodoSection(todos = uiState.todayTodos)
                 }
 
-                // 플로팅 내비게이션 영역 확보 (bar 56 + bottom 24 + 여백 24)
-                Spacer(modifier = Modifier.height(104.dp))
+                Spacer(modifier = Modifier.height(BottomBarDefaults.ContentBottomPadding))
             }
         }
 
         BottomBar(
             selectedTab = BottomBarTab.MAIN,
             onTabSelected = {},
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }

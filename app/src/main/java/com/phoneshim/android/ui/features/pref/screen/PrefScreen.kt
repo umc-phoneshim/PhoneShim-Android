@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.features.pref.component.AppGoalDescriptionDialog
 import com.phoneshim.android.ui.features.pref.component.GoalTimeDialog
 import com.phoneshim.android.ui.features.pref.component.PrefGoalSection
@@ -71,23 +75,30 @@ fun PrefScreen(
     onAppGoalSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        topBar = { PrefTopBar(onBack = onBack) },
-    ) { innerPadding ->
-        PrefContent(
-            uiState = uiState,
-            contentPadding = innerPadding,
-            onGenderClick = onGenderClick,
-            onAgeGroupClick = onAgeGroupClick,
-            onGenderSelected = onGenderSelected,
-            onAgeGroupSelected = onAgeGroupSelected,
-            onSelectionDismissed = onSelectionDismissed,
-            onTotalGoalClick = onTotalGoalClick,
-            onEditAppTime = onEditAppTime,
-            onToggleLimit = onToggleLimit,
-            onEditAppGoal = onEditAppGoal,
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+            topBar = { PrefTopBar(onBack = onBack) },
+        ) { innerPadding ->
+            PrefContent(
+                uiState = uiState,
+                contentPadding = innerPadding,
+                onGenderClick = onGenderClick,
+                onAgeGroupClick = onAgeGroupClick,
+                onGenderSelected = onGenderSelected,
+                onAgeGroupSelected = onAgeGroupSelected,
+                onSelectionDismissed = onSelectionDismissed,
+                onTotalGoalClick = onTotalGoalClick,
+                onEditAppTime = onEditAppTime,
+                onToggleLimit = onToggleLimit,
+                onEditAppGoal = onEditAppGoal,
+            )
+        }
+        BottomBar(
+            selectedTab = BottomBarTab.MAIN,
+            onTabSelected = {},
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 
@@ -159,11 +170,13 @@ private fun PrefContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(
                 start = PhoneShimDimens.screenHorizontalPadding,
                 end = PhoneShimDimens.screenHorizontalPadding,
-                bottom = PrefScreenDefaults.contentBottomPadding,
+                bottom = PrefScreenDefaults.contentBottomPadding +
+                    BottomBarDefaults.ContentBottomPadding,
             ),
     ) {
         PrefUserInfoSection(

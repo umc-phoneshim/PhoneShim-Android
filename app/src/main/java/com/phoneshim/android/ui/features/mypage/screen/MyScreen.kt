@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageViewModel
@@ -75,19 +77,19 @@ private fun MyContent(
     // TODO: 실제로는 상위 네비게이션에서 "마지막으로 선택된 탭"을 전달받아야 합니다.
     selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        bottomBar = {
-            BottomBar(selectedTab = selectedBottomTab, onTabSelected = onBottomNavSelected)
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        ) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = BottomBarDefaults.ContentBottomPadding),
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -131,7 +133,13 @@ private fun MyContent(
             }
 
             Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
+            }
         }
+        BottomBar(
+            selectedTab = selectedBottomTab,
+            onTabSelected = onBottomNavSelected,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
