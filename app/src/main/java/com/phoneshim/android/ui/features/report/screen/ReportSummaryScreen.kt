@@ -55,6 +55,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 @Composable
 fun ReportSummaryScreen(
     modifier: Modifier = Modifier,
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToTimetable: () -> Unit = {},
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
@@ -66,6 +67,7 @@ fun ReportSummaryScreen(
     ReportSummaryContent(
         modifier = modifier,
         dateLabel = "7.11",
+        onNavigateToSettings = onNavigateToSettings,
         onNavigateToMyPage = onNavigateToMyPage,
         onTabSelected = { tab -> if (tab == ReportTab.TIMETABLE) onNavigateToTimetable() },
         onBottomNavSelected = { tab ->
@@ -83,6 +85,7 @@ private fun ReportSummaryContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
     onBottomNavSelected: (BottomBarTab) -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -134,13 +137,15 @@ private fun ReportSummaryContent(
             TopAppBar(
                 title = "DAILY REPORT",
                 titleStyle = PhoneShimType.KorH3,
-                navigationIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_topbar_goal),
-                        contentDescription = null,
-                    )
+                leadingAction = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_topbar_goal),
+                            contentDescription = "설정",
+                        )
+                    }
                 },
-                actions = {
+                trailingAction = {
                     IconButton(onClick = onNavigateToMyPage) {
                         Icon(
                             painter = painterResource(R.drawable.ic_my),
@@ -208,6 +213,7 @@ private fun ReportSummaryContentPreview() {
             dateLabel = "7.11",
             onTabSelected = {},
             onBottomNavSelected = {},
+            onNavigateToSettings = {},
             onNavigateToMyPage = {},
         )
     }
