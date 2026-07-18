@@ -43,12 +43,16 @@ fun TodoRow(
             .background(PhoneShimTheme.colors.surface)
             .border(1.dp, PhoneShimPalette.Primary300, shape)
     }
+    val contentSpacing = when (variant) {
+        TodoRowVariant.Plain -> 12.dp
+        TodoRowVariant.Card -> 24.dp
+    }
     Row(
         modifier = containerModifier
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(contentSpacing),
     ) {
         leadingContent?.invoke()
         Column(

@@ -3,6 +3,7 @@ package com.phoneshim.android.ui.common
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -17,7 +18,8 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 object TopAppBarDefaults {
     val Height = 48.dp
     val HorizontalPadding = 16.dp
-    val IconSlotSize = 24.dp
+    val IconTouchTargetSize = 48.dp
+    internal val IconEdgeOffset = 12.dp
 }
 
 @Composable
@@ -37,7 +39,8 @@ fun TopAppBar(
         navigationIcon?.let {
             Box(
                 modifier = Modifier
-                    .size(TopAppBarDefaults.IconSlotSize)
+                    .size(TopAppBarDefaults.IconTouchTargetSize)
+                    .offset(x = -TopAppBarDefaults.IconEdgeOffset)
                     .align(Alignment.CenterStart),
                 contentAlignment = Alignment.Center,
             ) {
@@ -52,7 +55,8 @@ fun TopAppBar(
         )
         Box(
             modifier = Modifier
-                .size(TopAppBarDefaults.IconSlotSize)
+                .size(TopAppBarDefaults.IconTouchTargetSize)
+                .offset(x = TopAppBarDefaults.IconEdgeOffset)
                 .align(Alignment.CenterEnd),
             contentAlignment = Alignment.Center,
         ) {

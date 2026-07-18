@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -130,28 +131,24 @@ fun MainScreen(
                 title = "MAIN",
                 titleStyle = PhoneShimType.EngH3,
                 navigationIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_topbar_goal),
-                        contentDescription = "설정",
-                        tint = PhoneShimTheme.colors.textPrimary,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onNavigateToSetGoal
+                    IconButton(onClick = onNavigateToSetGoal) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_topbar_goal),
+                            contentDescription = "설정",
+                            tint = PhoneShimTheme.colors.textPrimary,
+                            modifier = Modifier.size(24.dp),
                         )
-                    )
+                    }
                 },
                 actions = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_my),
-                        contentDescription = "마이페이지",
-                        tint = PhoneShimTheme.colors.textPrimary,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onNavigateToMyPage
+                    IconButton(onClick = onNavigateToMyPage) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                            tint = PhoneShimTheme.colors.textPrimary,
+                            modifier = Modifier.size(24.dp),
                         )
-                    )
+                    }
                 }
             )
 

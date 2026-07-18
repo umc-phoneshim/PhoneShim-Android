@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
@@ -59,16 +60,13 @@ import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
 
 private val ScreenHorizontalPadding = PhoneShimDimens.screenHorizontalPadding
 private val CalendarCornerRadius = 12.dp
 private val CalendarHeight = 337.dp
-private val CalendarDayCellSize = 42.dp
 private val TaskRowHeight = 56.dp
 private val MainSectionSpacing = 24.dp
 private val TaskCardPadding = 12.dp
@@ -154,7 +152,7 @@ fun ReminderScreen(
                     title = "REMINDER",
                     titleStyle = PhoneShimType.KorH3,
                     navigationIcon = {
-                        IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = onNavigateToSettings) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_topbar_goal),
                                 contentDescription = "목표 설정",
@@ -163,7 +161,7 @@ fun ReminderScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onNavigateToMyPage, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = onNavigateToMyPage) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_my),
                                 contentDescription = "마이페이지",
@@ -253,7 +251,7 @@ private fun ReminderCalendar(
     onNextMonth: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().height(CalendarHeight).clip(RoundedCornerShape(CalendarCornerRadius))
+        modifier = Modifier.fillMaxWidth().heightIn(min = CalendarHeight).clip(RoundedCornerShape(CalendarCornerRadius))
             .background(PhoneShimTheme.colors.surface).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),

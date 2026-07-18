@@ -32,6 +32,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
 @Composable
@@ -171,13 +172,16 @@ private fun CalendarWeekHeader() {
 
 private fun calendarDates(month: YearMonth): List<LocalDate> {
     val first = month.atDay(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    return List(35) { first.plusDays(it.toLong()) }
+    val last = month.atEndOfMonth().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+    val requiredCellCount = ChronoUnit.DAYS.between(first, last).toInt() + 1
+    val cellCount = if (requiredCellCount > 35) 42 else 35
+    return List(cellCount) { first.plusDays(it.toLong()) }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "6주 달력", showBackground = true)
 @Composable
 private fun CalendarGridPreview() {
-    val today = LocalDate.of(2026, 7, 18)
+    val today = LocalDate.of(2026, 3, 1)
     PhoneShimTheme {
         Column {
             DateNavigator(
