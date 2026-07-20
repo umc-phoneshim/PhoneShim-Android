@@ -129,6 +129,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
             TimetableScreen(
                 onEntryClick = { entryId -> navController.navigate(Routes.usageReasonInput(entryId)) },
                 onNavigateToAiSuggestion = { navController.navigate(Routes.REPORT_AI_SUGGEST) },
+                onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
             )
         }
         composable(
@@ -143,7 +144,9 @@ fun PhoneShimNavHost(navController: NavHostController) {
             ReportAiSuggestScreen(onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) })
         }
         composable(Routes.REPORT_SUMMARY) {
-            ReportSummaryScreen()
+            ReportSummaryScreen(
+                onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
+            )
         }
 
         // 마이페이지 화면

@@ -21,7 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.common.PrimaryButton
-import com.phoneshim.android.ui.common.PrimaryButtonSize
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.features.appblocking.component.EmergencyAction
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -71,7 +71,7 @@ fun GoalAchievedScreen(
                 text = "폰쉼 어플",
                 onClick = onOpenPhoneShim,
                 modifier = Modifier.width(86.dp),
-                size = PrimaryButtonSize.Small,
+                size = PhoneShimButtonSize.Small,
                 fullWidth = false,
                 containerColor = PhoneShimPalette.Primary400,
                 pressedContainerColor = PhoneShimPalette.Primary500,

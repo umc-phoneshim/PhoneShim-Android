@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,12 +26,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.TextInputDialog
+import com.phoneshim.android.ui.common.PhoneShimDialog
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditorState
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditTarget
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeInputError
@@ -45,7 +46,6 @@ private object PrefDialogDefaults {
     val contentPadding = 24.dp
     val descriptionInputHeight = 56.dp
     val saveButtonWidth = 120.dp
-    val saveButtonHeight = 36.dp
 }
 
 @Composable
@@ -56,20 +56,17 @@ fun GoalTimeDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    Dialog(
+    PhoneShimDialog(
         onDismissRequest = onDismiss,
+        width = PrefDialogDefaults.dialogWidth,
+        shape = MaterialTheme.shapes.large,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(PrefDialogDefaults.contentPadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Column(
-            modifier = Modifier
-                .width(PrefDialogDefaults.dialogWidth)
-                .background(PhoneShimTheme.colors.surface, MaterialTheme.shapes.large)
-                .padding(PrefDialogDefaults.contentPadding),
-        ) {
             Text(
                 text = when (state.target) {
-                    TimeEditTarget.TotalGoal -> stringResource(R.string.pref_total_time_dialog_title)
-                    is TimeEditTarget.AppGoal -> stringResource(R.string.pref_app_time_dialog_title)
+                    TimeEditTarget.TotalGoal -> "전체 폰 목표 시간 설정"
+                    is TimeEditTarget.AppGoal -> "앱별 목표 시간 설정"
                 },
                 style = MaterialTheme.typography.titleLarge,
                 color = PhoneShimTheme.colors.textPrimary,
@@ -81,13 +78,13 @@ fun GoalTimeDialog(
             ) {
                 TimeInput(
                     value = state.hoursInput,
-                    label = stringResource(R.string.pref_hours),
+                    label = "시간",
                     onValueChange = onHoursChanged,
                     modifier = Modifier.weight(1f),
                 )
                 TimeInput(
                     value = state.minutesInput,
-                    label = stringResource(R.string.pref_minutes),
+                    label = "분",
                     onValueChange = onMinutesChanged,
                     modifier = Modifier.weight(1f),
                 )
@@ -97,9 +94,9 @@ fun GoalTimeDialog(
                 Text(
                     text = when (error) {
                         TimeInputError.INVALID_MINUTE_RANGE ->
-                            stringResource(R.string.pref_invalid_minute_range)
+                            "분은 0부터 59까지 입력해 주세요."
                         TimeInputError.BELOW_MINIMUM ->
-                            stringResource(R.string.pref_minimum_time_error)
+                            "목표 사용 시간은 10분 이상 입력해 주세요."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = PhoneShimTheme.colors.error,
@@ -112,26 +109,20 @@ fun GoalTimeDialog(
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(
-                        text = stringResource(R.string.pref_cancel),
+                        text = "취소",
                         style = MaterialTheme.typography.bodyMedium,
                         color = PhoneShimTheme.colors.textSecondary,
                     )
                 }
-                Button(
+                PrimaryButton(
+                    text = "확인",
                     onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PhoneShimTheme.colors.brand,
-                        contentColor = PhoneShimTheme.colors.onBrand,
-                    ),
+                    size = PhoneShimButtonSize.Small,
+                    fullWidth = false,
                     shape = MaterialTheme.shapes.small,
-                ) {
-                    Text(
-                        text = stringResource(R.string.pref_confirm),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                    labelStyle = MaterialTheme.typography.bodyMedium,
+                )
             }
-        }
     }
 }
 
@@ -168,82 +159,10 @@ fun AppGoalDescriptionDialog(
     onDescriptionChanged: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
-) {
-    Dialog(
-        onDismissRequest = {},
-        properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .width(PrefDialogDefaults.dialogWidth)
-                .background(PhoneShimTheme.colors.surface, MaterialTheme.shapes.small)
-                .padding(PrefDialogDefaults.contentPadding),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.pref_app_goal_dialog_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PhoneShimTheme.colors.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(24.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_close),
-                        contentDescription = stringResource(R.string.pref_close),
-                        tint = PhoneShimTheme.colors.textPrimary,
-                    )
-                }
-            }
-            Spacer(Modifier.height(PhoneShimDimens.spacing12))
-            TextField(
-                value = description,
-                onValueChange = onDescriptionChanged,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(PrefDialogDefaults.descriptionInputHeight),
-                textStyle = MaterialTheme.typography.bodySmall,
-                minLines = 2,
-                maxLines = 3,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = PhoneShimTheme.colors.brandSubtle,
-                    unfocusedContainerColor = PhoneShimTheme.colors.brandSubtle,
-                    focusedTextColor = PhoneShimTheme.colors.textSecondary,
-                    unfocusedTextColor = PhoneShimTheme.colors.textSecondary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-                shape = MaterialTheme.shapes.small,
-            )
-            Spacer(Modifier.height(PhoneShimDimens.spacing24))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                Button(
-                    onClick = onSave,
-                    modifier = Modifier
-                        .width(PrefDialogDefaults.saveButtonWidth)
-                        .height(PrefDialogDefaults.saveButtonHeight),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PhoneShimTheme.colors.brand,
-                        contentColor = PhoneShimTheme.colors.onBrand,
-                    ),
-                    shape = MaterialTheme.shapes.small,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.pref_save),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        }
-    }
-}
+) = TextInputDialog(
+    title = "어플 목표 설정",
+    value = description,
+    onValueChange = onDescriptionChanged,
+    onConfirm = onSave,
+    onDismiss = onDismiss,
+)

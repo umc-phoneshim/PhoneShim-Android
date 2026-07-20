@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.appblocking.component
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -29,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PrimaryButton
-import com.phoneshim.android.ui.common.PrimaryButtonSize
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -91,7 +87,7 @@ fun BlockingDialog(
             modifier = Modifier.padding(top = PhoneShimDimens.spacing12),
             text = buttonText,
             onClick = onConfirm,
-            size = PrimaryButtonSize.Small,
+            size = PhoneShimButtonSize.Small,
         )
     }
 }
@@ -108,31 +104,12 @@ fun BlockingTitle(title: String) {
 
 @Composable
 fun RestIllustration(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val green = PhoneShimPalette.Primary500
-        val darkGreen = PhoneShimPalette.Primary600
-        drawCircle(PhoneShimPalette.Primary100, radius = size.minDimension * .48f)
-        drawRoundRect(
-            color = green,
-            topLeft = androidx.compose.ui.geometry.Offset(size.width * .3f, size.height * .18f),
-            size = androidx.compose.ui.geometry.Size(size.width * .4f, size.height * .64f),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * .07f),
-            style = Stroke(width = size.width * .045f),
-        )
-        drawLine(
-            color = darkGreen,
-            start = androidx.compose.ui.geometry.Offset(size.width * .43f, size.height * .68f),
-            end = androidx.compose.ui.geometry.Offset(size.width * .57f, size.height * .68f),
-            strokeWidth = size.width * .035f,
-            cap = StrokeCap.Round,
-        )
-        val check = Path().apply {
-            moveTo(size.width * .4f, size.height * .47f)
-            lineTo(size.width * .48f, size.height * .55f)
-            lineTo(size.width * .63f, size.height * .37f)
-        }
-        drawPath(check, darkGreen, style = Stroke(size.width * .035f, cap = StrokeCap.Round))
-    }
+    Icon(
+        painter = painterResource(R.drawable.ic_rest_illustration),
+        contentDescription = null,
+        modifier = modifier,
+        tint = Color.Unspecified,
+    )
 }
 
 @Composable

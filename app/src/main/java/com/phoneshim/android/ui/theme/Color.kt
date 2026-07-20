@@ -34,7 +34,6 @@ object PhoneShimPalette {
     val Warning = Color(0xFFFFD5CE)
     val Info = Color(0xFFB7D4FF)
     val Error = Color(0xFFE56767)
-    val Info = Color(0xFFB7D4FF)
 }
 
 

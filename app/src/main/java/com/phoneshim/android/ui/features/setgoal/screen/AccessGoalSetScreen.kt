@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,19 +32,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
+import com.phoneshim.android.ui.common.AppInfoRow
+import com.phoneshim.android.ui.common.GoalTimeCard
+import com.phoneshim.android.ui.common.TextInputDialog
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
@@ -162,7 +168,10 @@ private fun AccessGoalSetContent(
             ),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
-            TotalTimeCard(totalMinutes = totalMinutes)
+            GoalTimeCard(
+                label = "총 목표 시간",
+                totalMinutes = totalMinutes,
+            )
             SetGoalBottomButtons(onBack = onBack, onNext = onNext)
         }
     }
@@ -177,27 +186,23 @@ fun AppGoalRow(
     onEditGoal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    AppInfoRow(
+        appName = app,
         modifier = modifier
             .fillMaxWidth()
             .height(28.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppLabel(name = app)
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "${setting.timeInput.hour} 시간 ${setting.timeInput.minute} 분",
-            style = PhoneShimType.KorLabel,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
-        Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
-        AccessLimitIcon(
-            active = setting.accessLimited,
-            onClick = onEditAccessCount,
-        )
-        Spacer(modifier = Modifier.width(PhoneShimDimens.spacing4))
-        GoalEditIcon(onClick = onEditGoal)
-    }
+        trailingContent = {
+            Text(
+                text = "${setting.timeInput.hour} 시간 ${setting.timeInput.minute} 분",
+                style = PhoneShimType.KorLabel,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
+            AccessLimitIcon(active = setting.accessLimited, onClick = onEditAccessCount)
+            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing4))
+            GoalEditIcon(onClick = onEditGoal)
+        },
+    )
 }
 
 // 접근 제한 토글 아이콘 (금지 표시). 활성화 시 붉은색으로 표시됩니다.
@@ -239,9 +244,9 @@ private fun GoalEditIcon(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Filled.Edit,
+            painter = painterResource(R.drawable.ic_modify),
             contentDescription = "목표 입력",
-            tint = PhoneShimTheme.colors.brand,
+            tint = Color.Unspecified,
             modifier = Modifier.size(11.dp),
         )
     }
@@ -256,80 +261,14 @@ fun GoalWriteDialog(
 ) {
     var text by remember { mutableStateOf(goalText) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(PhoneShimTheme.colors.surface)
-                .padding(PhoneShimDimens.spacing24),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "어플 목표 설정",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textPrimary,
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "닫기",
-                    tint = PhoneShimTheme.colors.textPrimary,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clickable(onClick = onDismiss),
-                )
-            }
-
-            BasicTextField(
-                value = text,
-                onValueChange = { text = it },
-                textStyle = PhoneShimType.KorCaption.copy(
-                    color = PhoneShimTheme.colors.textPrimary,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.small)
-                            .background(PhoneShimTheme.colors.brandSubtle)
-                            .padding(horizontal = PhoneShimDimens.spacing12, vertical = 10.dp),
-                    ) {
-                        if (text.isEmpty()) {
-                            Text(
-                                text = "이 어플에 대한 목표를 작성해보세요.",
-                                style = PhoneShimType.KorCaption,
-                                color = PhoneShimTheme.colors.textTertiary,
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-            )
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = PhoneShimDimens.spacing12)
-                    .size(width = 120.dp, height = 36.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(PhoneShimTheme.colors.brand)
-                    .clickable { onSave(text) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "저장",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.onBrand,
-                )
-            }
-        }
-    }
+    TextInputDialog(
+        title = "어플 목표 설정",
+        value = text,
+        onValueChange = { text = it },
+        placeholder = "이 어플에 대한 목표를 작성해보세요.",
+        onConfirm = { onSave(text) },
+        onDismiss = onDismiss,
+    )
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)

@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +44,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.TodoRow
+import com.phoneshim.android.ui.common.CalendarGrid
+import com.phoneshim.android.ui.common.DateNavigator
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.features.reminder.component.ReminderSetPopup
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderTaskUiModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiState
@@ -51,20 +60,15 @@ import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
 
 private val ScreenHorizontalPadding = PhoneShimDimens.screenHorizontalPadding
 private val CalendarCornerRadius = 12.dp
 private val CalendarHeight = 337.dp
-private val CalendarDayCellSize = 42.dp
 private val TaskRowHeight = 56.dp
-private val TopBarHeight = 49.dp
 private val MainSectionSpacing = 24.dp
-private val BottomNavigationSpacing = 55.dp
 private val TaskCardPadding = 12.dp
 private val TaskItemSpacing = 12.dp
 private val TaskItemHorizontalPadding = 12.dp
@@ -138,41 +142,74 @@ fun ReminderScreen(
     onSaveTask: () -> Unit = {},
     onDeleteTask: () -> Unit = {},
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { ReminderTopBar(onNavigateToSettings, onNavigateToMyPage) },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = ScreenHorizontalPadding,
-                top = 16.dp,
-                end = ScreenHorizontalPadding,
-                bottom = BottomNavigationSpacing,
-            ),
-            verticalArrangement = Arrangement.spacedBy(MainSectionSpacing),
-        ) {
-            item { ReminderDateHeader(state.todayDate) }
-            item {
-                ReminderCalendar(
-                    visibleMonth = state.visibleMonth,
-                    todayDate = state.todayDate,
-                    selectedDate = state.selectedDate,
-                    onDateSelected = onSelectDate,
-                    onPreviousMonth = onPreviousMonth,
-                    onNextMonth = onNextMonth,
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = "REMINDER",
+                    titleStyle = PhoneShimType.KorH3,
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_topbar_goal),
+                                contentDescription = "목표 설정",
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onNavigateToMyPage) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_my),
+                                contentDescription = "마이페이지",
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    },
                 )
-            }
-            item {
-                ReminderTaskSection(
-                    tasks = state.selectedTasks,
-                    onAddTask = onAddTask,
-                    onEditTask = onEditTask,
-                )
+            },
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .navigationBarsPadding(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = ScreenHorizontalPadding,
+                    top = 16.dp,
+                    end = ScreenHorizontalPadding,
+                    bottom = BottomBarDefaults.ContentBottomPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(MainSectionSpacing),
+            ) {
+                item { ReminderDateHeader(state.todayDate) }
+                item {
+                    ReminderCalendar(
+                        visibleMonth = state.visibleMonth,
+                        todayDate = state.todayDate,
+                        selectedDate = state.selectedDate,
+                        onDateSelected = onSelectDate,
+                        onPreviousMonth = onPreviousMonth,
+                        onNextMonth = onNextMonth,
+                    )
+                }
+                item {
+                    ReminderTaskSection(
+                        tasks = state.selectedTasks,
+                        onAddTask = onAddTask,
+                        onEditTask = onEditTask,
+                    )
+                }
             }
         }
+        BottomBar(
+            selectedTab = BottomBarTab.REMINDER,
+            onTabSelected = {},
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
     if (state.isTaskPopupVisible) {
         ReminderSetPopup(
@@ -187,22 +224,6 @@ fun ReminderScreen(
             onSave = onSaveTask,
             onDelete = onDeleteTask,
         )
-    }
-}
-
-@Composable
-private fun ReminderTopBar(onSettings: () -> Unit, onMyPage: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        IconButton(onClick = onSettings, modifier = Modifier.align(Alignment.CenterStart).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_reminder_settings), null, tint = PhoneShimTheme.colors.textPrimary, modifier = Modifier.size(24.dp))
-        }
-        Text("REMINDER", style = PhoneShimType.KorH3, color = PhoneShimTheme.colors.textPrimary)
-        IconButton(onClick = onMyPage, modifier = Modifier.align(Alignment.CenterEnd).size(40.dp)) {
-            Icon(painterResource(R.drawable.ic_reminder_profile), null, tint = PhoneShimTheme.colors.textPrimary, modifier = Modifier.size(24.dp))
-        }
     }
 }
 
@@ -230,64 +251,25 @@ private fun ReminderCalendar(
     onNextMonth: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().height(CalendarHeight).clip(RoundedCornerShape(CalendarCornerRadius))
+        modifier = Modifier.fillMaxWidth().heightIn(min = CalendarHeight).clip(RoundedCornerShape(CalendarCornerRadius))
             .background(PhoneShimTheme.colors.surface).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(42.dp)) {
-            CalendarArrow(R.drawable.ic_reminder_chevron_left, onPreviousMonth)
-            Text(visibleMonth.format(DateTimeFormatter.ofPattern("yyyy.MM")), style = PhoneShimType.KorH3, color = PhoneShimTheme.colors.brandStrong)
-            CalendarArrow(R.drawable.ic_reminder_chevron_right, onNextMonth)
-        }
-        CalendarWeekHeader()
-        calendarDates(visibleMonth).chunked(7).forEach { week ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                week.forEach { date -> CalendarDay(date, visibleMonth, todayDate, selectedDate, onDateSelected) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalendarArrow(icon: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
-        Icon(painterResource(icon), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
-    }
-}
-
-@Composable
-private fun CalendarWeekHeader() {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-        listOf("M", "T", "W", "T", "F", "S", "S").forEachIndexed { index, label ->
-            Text(
-                label,
-                modifier = Modifier.size(CalendarDayCellSize).padding(top = 10.dp),
-                textAlign = TextAlign.Center,
-                style = PhoneShimType.EngBodyM,
-                color = when (index) { 5 -> Color(0xFF2B00FF); 6 -> Color.Red; else -> PhoneShimTheme.colors.textPrimary },
-            )
-        }
-    }
-}
-
-@Composable
-private fun CalendarDay(date: LocalDate, month: YearMonth, today: LocalDate, selected: LocalDate, onClick: (LocalDate) -> Unit) {
-    val isSelected = date == selected
-    val isToday = date == today
-    val shape = CircleShape
-    val foreground = when {
-        isSelected -> PhoneShimTheme.colors.onBrand
-        YearMonth.from(date) != month -> PhoneShimPalette.Gray300
-        else -> PhoneShimTheme.colors.textPrimary
-    }
-    Box(Modifier.size(CalendarDayCellSize).clickable { onClick(date) }, contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(40.dp).clip(shape)
-                .then(if (isToday && !isSelected) Modifier.border(1.dp, PhoneShimTheme.colors.brandStrong, shape) else Modifier)
-                .background(if (isSelected) PhoneShimTheme.colors.brand else Color.Transparent),
-            contentAlignment = Alignment.Center,
-        ) { Text(date.dayOfMonth.toString(), style = PhoneShimType.EngBodyM, color = foreground) }
+        DateNavigator(
+            label = visibleMonth.format(DateTimeFormatter.ofPattern("yyyy.MM")),
+            onPrevious = onPreviousMonth,
+            onNext = onNextMonth,
+            modifier = Modifier.height(42.dp),
+            labelStyle = PhoneShimType.KorH3,
+            labelColor = PhoneShimTheme.colors.brandStrong,
+        )
+        CalendarGrid(
+            visibleMonth = visibleMonth,
+            selectedDate = selectedDate,
+            todayDate = todayDate,
+            onDateSelected = onDateSelected,
+        )
     }
 }
 
@@ -295,7 +277,7 @@ private fun CalendarDay(date: LocalDate, month: YearMonth, today: LocalDate, sel
 private fun ReminderTaskSection(tasks: List<ReminderTaskUiModel>, onAddTask: () -> Unit, onEditTask: (ReminderTaskUiModel) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_reminder_goal), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
+            Icon(painterResource(R.drawable.ic_goal), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(4.dp))
             // TODO: 선택 날짜에 따라 섹션 제목을 변경할지 기획 확인 필요
             Text("오늘 할 일 설정", style = PhoneShimType.KorBodyM.copy(fontWeight = FontWeight.SemiBold), color = PhoneShimTheme.colors.textPrimary)
@@ -315,26 +297,30 @@ private fun ReminderTaskSection(tasks: List<ReminderTaskUiModel>, onAddTask: () 
 
 @Composable
 private fun ReminderTaskItem(task: ReminderTaskUiModel, onEditTask: (ReminderTaskUiModel) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().height(TaskRowHeight).padding(
-            horizontal = TaskItemHorizontalPadding,
-            vertical = TaskItemVerticalPadding,
-        ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(TaskItemContentSpacing),
-    ) {
-        // TODO: 드래그 핸들의 실제 정렬 기능 여부를 기획 확인 후 결정
-        Icon(painterResource(R.drawable.ic_reminder_drag_handle), null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(task.title, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${formatMinutes(task.startMinutes)} ~ ${formatMinutes(task.endMinutes)}", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textTertiary)
-        }
-        Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+    TodoRow(
+        title = task.title,
+        timeRange = "${formatMinutes(task.startMinutes)} ~ ${formatMinutes(task.endMinutes)}",
+        modifier = Modifier.fillMaxWidth().height(TaskRowHeight),
+        leadingContent = {
+            // TODO: 드래그 핸들의 실제 정렬 기능 여부를 기획 확인 후 결정
+            Icon(
+                painterResource(R.drawable.ic_reminder_drag_handle),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp),
+            )
+        },
+        trailingContent = {
             Box(Modifier.size(40.dp).clickable { onEditTask(task) }, contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_reminder_edit), null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
+                Icon(
+                    painterResource(R.drawable.ic_modify),
+                    contentDescription = "할 일 수정",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(20.dp),
+                )
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -344,16 +330,12 @@ private fun ReminderEmptyTaskCard(compact: Boolean, onClick: () -> Unit) {
             .background(PhoneShimTheme.colors.brandSubtle).clickable(onClick = onClick).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(R.drawable.ic_reminder_add), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
+        Icon(painterResource(R.drawable.ic_plus), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(16.dp))
         Text("할 일을 추가하세요", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.brand)
     }
 }
 
-private fun calendarDates(month: YearMonth): List<LocalDate> {
-    val first = month.atDay(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    return List(35) { first.plusDays(it.toLong()) }
-}
 
 private fun previewState(tasks: Boolean = true) = ReminderUiState(tasksByDate = if (tasks) ReminderUiState().tasksByDate else emptyMap())
 

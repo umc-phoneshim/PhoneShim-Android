@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
@@ -25,7 +26,6 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
@@ -126,7 +126,10 @@ private fun SetGoalConfirmContent(
             ),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
-            TotalTimeCard(totalMinutes = totalMinutes)
+            GoalTimeCard(
+                label = "총 목표 시간",
+                totalMinutes = totalMinutes,
+            )
             SetGoalBottomButtons(onBack = onBack, onNext = onConfirm)
         }
     }

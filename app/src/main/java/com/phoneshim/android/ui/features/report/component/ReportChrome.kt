@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,82 +15,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.LineIcon
-import com.phoneshim.android.ui.common.LineIconType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
+import com.phoneshim.android.ui.common.DateNavigator
 
 /**
  * "07. 데일리 리포트" 화면군(ReportSummaryScreen / TimetableScreen)이 공유하는
  * 상단바, 날짜 네비게이터, 탭. 하단 네비게이션 바는 여러 피처에서 공통으로 쓰여
- * [com.phoneshim.android.ui.common.PhoneShimBottomNavBar] 로 옮겼습니다.
+ * 공통 [com.phoneshim.android.ui.common.BottomBar]로 옮겼습니다.
  */
 
 @Composable
-fun DailyReportHeader(
+fun ReportDateNavigator(
     dateLabel: String,
     onPrevDate: () -> Unit,
     onNextDate: () -> Unit,
     modifier: Modifier = Modifier,
-    onProfileClick: () -> Unit = {},
 ) {
-    Column(
+    DateNavigator(
+        label = dateLabel,
+        onPrevious = onPrevDate,
+        onNext = onNextDate,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = PhoneShimDimens.spacing12),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LineIcon(type = LineIconType.Target)
-            Text(
-                text = "DAILY REPORT",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            LineIcon(
-                type = LineIconType.Person,
-                modifier = Modifier.clickable(onClick = onProfileClick),
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PhoneShimDimens.spacing16),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "‹",
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textTertiary,
-                modifier = Modifier
-                    .clickable(onClick = onPrevDate)
-                    .padding(horizontal = PhoneShimDimens.spacing16),
-            )
-            Text(
-                text = dateLabel,
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "›",
-                style = PhoneShimType.EngH2,
-                color = PhoneShimTheme.colors.textTertiary,
-                modifier = Modifier
-                    .clickable(onClick = onNextDate)
-                    .padding(horizontal = PhoneShimDimens.spacing16),
-            )
-        }
-    }
+            .padding(vertical = PhoneShimDimens.spacing16),
+    )
 }
 
 enum class ReportTab(val label: String) {

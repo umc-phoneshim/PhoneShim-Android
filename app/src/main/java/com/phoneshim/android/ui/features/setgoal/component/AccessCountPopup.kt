@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,7 +30,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import com.phoneshim.android.ui.common.PhoneShimDialog
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -45,15 +48,11 @@ fun AccessCountPopup(
         mutableStateOf(if (initialCount > 0) initialCount.toString() else "")
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(PhoneShimTheme.colors.surface)
-                .padding(PhoneShimDimens.spacing16),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
-        ) {
+    PhoneShimDialog(
+        onDismissRequest = onDismiss,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(PhoneShimDimens.spacing16),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
+    ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -122,22 +121,17 @@ fun AccessCountPopup(
                 )
             }
 
-            Box(
+            PrimaryButton(
+                text = "저장",
+                onClick = { onConfirm(text.toIntOrNull() ?: 0) },
                 modifier = Modifier
                     .align(Alignment.End)
-                    .size(width = 100.dp, height = 36.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(PhoneShimTheme.colors.brand)
-                    .clickable { onConfirm(text.toIntOrNull() ?: 0) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "저장",
-                    style = PhoneShimType.KorBodyM,
-                    color = PhoneShimTheme.colors.onBrand,
-                )
-            }
-        }
+                    .width(100.dp),
+                size = PhoneShimButtonSize.Small,
+                fullWidth = false,
+                shape = MaterialTheme.shapes.small,
+                labelStyle = PhoneShimType.KorBodyM,
+            )
     }
 }
 

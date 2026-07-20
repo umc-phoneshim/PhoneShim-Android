@@ -1,15 +1,19 @@
 package com.phoneshim.android.ui.features.report.screen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,16 +21,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.BottomNavTab
-import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageRow
-import com.phoneshim.android.ui.features.report.component.DailyReportHeader
+import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -49,6 +58,7 @@ fun ReportSummaryScreen(
     onNavigateToTimetable: () -> Unit = {},
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     // TODO: viewModel.uiState 의 DailyReport/AppUsage 를 AppBubble·CategoryUsageRow 로 매핑해
@@ -56,12 +66,13 @@ fun ReportSummaryScreen(
     ReportSummaryContent(
         modifier = modifier,
         dateLabel = "7.11",
+        onNavigateToMyPage = onNavigateToMyPage,
         onTabSelected = { tab -> if (tab == ReportTab.TIMETABLE) onNavigateToTimetable() },
         onBottomNavSelected = { tab ->
             when (tab) {
-                BottomNavTab.MAIN -> onNavigateToMain()
-                BottomNavTab.REMINDER -> onNavigateToReminder()
-                BottomNavTab.REPORT -> Unit
+                BottomBarTab.MAIN -> onNavigateToMain()
+                BottomBarTab.REMINDER -> onNavigateToReminder()
+                BottomBarTab.REPORT -> Unit
             }
         },
     )
@@ -71,7 +82,8 @@ fun ReportSummaryScreen(
 private fun ReportSummaryContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
-    onBottomNavSelected: (BottomNavTab) -> Unit,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
+    onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var period by remember { mutableStateOf(ReportPeriod.DAY) }
@@ -106,20 +118,38 @@ private fun ReportSummaryContent(
         )
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        bottomBar = {
-            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            DailyReportHeader(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = BottomBarDefaults.ContentBottomPadding),
+            ) {
+            TopAppBar(
+                title = "DAILY REPORT",
+                titleStyle = PhoneShimType.KorH3,
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_topbar_goal),
+                        contentDescription = null,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToMyPage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                        )
+                    }
+                },
+            )
+            ReportDateNavigator(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
             ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
 
             Column(
@@ -161,6 +191,12 @@ private fun ReportSummaryContent(
                 }
             }
         }
+        }
+        BottomBar(
+            selectedTab = BottomBarTab.REPORT,
+            onTabSelected = onBottomNavSelected,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -172,6 +208,7 @@ private fun ReportSummaryContentPreview() {
             dateLabel = "7.11",
             onTabSelected = {},
             onBottomNavSelected = {},
+            onNavigateToMyPage = {},
         )
     }
 }

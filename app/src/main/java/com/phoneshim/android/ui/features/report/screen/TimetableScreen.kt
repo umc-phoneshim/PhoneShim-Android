@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.report.screen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,21 +9,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.common.BottomNavTab
-import com.phoneshim.android.ui.common.LineIconType
-import com.phoneshim.android.ui.common.PhoneShimBottomNavBar
-import com.phoneshim.android.ui.features.report.component.DailyReportHeader
+import com.phoneshim.android.ui.common.BottomBar
+import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.HourUsage
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -48,6 +57,7 @@ fun TimetableScreen(
     onNavigateToSummary: () -> Unit = {},
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     // TODO: viewModel.uiState.report.timetable(List<TimetableEntry>) 을 시간대별 HourUsage 로
@@ -55,12 +65,13 @@ fun TimetableScreen(
     TimetableContent(
         modifier = modifier,
         dateLabel = "7.11",
+        onNavigateToMyPage = onNavigateToMyPage,
         onTabSelected = { tab -> if (tab == ReportTab.SUMMARY) onNavigateToSummary() },
         onBottomNavSelected = { tab ->
             when (tab) {
-                BottomNavTab.MAIN -> onNavigateToMain()
-                BottomNavTab.REMINDER -> onNavigateToReminder()
-                BottomNavTab.REPORT -> Unit
+                BottomBarTab.MAIN -> onNavigateToMain()
+                BottomBarTab.REMINDER -> onNavigateToReminder()
+                BottomBarTab.REPORT -> Unit
             }
         },
         onEntryClick = onEntryClick,
@@ -73,10 +84,11 @@ fun TimetableScreen(
 private fun TimetableContent(
     dateLabel: String,
     onTabSelected: (ReportTab) -> Unit,
-    onBottomNavSelected: (BottomNavTab) -> Unit,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
     onEntryClick: (String) -> Unit,
     onEditView: () -> Unit,
     onAlarmSettings: () -> Unit,
+    onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hours = remember {
@@ -115,20 +127,38 @@ private fun TimetableContent(
         )
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = PhoneShimTheme.colors.background,
-        bottomBar = {
-            PhoneShimBottomNavBar(selected = BottomNavTab.REPORT, onTabSelected = onBottomNavSelected)
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            DailyReportHeader(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = PhoneShimTheme.colors.background,
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = BottomBarDefaults.ContentBottomPadding),
+            ) {
+            TopAppBar(
+                title = "DAILY REPORT",
+                titleStyle = PhoneShimType.KorH3,
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_topbar_goal),
+                        contentDescription = null,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToMyPage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_my),
+                            contentDescription = "마이페이지",
+                        )
+                    }
+                },
+            )
+            ReportDateNavigator(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
             ReportTabRow(selected = ReportTab.TIMETABLE, onTabSelected = onTabSelected)
 
             Column(
@@ -154,13 +184,19 @@ private fun TimetableContent(
                         modifier = Modifier.width(84.dp),
                         verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
                     ) {
-                        ReportSideActionButton(text = "재편 보기", icon = LineIconType.Info, onClick = onEditView)
-                        ReportSideActionButton(text = "알림 설정", icon = LineIconType.Bell, onClick = onAlarmSettings)
+                        ReportSideActionButton(text = "재편 보기", icon = PhoneShimIconType.Info, onClick = onEditView)
+                        ReportSideActionButton(text = "알림 설정", icon = PhoneShimIconType.Bell, onClick = onAlarmSettings)
                         UsageReasonLegendCard(items = legend)
                     }
                 }
             }
         }
+        }
+        BottomBar(
+            selectedTab = BottomBarTab.REPORT,
+            onTabSelected = onBottomNavSelected,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -175,6 +211,7 @@ private fun TimetableContentPreview() {
             onEntryClick = {},
             onEditView = {},
             onAlarmSettings = {},
+            onNavigateToMyPage = {},
         )
     }
 }
