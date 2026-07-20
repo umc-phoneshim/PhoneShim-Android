@@ -6,6 +6,7 @@ import com.phoneshim.android.data.repository.MainRepositoryImpl
 import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReminderRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
+import com.phoneshim.android.data.repository.mock.MockMainRepositoryImpl
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.MainRepository
@@ -32,7 +33,7 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindMainRepository(impl: MainRepositoryImpl): MainRepository
+    abstract fun bindMainRepository(impl: MockMainRepositoryImpl): MainRepository
 
     @Binds
     @Singleton
