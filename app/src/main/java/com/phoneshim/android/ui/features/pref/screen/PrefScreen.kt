@@ -54,6 +54,8 @@ private object PrefScreenDefaults {
 @Composable
 fun PrefScreen(
     uiState: PrefUiState,
+    selectedBottomTab: BottomBarTab,
+    onBottomNavSelected: (BottomBarTab) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit,
@@ -96,8 +98,8 @@ fun PrefScreen(
             )
         }
         BottomBar(
-            selectedTab = BottomBarTab.MAIN,
-            onTabSelected = {},
+            selectedTab = selectedBottomTab,
+            onTabSelected = onBottomNavSelected,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -212,6 +214,8 @@ private fun PreviewPrefScreen(uiState: PrefUiState) {
     PhoneShimTheme {
         PrefScreen(
             uiState = uiState,
+            selectedBottomTab = BottomBarTab.MAIN,
+            onBottomNavSelected = {},
             onBack = noOp,
             onCancel = noOp,
             onSave = noOp,

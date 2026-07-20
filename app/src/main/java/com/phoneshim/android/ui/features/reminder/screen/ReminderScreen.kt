@@ -151,7 +151,7 @@ fun ReminderScreen(
                 TopAppBar(
                     title = "REMINDER",
                     titleStyle = PhoneShimType.KorH3,
-                    navigationIcon = {
+                    leadingAction = {
                         IconButton(onClick = onNavigateToSettings) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_topbar_goal),
@@ -160,7 +160,7 @@ fun ReminderScreen(
                             )
                         }
                     },
-                    actions = {
+                    trailingAction = {
                         IconButton(onClick = onNavigateToMyPage) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_my),
@@ -207,7 +207,13 @@ fun ReminderScreen(
         }
         BottomBar(
             selectedTab = BottomBarTab.REMINDER,
-            onTabSelected = {},
+            onTabSelected = { tab ->
+                when (tab) {
+                    BottomBarTab.MAIN -> onNavigateToMain()
+                    BottomBarTab.REMINDER -> Unit
+                    BottomBarTab.REPORT -> onNavigateToReport()
+                }
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }

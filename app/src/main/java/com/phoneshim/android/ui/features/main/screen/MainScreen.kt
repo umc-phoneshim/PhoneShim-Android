@@ -110,8 +110,11 @@ data class MainTodoItem(
 @Composable
 fun MainScreen(
     onNavigateToSetGoal: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToReminder: () -> Unit = {},
+    onNavigateToReport: () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     // TODO: viewModel.uiState 연동 필요. 지금은 로컬 프로젝트에서 그대로 가져온
@@ -130,8 +133,8 @@ fun MainScreen(
             TopAppBar(
                 title = "MAIN",
                 titleStyle = PhoneShimType.EngH3,
-                navigationIcon = {
-                    IconButton(onClick = onNavigateToSetGoal) {
+                leadingAction = {
+                    IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_topbar_goal),
                             contentDescription = "설정",
@@ -140,7 +143,7 @@ fun MainScreen(
                         )
                     }
                 },
-                actions = {
+                trailingAction = {
                     IconButton(onClick = onNavigateToMyPage) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_my),
@@ -185,7 +188,13 @@ fun MainScreen(
 
         BottomBar(
             selectedTab = BottomBarTab.MAIN,
-            onTabSelected = {},
+            onTabSelected = { tab ->
+                when (tab) {
+                    BottomBarTab.MAIN -> Unit
+                    BottomBarTab.REMINDER -> onNavigateToReminder()
+                    BottomBarTab.REPORT -> onNavigateToReport()
+                }
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }

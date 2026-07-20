@@ -27,8 +27,8 @@ fun TopAppBar(
     title: String,
     modifier: Modifier = Modifier,
     titleStyle: TextStyle = PhoneShimType.KorH3,
-    navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable () -> Unit = {},
+    leadingAction: @Composable () -> Unit = {},
+    trailingAction: @Composable () -> Unit = {},
 ) {
     Box(
         modifier = modifier
@@ -36,16 +36,14 @@ fun TopAppBar(
             .height(TopAppBarDefaults.Height)
             .padding(horizontal = TopAppBarDefaults.HorizontalPadding),
     ) {
-        navigationIcon?.let {
-            Box(
-                modifier = Modifier
-                    .size(TopAppBarDefaults.IconTouchTargetSize)
-                    .offset(x = -TopAppBarDefaults.IconEdgeOffset)
-                    .align(Alignment.CenterStart),
-                contentAlignment = Alignment.Center,
-            ) {
-                it()
-            }
+        Box(
+            modifier = Modifier
+                .size(TopAppBarDefaults.IconTouchTargetSize)
+                .offset(x = -TopAppBarDefaults.IconEdgeOffset)
+                .align(Alignment.CenterStart),
+            contentAlignment = Alignment.Center,
+        ) {
+            leadingAction()
         }
         Text(
             text = title,
@@ -60,7 +58,7 @@ fun TopAppBar(
                 .align(Alignment.CenterEnd),
             contentAlignment = Alignment.Center,
         ) {
-            actions()
+            trailingAction()
         }
     }
 }

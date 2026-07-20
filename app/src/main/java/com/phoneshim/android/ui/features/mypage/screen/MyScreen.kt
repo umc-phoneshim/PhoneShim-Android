@@ -42,6 +42,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 fun MyScreen(
     onNavigateToSideMenu: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
     onNavigateToReport: () -> Unit = {},
@@ -56,6 +57,7 @@ fun MyScreen(
         nickname = uiState.user?.nickname.orEmpty(),
         email = uiState.user?.email.orEmpty(),
         onMenuClick = onNavigateToSideMenu,
+        selectedBottomTab = selectedBottomTab,
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -73,8 +75,6 @@ private fun MyContent(
     onMenuClick: () -> Unit,
     onBottomNavSelected: (BottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
-    // 마이페이지엔 전용 하단 탭이 없어, 진입 직전 탭을 그대로 보여줍니다.
-    // TODO: 실제로는 상위 네비게이션에서 "마지막으로 선택된 탭"을 전달받아야 합니다.
     selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
