@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,6 +24,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.IconButton
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginViewModel
+import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEffect
+import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEvent
+import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiState
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -33,15 +39,28 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                LoginUiEffect.NavigateToGoalSetup -> onLoginSuccess()
+                is LoginUiEffect.ShowSnackbar -> Unit
+            }
+        }
+    }
+
     LoginContent(
-        onGoogleLogin = onLoginSuccess,
-        onKakaoLogin = onLoginSuccess,
+        uiState = uiState,
+        onGoogleLogin = { viewModel.onEvent(LoginUiEvent.GoogleLoginClicked) },
+        onKakaoLogin = { viewModel.onEvent(LoginUiEvent.KakaoLoginClicked) },
         modifier = modifier,
     )
 }
 
 @Composable
 private fun LoginContent(
+    uiState: LoginUiState,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
     modifier: Modifier = Modifier,
@@ -78,21 +97,22 @@ private fun LoginContent(
                     icon = R.drawable.google_logo,
                     iconWidth = 16.dp,
                     backgroundColor = PhoneShimPalette.Gray100,
-                    contentColor = LoginButtonText,
+                    contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onGoogleLogin,
+                    enabled = !uiState.isLoading,
                 )
                 IconButton(
                     label = "카카오톡으로 계속하기",
                     icon = R.drawable.kakao_logo,
                     iconWidth = 17.dp,
-                    backgroundColor = KakaoYellow,
-                    contentColor = LoginButtonText,
+                    backgroundColor = PhoneShimPalette.KakaoYellow,
+                    contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onKakaoLogin,
+                    enabled = !uiState.isLoading,
                 )
             }
 
             Spacer(Modifier.height(PhoneShimDimens.spacing32))
-
             Text(
                 text = "로그인하면 이용약관 및 개인정보 처리방침에 동의하게 됩니다.",
                 modifier = Modifier
@@ -106,13 +126,14 @@ private fun LoginContent(
     }
 }
 
-private val KakaoYellow = Color(0xFFFEE500)
-private val LoginButtonText = Color(0xFF3A1D1D)
-
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun LoginScreenPreview() {
     PhoneShimTheme {
-        LoginContent(onGoogleLogin = {}, onKakaoLogin = {})
+        LoginContent(
+            uiState = LoginUiState(),
+            onGoogleLogin = {},
+            onKakaoLogin = {},
+        )
     }
 }
