@@ -28,7 +28,25 @@ object BlockingPermissions {
 
     fun hasAll(context: Context): Boolean = hasUsageAccess(context) && hasOverlay(context)
 
-    fun usageAccessIntent(): Intent =
+    /**
+     * 사용정보 접근 설정 화면.
+     *
+     * 오버레이(ACTION_MANAGE_OVERLAY_PERMISSION)와 달리 '앱별 화면으로 바로 가기'가
+     * 공식 지원되지 않는다. package: URI 를 붙이면 일부 기기에서 해당 앱 항목으로 바로
+     * 이동하지만, 지원하지 않는 기기에서는 무시되거나 인텐트를 처리할 액티비티가 없어
+     * 실패한다. 그래서 [usageAccessIntentFallback] 을 함께 두고 실패 시 목록 화면으로 연다.
+     *
+     * → 목록 화면이 뜨는 기기에서는 사용자가 직접 앱을 찾아야 하므로,
+     *   호출하는 화면에서 안내 문구가 필요하다.
+     */
+    fun usageAccessIntent(context: Context): Intent =
+        Intent(
+            Settings.ACTION_USAGE_ACCESS_SETTINGS,
+            Uri.parse("package:${context.packageName}"),
+        )
+
+    /** 앱별 이동이 안 되는 기기용. 사용정보 접근 '목록' 화면. */
+    fun usageAccessIntentFallback(): Intent =
         Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
 
     fun overlayIntent(context: Context): Intent =
