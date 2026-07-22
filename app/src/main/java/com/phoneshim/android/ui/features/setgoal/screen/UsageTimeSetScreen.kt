@@ -18,8 +18,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,13 +26,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.common.Toggle
+import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
@@ -42,7 +41,6 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
@@ -178,15 +176,10 @@ private fun UsageTimeSetContent(
                         color = PhoneShimTheme.colors.textTertiary,
                     )
                 }
-                Switch(
+                Toggle(
                     checked = blockAfterGoal,
                     onCheckedChange = onBlockAfterGoalChange,
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = PhoneShimTheme.colors.brand,
-                    ),
-                    modifier = Modifier
-                        .padding(start = PhoneShimDimens.spacing32)
-                        .scale(0.7f),
+                    modifier = Modifier.padding(start = PhoneShimDimens.spacing32),
                 )
             }
         }
@@ -198,7 +191,10 @@ private fun UsageTimeSetContent(
             ),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
-            TotalTimeCard(totalMinutes = totalMinutes)
+            GoalTimeCard(
+                label = "총 목표 시간",
+                totalMinutes = totalMinutes,
+            )
             SetGoalBottomButtons(
                 onBack = onBack,
                 onNext = onNext,

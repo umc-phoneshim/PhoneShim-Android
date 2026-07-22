@@ -24,17 +24,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.ui.features.setgoal.component.AppLabel
+import com.phoneshim.android.ui.common.AppInfoRow
+import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
@@ -125,7 +127,10 @@ private fun AccessGoalSetContent(
             ),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
-            TotalTimeCard(totalMinutes = totalMinutes)
+            GoalTimeCard(
+                label = "총 목표 시간",
+                totalMinutes = totalMinutes,
+            )
             SetGoalBottomButtons(onBack = onBack, onNext = onNext)
         }
     }
@@ -139,25 +144,21 @@ fun AppGoalRow(
     onToggleAccessLimit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    AppInfoRow(
+        appName = app,
         modifier = modifier
             .fillMaxWidth()
             .height(28.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppLabel(name = app)
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "${setting.timeInput.hour} 시간 ${setting.timeInput.minute} 분",
-            style = PhoneShimType.KorLabel,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
-        Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
-        AccessLimitIcon(
-            active = setting.accessLimited,
-            onClick = onToggleAccessLimit,
-        )
-    }
+        trailingContent = {
+            Text(
+                text = "${setting.timeInput.hour} 시간 ${setting.timeInput.minute} 분",
+                style = PhoneShimType.KorLabel,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
+            AccessLimitIcon(active = setting.accessLimited, onClick = onToggleAccessLimit)
+        },
+    )
 }
 
 // 접근 제한 토글 아이콘 (금지 표시). 활성화 시 붉은색으로 표시됩니다.

@@ -13,8 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.phoneshim.android.ui.common.PhoneShimButton
+import com.phoneshim.android.ui.common.PhoneShimDialog
+import com.phoneshim.android.ui.common.PermissionNoticeItem
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -27,64 +28,27 @@ fun PermissionConsentPopup(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(PhoneShimTheme.colors.surface)
-                .padding(PhoneShimDimens.spacing24),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing32),
-        ) {
+    PhoneShimDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing32),
+    ) {
             Column(verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24)) {
-                ConsentItem(
+                PermissionNoticeItem(
                     title = "개인정보 수집 및 이용 동의",
                     description = "서비스 제공 및 원활한 이용을 위해 필요한 개인 정보를 수집 및 이용합니다.",
                 )
-                ConsentItem(
+                PermissionNoticeItem(
                     title = "설치된 앱 목록 /스크린타임 수집 권한 동의",
                     description = "맞춤형 서비스 제공을 위해 앱 사용 시간 및 설치된 앱 정보를 수집합니다. " +
                         "수집된 정보는 서비스 제공 목적으로만 사용됩니다.",
                 )
             }
 
-            PhoneShimButton(
+            PrimaryButton(
                 text = "모두 허용하기",
                 onClick = onAllowAll,
             )
-        }
-    }
-}
-
-// 동의 제목 + 연녹 배경 설명 박스 한 쌍
-@Composable
-private fun ConsentItem(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-    ) {
-        Text(
-            text = title,
-            style = PhoneShimType.KorBodyM,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.small)
-                .background(PhoneShimTheme.colors.brandSubtle)
-                .padding(horizontal = PhoneShimDimens.spacing12, vertical = 10.dp),
-        ) {
-            Text(
-                text = description,
-                style = PhoneShimType.KorLabel,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
     }
 }
 

@@ -2,7 +2,6 @@ package com.phoneshim.android.ui.features.setgoal.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,10 +22,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.SecondaryButton
+import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -52,9 +57,9 @@ fun SetGoalTopBar(
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                painter = painterResource(R.drawable.ic_back),
                 contentDescription = "뒤로가기",
-                tint = PhoneShimTheme.colors.textPrimary,
+                tint = Color.Unspecified,
             )
         }
         Text(
@@ -154,13 +159,8 @@ fun SetGoalCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(PhoneShimTheme.colors.surface)
-            .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
-            .padding(PhoneShimDimens.spacing16),
+    SectionCard(
+        modifier = modifier.fillMaxWidth(),
         content = content,
     )
 }
@@ -215,92 +215,42 @@ fun SetGoalBottomButtons(
         horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
     ) {
         if (showBack) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(42.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(PhoneShimTheme.colors.surface)
-                    .border(1.dp, PhoneShimPalette.Primary400, MaterialTheme.shapes.medium)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "뒤로가기",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimPalette.Primary400,
-                )
-            }
+            SecondaryButton(
+                text = "뒤로가기",
+                onClick = onBack,
+                modifier = Modifier.weight(1f),
+                size = PhoneShimButtonSize.Medium,
+                fullWidth = false,
+                accentColor = PhoneShimPalette.Primary400,
+                pressedAccentColor = PhoneShimPalette.Primary500,
+                labelStyle = PhoneShimType.KorCaption,
+            )
         } else {
             Box(modifier = Modifier.weight(1f))
         }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(42.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(
-                    if (nextEnabled) PhoneShimTheme.colors.brand else PhoneShimPalette.Primary300,
-                )
-                .clickable(enabled = nextEnabled, onClick = onNext),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = nextText,
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.onBrand,
-            )
-        }
+        PrimaryButton(
+            text = nextText,
+            onClick = onNext,
+            modifier = Modifier.weight(1f),
+            enabled = nextEnabled,
+            size = PhoneShimButtonSize.Medium,
+            fullWidth = false,
+            labelStyle = PhoneShimType.KorCaption,
+        )
     }
 }
 
-// 총 목표 시간 표시 카드 (연녹 배경 + 큰 시간 표기)
+@Preview(name = "목표 설정 하단 버튼", showBackground = true, widthDp = 360)
 @Composable
-fun TotalTimeCard(
-    totalMinutes: Int,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(PhoneShimTheme.colors.brandSubtle)
-            .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
-            .padding(PhoneShimDimens.spacing16),
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-    ) {
-        Text(
-            text = "총 목표 시간",
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.brandStrong,
-        )
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+private fun SetGoalBottomButtonsPreview() {
+    PhoneShimTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "${totalMinutes / 60}",
-                style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                fontWeight = FontWeight.Bold,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "시간",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-            Text(
-                text = "${totalMinutes % 60}",
-                style = PhoneShimType.KorH3.copy(fontSize = 24.sp),
-                fontWeight = FontWeight.Bold,
-                color = PhoneShimTheme.colors.textPrimary,
-                modifier = Modifier.padding(start = PhoneShimDimens.spacing8),
-            )
-            Text(
-                text = "분",
-                style = PhoneShimType.KorH3,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
+            SetGoalBottomButtons(onBack = {}, onNext = {})
+            SetGoalBottomButtons(onBack = {}, onNext = {}, nextEnabled = false)
+            SetGoalBottomButtons(onBack = {}, onNext = {}, showBack = false)
         }
     }
 }

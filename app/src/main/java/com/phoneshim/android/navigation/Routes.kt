@@ -20,6 +20,9 @@ object Routes {
     // 05. main
     const val MAIN = "main"
 
+    // 환경 설정
+    const val PREF = "pref"
+
     // 06. reminder
     const val REMINDER = "reminder"
 

@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,13 +29,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
+import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
@@ -139,17 +141,16 @@ private fun AppSelectContent(
 
                 SetGoalCard {
                     apps.forEachIndexed { index, app ->
-                        Row(
+                        AppInfoRow(
+                            appName = app,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
                                 .clickable { onToggleApp(app) },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            AppLabel(name = app)
-                            Spacer(modifier = Modifier.weight(1f))
-                            AppCheckCircle(checked = selectedApps.contains(app))
-                        }
+                            trailingContent = {
+                                AppCheckCircle(checked = selectedApps.contains(app))
+                            },
+                        )
                         if (index != apps.lastIndex) {
                             SetGoalCardDivider()
                         }
@@ -173,7 +174,7 @@ private fun AppSelectContent(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Add,
+                                painter = painterResource(R.drawable.ic_plus_button),
                                 contentDescription = null,
                                 tint = PhoneShimTheme.colors.textTertiary,
                                 modifier = Modifier.size(12.dp),

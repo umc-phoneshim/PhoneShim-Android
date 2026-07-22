@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.PhoneShimButton
+import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.PermissionConsentPopup
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -83,7 +83,7 @@ fun SetGoalStartScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
-            PhoneShimButton(
+            PrimaryButton(
                 text = "목표 설정하기",
                 onClick = onStart,
             )
