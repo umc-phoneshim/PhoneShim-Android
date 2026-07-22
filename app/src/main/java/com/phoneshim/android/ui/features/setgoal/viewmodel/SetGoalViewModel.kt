@@ -24,8 +24,6 @@ data class AppTimeInput(
 data class AppGoalSetting(
     val timeInput: AppTimeInput = AppTimeInput(),
     val accessLimited: Boolean = false,
-    val accessCount: Int = 0,
-    val goalText: String = "",
 )
 
 // 목표 설정 플로우(04-1 ~ 04-6) 전체가 공유하는 UI 상태
@@ -92,16 +90,6 @@ class SetGoalViewModel @Inject constructor(
     // 04-4/04-5. 앱별 접근 제한 토글
     fun toggleAccessLimit(app: String) {
         updateSetting(app) { it.copy(accessLimited = !it.accessLimited) }
-    }
-
-    // 04-4. 앱별 하루 접근 허용 횟수 저장 (0이면 제한 해제)
-    fun setAccessCount(app: String, count: Int) {
-        updateSetting(app) { it.copy(accessCount = count, accessLimited = count > 0) }
-    }
-
-    // 04-4. 앱별 목표 문구 저장
-    fun setGoalText(app: String, goalText: String) {
-        updateSetting(app) { it.copy(goalText = goalText) }
     }
 
     private fun updateSetting(app: String, transform: (AppGoalSetting) -> AppGoalSetting) {
