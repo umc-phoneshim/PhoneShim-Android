@@ -24,6 +24,7 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
 import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -41,9 +42,9 @@ fun SetGoalConfirmScreen(
     SetGoalConfirmContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
-        onToggleAccessLimit = viewModel::toggleAccessLimit,
+        onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
         onConfirm = {
-            viewModel.submitGoal()
+            viewModel.onEvent(SetGoalEvent.SubmitGoal)
             onConfirm()
         },
         onBack = onBack,

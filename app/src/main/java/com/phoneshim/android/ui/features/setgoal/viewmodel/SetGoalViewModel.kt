@@ -1,15 +1,18 @@
 package com.phoneshim.android.ui.features.setgoal.viewmodel
 
-import androidx.lifecycle.ViewModel
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
+import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.UiEffect
+import com.phoneshim.android.ui.common.base.UiEvent
+import com.phoneshim.android.ui.common.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 // 선택 가능한 앱 최대 개수
 const val MAX_SELECTABLE_APPS = 5
+
+// 허용되는 최소 목표 사용 시간 (분)
+const val MIN_GOAL_MINUTES = 10
 
 // 앱별 목표 시간 입력값 (시/분 문자열)
 data class AppTimeInput(
@@ -20,7 +23,7 @@ data class AppTimeInput(
         get() = (hour.toIntOrNull() ?: 0) * 60 + (minute.toIntOrNull() ?: 0)
 }
 
-// 앱별 목표 시간 + 접근 제한/목표 문구 설정
+// 앱별 목표 시간 + 접근 제한 설정
 data class AppGoalSetting(
     val timeInput: AppTimeInput = AppTimeInput(),
     val accessLimited: Boolean = false,
@@ -34,10 +37,31 @@ data class SetGoalUiState(
     val appSettings: Map<String, AppGoalSetting> = emptyMap(),
     val blockAfterGoal: Boolean = false,
     val isLoading: Boolean = false,
-) {
+) : UiState {
     // 선택한 앱들의 목표 시간 합계 (분)
     val totalMinutes: Int
         get() = selectedApps.sumOf { appSettings[it]?.timeInput?.totalMinutes ?: 0 }
+}
+
+// 목표 설정 화면에서 발생하는 사용자 이벤트
+sealed interface SetGoalEvent : UiEvent {
+    data class SelectGender(val gender: String) : SetGoalEvent
+    data class SelectAgeGroup(val ageGroup: String) : SetGoalEvent
+    data class ToggleApp(val app: String) : SetGoalEvent
+    data class SetAppTime(val app: String, val timeInput: AppTimeInput) : SetGoalEvent
+    data class SetBlockAfterGoal(val enabled: Boolean) : SetGoalEvent
+    data class ToggleAccessLimit(val app: String) : SetGoalEvent
+    // 각 단계 '다음' 시 검증 후 통과하면 NavigateNext, 실패하면 ShowMessage
+    data object SubmitGenderAge : SetGoalEvent
+    data object SubmitAppSelection : SetGoalEvent
+    data object SubmitTimeSet : SetGoalEvent
+    data object SubmitGoal : SetGoalEvent
+}
+
+// 목표 설정 화면의 1회성 효과
+sealed interface SetGoalEffect : UiEffect {
+    data class ShowMessage(val message: String) : SetGoalEffect
+    data object NavigateNext : SetGoalEffect
 }
 
 // 목표 설정 온보딩 화면들이 함께 사용하는 뷰모델.
@@ -45,61 +69,80 @@ data class SetGoalUiState(
 @HiltViewModel
 class SetGoalViewModel @Inject constructor(
     private val setGoalUseCase: SetGoalUseCase,
-) : ViewModel() {
+) : BaseViewModel<SetGoalUiState, SetGoalEvent, SetGoalEffect>(SetGoalUiState()) {
 
-    private val _uiState = MutableStateFlow(SetGoalUiState())
-    val uiState: StateFlow<SetGoalUiState> = _uiState
-
-    // 04-1. 성별 선택
-    fun selectGender(gender: String) {
-        _uiState.update { it.copy(gender = gender) }
+    override fun handleEvent(event: SetGoalEvent) {
+        when (event) {
+            is SetGoalEvent.SelectGender -> setState { copy(gender = event.gender) }
+            is SetGoalEvent.SelectAgeGroup -> setState { copy(ageGroup = event.ageGroup) }
+            is SetGoalEvent.ToggleApp -> toggleApp(event.app)
+            is SetGoalEvent.SetAppTime ->
+                updateSetting(event.app) { it.copy(timeInput = event.timeInput) }
+            is SetGoalEvent.SetBlockAfterGoal -> setState { copy(blockAfterGoal = event.enabled) }
+            is SetGoalEvent.ToggleAccessLimit ->
+                updateSetting(event.app) { it.copy(accessLimited = !it.accessLimited) }
+            SetGoalEvent.SubmitGenderAge -> submitGenderAge()
+            SetGoalEvent.SubmitAppSelection -> submitAppSelection()
+            SetGoalEvent.SubmitTimeSet -> submitTimeSet()
+            SetGoalEvent.SubmitGoal -> submitGoal()
+        }
     }
 
-    // 04-1. 나이대 선택
-    fun selectAgeGroup(ageGroup: String) {
-        _uiState.update { it.copy(ageGroup = ageGroup) }
-    }
-
-    // 04-2. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개)
-    fun toggleApp(app: String) {
-        _uiState.update { state ->
-            when {
-                state.selectedApps.contains(app) -> state.copy(
-                    selectedApps = state.selectedApps - app,
-                    appSettings = state.appSettings - app,
-                )
-                state.selectedApps.size < MAX_SELECTABLE_APPS -> state.copy(
-                    selectedApps = state.selectedApps + app,
-                    appSettings = state.appSettings + (app to AppGoalSetting()),
-                )
-                else -> state
+    // 04-2. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개, 초과 시 안내)
+    private fun toggleApp(app: String) {
+        val state = currentState
+        when {
+            state.selectedApps.contains(app) -> setState {
+                copy(selectedApps = selectedApps - app, appSettings = appSettings - app)
             }
+            state.selectedApps.size < MAX_SELECTABLE_APPS -> setState {
+                copy(
+                    selectedApps = selectedApps + app,
+                    appSettings = appSettings + (app to AppGoalSetting()),
+                )
+            }
+            else -> sendEffect(
+                SetGoalEffect.ShowMessage("주의 앱은 최대 ${MAX_SELECTABLE_APPS}개까지 선택할 수 있어요"),
+            )
         }
     }
 
-    // 04-3. 앱별 목표 시간 설정
-    fun setAppTime(app: String, timeInput: AppTimeInput) {
-        updateSetting(app) { it.copy(timeInput = timeInput) }
-    }
-
-    // 04-3. 목표 시간 이후 폰 금지 토글
-    fun setBlockAfterGoal(enabled: Boolean) {
-        _uiState.update { it.copy(blockAfterGoal = enabled) }
-    }
-
-    // 04-4/04-5. 앱별 접근 제한 토글
-    fun toggleAccessLimit(app: String) {
-        updateSetting(app) { it.copy(accessLimited = !it.accessLimited) }
-    }
-
-    private fun updateSetting(app: String, transform: (AppGoalSetting) -> AppGoalSetting) {
-        _uiState.update { state ->
-            val current = state.appSettings[app] ?: AppGoalSetting()
-            state.copy(appSettings = state.appSettings + (app to transform(current)))
+    // 04-1. 성별/나이 필수 검증
+    private fun submitGenderAge() {
+        val state = currentState
+        when {
+            state.gender == null -> sendEffect(SetGoalEffect.ShowMessage("성별을 선택해주세요"))
+            state.ageGroup == null -> sendEffect(SetGoalEffect.ShowMessage("나이를 선택해주세요"))
+            else -> sendEffect(SetGoalEffect.NavigateNext)
         }
     }
 
-    fun submitGoal() {
+    // 04-2. 앱 최소 1개 선택 검증
+    private fun submitAppSelection() {
+        if (currentState.selectedApps.isEmpty()) {
+            sendEffect(SetGoalEffect.ShowMessage("관리할 주의 앱을 최소 1개 선택해주세요"))
+        } else {
+            sendEffect(SetGoalEffect.NavigateNext)
+        }
+    }
+
+    // 04-3. 목표 시간 최소 10분 검증
+    private fun submitTimeSet() {
+        if (currentState.totalMinutes < MIN_GOAL_MINUTES) {
+            sendEffect(
+                SetGoalEffect.ShowMessage("목표 시간은 최소 ${MIN_GOAL_MINUTES}분 이상으로 설정해주세요"),
+            )
+        } else {
+            sendEffect(SetGoalEffect.NavigateNext)
+        }
+    }
+
+    private fun updateSetting(app: String, transform: (AppGoalSetting) -> AppGoalSetting) = setState {
+        val current = appSettings[app] ?: AppGoalSetting()
+        copy(appSettings = appSettings + (app to transform(current)))
+    }
+
+    private fun submitGoal() {
         // TODO: uiState를 Goal 도메인 모델로 변환해 setGoalUseCase 호출
     }
 }

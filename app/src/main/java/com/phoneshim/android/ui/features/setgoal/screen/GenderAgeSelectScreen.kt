@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,8 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -59,13 +62,24 @@ fun GenderAgeSelectScreen(
     viewModel: SetGoalViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is SetGoalEffect.ShowMessage ->
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                SetGoalEffect.NavigateNext -> onNext()
+            }
+        }
+    }
 
     GenderAgeSelectContent(
         gender = uiState.gender,
         age = uiState.ageGroup,
-        onGenderSelected = viewModel::selectGender,
-        onAgeSelected = viewModel::selectAgeGroup,
-        onNext = onNext,
+        onGenderSelected = { viewModel.onEvent(SetGoalEvent.SelectGender(it)) },
+        onAgeSelected = { viewModel.onEvent(SetGoalEvent.SelectAgeGroup(it)) },
+        onNext = { viewModel.onEvent(SetGoalEvent.SubmitGenderAge) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -81,8 +95,6 @@ private fun GenderAgeSelectContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -158,17 +170,7 @@ private fun GenderAgeSelectContent(
 
         SetGoalBottomButtons(
             onBack = onBack,
-            onNext = {
-                when {
-                    gender == null -> Toast.makeText(
-                        context, "성별을 선택해주세요", Toast.LENGTH_SHORT,
-                    ).show()
-                    age == null -> Toast.makeText(
-                        context, "나이를 선택해주세요", Toast.LENGTH_SHORT,
-                    ).show()
-                    else -> onNext()
-                }
-            },
+            onNext = onNext,
             showBack = false,
             modifier = Modifier.padding(
                 horizontal = PhoneShimDimens.screenHorizontalPadding,

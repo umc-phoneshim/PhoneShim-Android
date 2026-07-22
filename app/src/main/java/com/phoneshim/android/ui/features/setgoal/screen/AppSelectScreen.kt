@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,7 +43,8 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.viewmodel.MAX_SELECTABLE_APPS
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -61,12 +63,23 @@ fun AppSelectScreen(
 ) {
     // TODO: 설치된 앱 목록 조회 연동 (선택 상태는 viewModel이 플로우 전체에 공유)
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is SetGoalEffect.ShowMessage ->
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                SetGoalEffect.NavigateNext -> onNext()
+            }
+        }
+    }
 
     AppSelectContent(
         apps = SampleApps,
         selectedApps = uiState.selectedApps,
-        onToggleApp = viewModel::toggleApp,
-        onNext = onNext,
+        onToggleApp = { viewModel.onEvent(SetGoalEvent.ToggleApp(it)) },
+        onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppSelection) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -81,8 +94,6 @@ private fun AppSelectContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -132,19 +143,7 @@ private fun AppSelectContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
-                                .clickable {
-                                    val addingBeyondLimit = !selectedApps.contains(app) &&
-                                        selectedApps.size >= MAX_SELECTABLE_APPS
-                                    if (addingBeyondLimit) {
-                                        Toast.makeText(
-                                            context,
-                                            "주의 앱은 최대 ${MAX_SELECTABLE_APPS}개까지 선택할 수 있어요",
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    } else {
-                                        onToggleApp(app)
-                                    }
-                                },
+                                .clickable { onToggleApp(app) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             AppLabel(name = app)
@@ -192,17 +191,7 @@ private fun AppSelectContent(
             // Figma 04-2: 버튼은 하단 고정이 아니라 카드 아래 24dp 간격(컬럼 gap)으로 배치
             SetGoalBottomButtons(
                 onBack = onBack,
-                onNext = {
-                    if (selectedApps.isEmpty()) {
-                        Toast.makeText(
-                            context,
-                            "관리할 주의 앱을 최소 1개 선택해주세요",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    } else {
-                        onNext()
-                    }
-                },
+                onNext = onNext,
             )
         }
     }

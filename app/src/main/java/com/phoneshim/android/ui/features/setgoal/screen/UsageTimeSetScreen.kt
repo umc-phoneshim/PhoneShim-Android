@@ -22,6 +22,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,13 +44,12 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
 import com.phoneshim.android.ui.features.setgoal.component.TotalTimeCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
-
-// 허용되는 최소 목표 사용 시간 (분). 미만이면 다음 단계로 넘어갈 수 없습니다.
-private const val MIN_GOAL_MINUTES = 10
 
 // 앱별 하루 목표 사용 시간을 설정하는 화면 (Figma 04-3. 목표 사용 시간 설정)
 @Composable
@@ -61,14 +61,25 @@ fun UsageTimeSetScreen(
 ) {
     // 04-2에서 선택한 앱 목록과 시간 입력값을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is SetGoalEffect.ShowMessage ->
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                SetGoalEffect.NavigateNext -> onNext()
+            }
+        }
+    }
 
     UsageTimeSetContent(
         apps = uiState.selectedApps,
         timeInputs = uiState.appSettings.mapValues { it.value.timeInput },
-        onTimeChange = viewModel::setAppTime,
+        onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
         blockAfterGoal = uiState.blockAfterGoal,
-        onBlockAfterGoalChange = viewModel::setBlockAfterGoal,
-        onNext = onNext,
+        onBlockAfterGoalChange = { viewModel.onEvent(SetGoalEvent.SetBlockAfterGoal(it)) },
+        onNext = { viewModel.onEvent(SetGoalEvent.SubmitTimeSet) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -85,7 +96,6 @@ private fun UsageTimeSetContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val totalMinutes = apps.sumOf { timeInputs[it]?.totalMinutes ?: 0 }
 
     Column(
@@ -191,17 +201,7 @@ private fun UsageTimeSetContent(
             TotalTimeCard(totalMinutes = totalMinutes)
             SetGoalBottomButtons(
                 onBack = onBack,
-                onNext = {
-                    if (totalMinutes < MIN_GOAL_MINUTES) {
-                        Toast.makeText(
-                            context,
-                            "목표 시간은 최소 ${MIN_GOAL_MINUTES}분 이상으로 설정해주세요",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    } else {
-                        onNext()
-                    }
-                },
+                onNext = onNext,
             )
         }
     }
