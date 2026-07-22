@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  *
  * [필드가 서버와 다른 이유]
  *   서버 restrictedAppIds 는 monitoredAppId(uuid) 목록이지만, 엔진은 패키지명이 필요.
- *   그래서 캐시에는 uuid 를 패키지명으로 해석한 결과 restrictedPackages를 저장한다.
+ *   그래서 캐시에는 uuid 를 패키지명으로 해석한 결과 restrictedPackages를 저장.
  *   (명세: "클라이언트가 주의앱 API 조회해 패키지명 해석")
  *   restrictionMode: 서버 restrictMode 와 동일 문자열.
  *

@@ -5,27 +5,30 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Room 기반 정책 provider.
+ * Room(Goal 테이블) 기반 정책 provider.
  *
- * 비어 있으면 [StubBlockingPolicyProvider] 값으로 폴백해 엔진 테스트가 가능하게 한다.
- * 온보딩 저장이 붙으면 자연스럽게 실제 값이 우선한다. 폴백은 그때 제거해도 됨.
+ * 목표가 저장돼 있지 않으면(테이블 비어 있음) "목표 없음 = 차단 없음"으로 동작한다.
+ *   - phoneGoalMinutes() == null  → 전체폰 쿼터 분기 skip
+ *   - watchedApps().isEmpty()      → 주의앱 없음 → Allow
+ * 온보딩/설정 저장이 붙으면 그 값이 그대로 판정에 쓰인다.
+ *
+ * (수동으로 stub 값으로 엔진을 돌려보고 싶으면 BlockingPolicyBindModule 에서
+ *  bindPolicyProvider 를 StubBlockingPolicyProvider 로 바꿔 끼운다. 자동 폴백은 두지 않는다 —
+ *  빈 상태에서 몰래 stub 목표로 차단돼 "데이터 없는데 왜 차단?"이 되기 때문.)
  */
 @Singleton
 class RoomBlockingPolicyProvider @Inject constructor(
     private val goalDao: GoalDao,
-    private val fallback: StubBlockingPolicyProvider,
 ) : BlockingPolicyProvider {
 
     override suspend fun phoneGoalMinutes(): Int? =
-        goalDao.getPhoneGoal()?.goalMinutes ?: fallback.phoneGoalMinutes()
+        goalDao.getPhoneGoal()?.goalMinutes
 
     override suspend fun phoneLimitEnabled(): Boolean =
-        goalDao.getPhoneGoal()?.limitEnabled ?: fallback.phoneLimitEnabled()
+        goalDao.getPhoneGoal()?.limitEnabled ?: false
 
-    override suspend fun watchedApps(): List<AppBlockingPolicy> {
-        val rows = goalDao.getAppGoals()
-        if (rows.isEmpty()) return fallback.watchedApps()
-        return rows.map {
+    override suspend fun watchedApps(): List<AppBlockingPolicy> =
+        goalDao.getAppGoals().map {
             AppBlockingPolicy(
                 packageName = it.packageName,
                 appLabel = it.appLabel,
@@ -33,5 +36,4 @@ class RoomBlockingPolicyProvider @Inject constructor(
                 limitEnabled = it.limitEnabled,
             )
         }
-    }
 }

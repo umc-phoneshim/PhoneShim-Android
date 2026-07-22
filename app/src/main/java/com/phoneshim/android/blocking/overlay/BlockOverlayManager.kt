@@ -5,6 +5,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -14,8 +15,7 @@ import com.phoneshim.android.blocking.policy.BlockDecision
 import com.phoneshim.android.ui.features.appblocking.BlockOverlayContent
 
 /**
- * WindowManager 로 전체화면 ComposeView 를 붙였다 뗐다 한다.
- * decision 을 State 로 들고 있어, show() 를 여러 번 불러도 뷰 재생성 없이 내용만 바뀐다.
+ * WindowManager 로 전체화면 ComposeView 를 붙였다 뗐다 한다..
  */
 class BlockOverlayManager(
     private val context: Context,
@@ -51,6 +51,7 @@ class BlockOverlayManager(
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
+            setViewTreeOnBackPressedDispatcherOwner(owner)
             setContent {
                 BlockOverlayContent(
                     decision = decisionState.value,
@@ -81,13 +82,13 @@ class BlockOverlayManager(
             // 차단 화면은 뒤 앱 입력을 완전히 가로채야 한다.
             //  - FLAG_NOT_TOUCH_MODAL 없음 + 전체화면 → 바깥 터치가 뒤로 새지 않음
             //  - focusable(=NOT_FOCUSABLE 안 줌) → 키 이벤트 수신. back 은 Compose BackHandler 가 소비
-            //  - FLAG_WATCH_OUTSIDE_TOUCH 안 씀(전체를 덮으므로 불필요)
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.OPAQUE,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
         }
     }
 }
+

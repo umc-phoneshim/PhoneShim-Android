@@ -1,5 +1,6 @@
 package com.phoneshim.android.blocking.policy
 
+
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,13 +14,23 @@ class BlockPolicyEngine @Inject constructor(
     private val goalProvider: BlockingPolicyProvider,
     private val scheduleProvider: SchedulePolicyProvider,
 ) {
+    /**
+     * 하드코딩 목록으로는 못 잡는, 기기별 기본 전화/문자 앱을 런타임에 채워 넣는 자리.
+     * BlockerService 가 TelecomManager/Telephony 로 실제 기본앱을 조회해 주입한다.
+     * 이게 없으면 전체 차단 중 전화/문자 버튼으로 연 앱이 허용목록에 없어 다시 차단된다.
+     */
+    @Volatile
+    var extraAllowed: Set<String> = emptySet()
+
     suspend fun decide(
         foregroundPackage: String,
         phoneUsedMinutes: Int,
         appUsedMinutes: Int,
         reasonAlreadyAsked: Boolean,
     ): BlockDecision {
-        if (foregroundPackage in ALWAYS_ALLOWED) return BlockDecision.Allow
+        if (foregroundPackage in ALWAYS_ALLOWED || foregroundPackage in extraAllowed) {
+            return BlockDecision.Allow
+        }
 
         // ── 1) 일정 차단 우선 ──
         when (val schedule = scheduleProvider.activeScheduleBlock()) {
