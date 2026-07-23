@@ -8,6 +8,6 @@
 .externalNativeBuild/
 .cxx/
 local.properties
-build/
+**/build/
 .claude/
 .kotlin/
