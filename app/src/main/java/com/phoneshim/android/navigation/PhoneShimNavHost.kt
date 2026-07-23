@@ -85,21 +85,21 @@ fun PhoneShimNavHost(navController: NavHostController) {
             }
             composable(Routes.GENDER_AGE_SELECT) { entry ->
                 GenderAgeSelectScreen(
-                    onNext = { navController.navigate(Routes.APP_SELECT) },
+                    onNext = { navController.navigate(Routes.USAGE_TIME_SET) },
                     onBack = { navController.popBackStack() },
                     viewModel = navController.sharedSetGoalViewModel(entry),
                 )
             }
             composable(Routes.APP_SELECT) { entry ->
                 AppSelectScreen(
-                    onNext = { navController.navigate(Routes.USAGE_TIME_SET) },
+                    onNext = { navController.navigate(Routes.ACCESS_GOAL_SET) },
                     onBack = { navController.popBackStack() },
                     viewModel = navController.sharedSetGoalViewModel(entry),
                 )
             }
             composable(Routes.USAGE_TIME_SET) { entry ->
                 UsageTimeSetScreen(
-                    onNext = { navController.navigate(Routes.ACCESS_GOAL_SET) },
+                    onNext = { navController.navigate(Routes.APP_SELECT) },
                     onBack = { navController.popBackStack() },
                     viewModel = navController.sharedSetGoalViewModel(entry),
                 )

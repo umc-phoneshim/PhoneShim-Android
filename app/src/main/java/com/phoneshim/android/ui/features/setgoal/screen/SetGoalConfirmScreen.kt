@@ -42,6 +42,8 @@ fun SetGoalConfirmScreen(
     SetGoalConfirmContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
+        totalMinutes = uiState.totalMinutes,
+        onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
         onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
         onConfirm = {
             viewModel.onEvent(SetGoalEvent.SubmitGoal)
@@ -56,13 +58,13 @@ fun SetGoalConfirmScreen(
 private fun SetGoalConfirmContent(
     apps: List<String>,
     settings: Map<String, AppGoalSetting>,
+    totalMinutes: Int,
+    onTimeChange: (String, AppTimeInput) -> Unit,
     onToggleAccessLimit: (String) -> Unit,
     onConfirm: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalMinutes = apps.sumOf { settings[it]?.timeInput?.totalMinutes ?: 0 }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -93,6 +95,7 @@ private fun SetGoalConfirmContent(
                     AppGoalRow(
                         app = app,
                         setting = setting,
+                        onTimeChange = { onTimeChange(app, it) },
                         onToggleAccessLimit = { onToggleAccessLimit(app) },
                     )
                     if (index != apps.lastIndex) {
@@ -125,10 +128,12 @@ private fun SetGoalConfirmScreenPreview() {
         SetGoalConfirmContent(
             apps = listOf("카카오톡", "페이스북", "틱톡"),
             settings = mapOf(
-                "카카오톡" to AppGoalSetting(AppTimeInput("01", "00"), accessLimited = true),
-                "페이스북" to AppGoalSetting(AppTimeInput("01", "30")),
-                "틱톡" to AppGoalSetting(AppTimeInput("01", "00")),
+                "카카오톡" to AppGoalSetting(accessLimited = true),
+                "페이스북" to AppGoalSetting(),
+                "틱톡" to AppGoalSetting(),
             ),
+            totalMinutes = 210,
+            onTimeChange = { _, _ -> },
             onToggleAccessLimit = {},
             onConfirm = {},
             onBack = {},

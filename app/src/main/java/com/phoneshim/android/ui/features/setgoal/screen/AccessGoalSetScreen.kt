@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,6 +64,8 @@ fun AccessGoalSetScreen(
     AccessGoalSetContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
+        totalMinutes = uiState.totalMinutes,
+        onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
         onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
         onNext = onNext,
         onBack = onBack,
@@ -70,13 +77,13 @@ fun AccessGoalSetScreen(
 private fun AccessGoalSetContent(
     apps: List<String>,
     settings: Map<String, AppGoalSetting>,
+    totalMinutes: Int,
+    onTimeChange: (String, AppTimeInput) -> Unit,
     onToggleAccessLimit: (String) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalMinutes = apps.sumOf { settings[it]?.timeInput?.totalMinutes ?: 0 }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -111,6 +118,7 @@ private fun AccessGoalSetContent(
                     AppGoalRow(
                         app = app,
                         setting = setting,
+                        onTimeChange = { onTimeChange(app, it) },
                         onToggleAccessLimit = { onToggleAccessLimit(app) },
                     )
                     if (index != apps.lastIndex) {
@@ -141,6 +149,7 @@ private fun AccessGoalSetContent(
 fun AppGoalRow(
     app: String,
     setting: AppGoalSetting,
+    onTimeChange: (AppTimeInput) -> Unit,
     onToggleAccessLimit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -150,13 +159,60 @@ fun AppGoalRow(
             .fillMaxWidth()
             .height(28.dp),
         trailingContent = {
+            TimeField(
+                value = setting.timeInput.hour,
+                onValueChange = { onTimeChange(setting.timeInput.copy(hour = it)) },
+            )
             Text(
-                text = "${setting.timeInput.hour} 시간 ${setting.timeInput.minute} 분",
+                text = "시간",
                 style = PhoneShimType.KorLabel,
                 color = PhoneShimTheme.colors.textPrimary,
+                modifier = Modifier.padding(horizontal = PhoneShimDimens.spacing4),
             )
-            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
+            TimeField(
+                value = setting.timeInput.minute,
+                onValueChange = { onTimeChange(setting.timeInput.copy(minute = it)) },
+            )
+            Text(
+                text = "분",
+                style = PhoneShimType.KorLabel,
+                color = PhoneShimTheme.colors.textPrimary,
+                modifier = Modifier.padding(start = PhoneShimDimens.spacing4),
+            )
+            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing8))
             AccessLimitIcon(active = setting.accessLimited, onClick = onToggleAccessLimit)
+        },
+    )
+}
+
+// 시/분 입력용 소형 텍스트 필드 (2자리)
+@Composable
+private fun TimeField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = { new -> onValueChange(new.filter(Char::isDigit).take(2)) },
+        textStyle = PhoneShimType.KorLabel.copy(
+            color = PhoneShimTheme.colors.textPrimary,
+            textAlign = TextAlign.Center,
+        ),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        modifier = modifier.size(width = 32.dp, height = 24.dp),
+        decorationBox = { innerTextField ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.small)
+                    .background(PhoneShimTheme.colors.surface)
+                    .border(1.dp, PhoneShimTheme.colors.border, MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center,
+            ) {
+                innerTextField()
+            }
         },
     )
 }
@@ -193,10 +249,12 @@ private fun AccessGoalSetScreenPreview() {
         AccessGoalSetContent(
             apps = listOf("카카오톡", "페이스북", "틱톡"),
             settings = mapOf(
-                "카카오톡" to AppGoalSetting(AppTimeInput("01", "00"), accessLimited = true),
-                "페이스북" to AppGoalSetting(AppTimeInput("01", "30")),
-                "틱톡" to AppGoalSetting(AppTimeInput("01", "00")),
+                "카카오톡" to AppGoalSetting(accessLimited = true),
+                "페이스북" to AppGoalSetting(),
+                "틱톡" to AppGoalSetting(),
             ),
+            totalMinutes = 210,
+            onTimeChange = { _, _ -> },
             onToggleAccessLimit = {},
             onNext = {},
             onBack = {},

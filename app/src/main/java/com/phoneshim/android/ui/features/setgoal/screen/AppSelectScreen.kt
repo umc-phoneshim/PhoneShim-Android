@@ -115,7 +115,7 @@ private fun AppSelectContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
         ) {
-            SetGoalStepIndicator(currentStep = 2)
+            SetGoalStepIndicator(currentStep = 3)
             SetGoalTitle(
                 title = "특별히 관리가 필요한\n‘주의 앱’을 선택해주세요!",
                 subtitle = "최대 5개까지 가능합니다",

@@ -14,47 +14,49 @@ const val MAX_SELECTABLE_APPS = 5
 // 허용되는 최소 목표 사용 시간 (분)
 const val MIN_GOAL_MINUTES = 10
 
-// 앱별 목표 시간 입력값 (시/분 문자열)
+// 목표 사용 시간 입력값 (시/분 문자열)
 data class AppTimeInput(
-    val hour: String = "01",
+    val hour: String = "00",
     val minute: String = "00",
 ) {
     val totalMinutes: Int
         get() = (hour.toIntOrNull() ?: 0) * 60 + (minute.toIntOrNull() ?: 0)
 }
 
-// 앱별 목표 시간 + 접근 제한 설정
+// 앱별 설정 (목표 시간 + 접근 제한) — 04-4에서 입력
 data class AppGoalSetting(
-    val timeInput: AppTimeInput = AppTimeInput(),
+    val timeInput: AppTimeInput = AppTimeInput("01", "00"),
     val accessLimited: Boolean = false,
 )
 
-// 목표 설정 플로우(04-1 ~ 04-6) 전체가 공유하는 UI 상태
+// 목표 설정 플로우(04-1 ~ 04-4) 전체가 공유하는 UI 상태
 data class SetGoalUiState(
     val gender: String? = null,
     val ageGroup: String? = null,
+    val goalTime: AppTimeInput = AppTimeInput(),
+    val blockAfterGoal: Boolean = false,
     val selectedApps: List<String> = emptyList(),
     val appSettings: Map<String, AppGoalSetting> = emptyMap(),
-    val blockAfterGoal: Boolean = false,
     val isLoading: Boolean = false,
 ) : UiState {
-    // 선택한 앱들의 목표 시간 합계 (분)
+    // 하루 목표 사용 시간 합계 (분)
     val totalMinutes: Int
-        get() = selectedApps.sumOf { appSettings[it]?.timeInput?.totalMinutes ?: 0 }
+        get() = goalTime.totalMinutes
 }
 
 // 목표 설정 화면에서 발생하는 사용자 이벤트
 sealed interface SetGoalEvent : UiEvent {
     data class SelectGender(val gender: String) : SetGoalEvent
     data class SelectAgeGroup(val ageGroup: String) : SetGoalEvent
-    data class ToggleApp(val app: String) : SetGoalEvent
-    data class SetAppTime(val app: String, val timeInput: AppTimeInput) : SetGoalEvent
+    data class SetGoalTime(val timeInput: AppTimeInput) : SetGoalEvent
     data class SetBlockAfterGoal(val enabled: Boolean) : SetGoalEvent
+    data class ToggleApp(val app: String) : SetGoalEvent
     data class ToggleAccessLimit(val app: String) : SetGoalEvent
+    data class SetAppTime(val app: String, val timeInput: AppTimeInput) : SetGoalEvent
     // 각 단계 '다음' 시 검증 후 통과하면 NavigateNext, 실패하면 ShowMessage
     data object SubmitGenderAge : SetGoalEvent
-    data object SubmitAppSelection : SetGoalEvent
     data object SubmitTimeSet : SetGoalEvent
+    data object SubmitAppSelection : SetGoalEvent
     data object SubmitGoal : SetGoalEvent
 }
 
@@ -75,20 +77,21 @@ class SetGoalViewModel @Inject constructor(
         when (event) {
             is SetGoalEvent.SelectGender -> setState { copy(gender = event.gender) }
             is SetGoalEvent.SelectAgeGroup -> setState { copy(ageGroup = event.ageGroup) }
-            is SetGoalEvent.ToggleApp -> toggleApp(event.app)
-            is SetGoalEvent.SetAppTime ->
-                updateSetting(event.app) { it.copy(timeInput = event.timeInput) }
+            is SetGoalEvent.SetGoalTime -> setState { copy(goalTime = event.timeInput) }
             is SetGoalEvent.SetBlockAfterGoal -> setState { copy(blockAfterGoal = event.enabled) }
+            is SetGoalEvent.ToggleApp -> toggleApp(event.app)
             is SetGoalEvent.ToggleAccessLimit ->
                 updateSetting(event.app) { it.copy(accessLimited = !it.accessLimited) }
+            is SetGoalEvent.SetAppTime ->
+                updateSetting(event.app) { it.copy(timeInput = event.timeInput) }
             SetGoalEvent.SubmitGenderAge -> submitGenderAge()
-            SetGoalEvent.SubmitAppSelection -> submitAppSelection()
             SetGoalEvent.SubmitTimeSet -> submitTimeSet()
+            SetGoalEvent.SubmitAppSelection -> submitAppSelection()
             SetGoalEvent.SubmitGoal -> submitGoal()
         }
     }
 
-    // 04-2. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개, 초과 시 안내)
+    // 04-3. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개, 초과 시 안내)
     private fun toggleApp(app: String) {
         val state = currentState
         when {
@@ -117,21 +120,21 @@ class SetGoalViewModel @Inject constructor(
         }
     }
 
-    // 04-2. 앱 최소 1개 선택 검증
-    private fun submitAppSelection() {
-        if (currentState.selectedApps.isEmpty()) {
-            sendEffect(SetGoalEffect.ShowMessage("관리할 주의 앱을 최소 1개 선택해주세요"))
-        } else {
-            sendEffect(SetGoalEffect.NavigateNext)
-        }
-    }
-
-    // 04-3. 목표 시간 최소 10분 검증
+    // 04-2. 목표 시간 최소 10분 검증
     private fun submitTimeSet() {
         if (currentState.totalMinutes < MIN_GOAL_MINUTES) {
             sendEffect(
                 SetGoalEffect.ShowMessage("목표 시간은 최소 ${MIN_GOAL_MINUTES}분 이상으로 설정해주세요"),
             )
+        } else {
+            sendEffect(SetGoalEffect.NavigateNext)
+        }
+    }
+
+    // 04-3. 앱 최소 1개 선택 검증
+    private fun submitAppSelection() {
+        if (currentState.selectedApps.isEmpty()) {
+            sendEffect(SetGoalEffect.ShowMessage("관리할 주의 앱을 최소 1개 선택해주세요"))
         } else {
             sendEffect(SetGoalEffect.NavigateNext)
         }
