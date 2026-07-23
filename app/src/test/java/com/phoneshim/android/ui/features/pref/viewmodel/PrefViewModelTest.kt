@@ -2,8 +2,11 @@ package com.phoneshim.android.ui.features.pref.viewmodel
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -32,9 +35,9 @@ class PrefViewModelTest {
 
     @Test
     fun `selectGender updates draft and closes selection popup`() {
-        viewModel.showGenderSelection()
+        viewModel.onEvent(PrefUiEvent.GenderSelectionOpened)
 
-        viewModel.selectGender(Gender.FEMALE)
+        viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
 
         val state = viewModel.uiState.value
         assertEquals(Gender.FEMALE, state.draftSettings.gender)
@@ -44,9 +47,9 @@ class PrefViewModelTest {
 
     @Test
     fun `selectAgeGroup updates draft and closes selection popup`() {
-        viewModel.showAgeGroupSelection()
+        viewModel.onEvent(PrefUiEvent.AgeGroupSelectionOpened)
 
-        viewModel.selectAgeGroup(AgeGroup.FORTIES)
+        viewModel.onEvent(PrefUiEvent.AgeGroupSelected(AgeGroup.FORTIES))
 
         val state = viewModel.uiState.value
         assertEquals(AgeGroup.FORTIES, state.draftSettings.ageGroup)
@@ -56,7 +59,7 @@ class PrefViewModelTest {
 
     @Test
     fun `showTotalTimeEditor initializes inputs from draft total`() {
-        viewModel.showTotalTimeEditor()
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
 
         assertEquals(
             TimeEditorState(
@@ -70,12 +73,12 @@ class PrefViewModelTest {
 
     @Test
     fun `time input keeps digits only and clears previous error`() {
-        viewModel.showTotalTimeEditor()
-        viewModel.updateMinutesInput("99")
-        viewModel.confirmGoalTime()
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("99"))
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
 
-        viewModel.updateHoursInput("1h2")
-        viewModel.updateMinutesInput("3m0")
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("1h2"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("3m0"))
 
         val editor = viewModel.uiState.value.timeEditor
         assertEquals("12", editor?.hoursInput)
@@ -85,10 +88,10 @@ class PrefViewModelTest {
 
     @Test
     fun `confirmGoalTime rejects minute outside valid range`() {
-        viewModel.showTotalTimeEditor()
-        viewModel.updateMinutesInput("60")
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("60"))
 
-        assertFalse(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
 
         val state = viewModel.uiState.value
         assertEquals(TimeInputError.INVALID_MINUTE_RANGE, state.timeEditor?.error)
@@ -97,11 +100,11 @@ class PrefViewModelTest {
 
     @Test
     fun `confirmGoalTime rejects goal below minimum`() {
-        viewModel.showTotalTimeEditor()
-        viewModel.updateHoursInput("0")
-        viewModel.updateMinutesInput("9")
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("0"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("9"))
 
-        assertFalse(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
 
         val state = viewModel.uiState.value
         assertEquals(TimeInputError.BELOW_MINIMUM, state.timeEditor?.error)
@@ -110,11 +113,11 @@ class PrefViewModelTest {
 
     @Test
     fun `confirmGoalTime updates total goal and closes editor`() {
-        viewModel.showTotalTimeEditor()
-        viewModel.updateHoursInput("4")
-        viewModel.updateMinutesInput("15")
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("4"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("15"))
 
-        assertTrue(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
 
         val state = viewModel.uiState.value
         assertEquals(255, state.draftSettings.totalGoalMinutes)
@@ -125,11 +128,11 @@ class PrefViewModelTest {
     @Test
     fun `confirmGoalTime updates only selected app goal`() {
         val goalsBeforeEdit = viewModel.uiState.value.draftSettings.appGoals
-        viewModel.showAppTimeEditor("facebook")
-        viewModel.updateHoursInput("2")
-        viewModel.updateMinutesInput("0")
+        viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened("facebook"))
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("2"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("0"))
 
-        assertTrue(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
 
         val goals = viewModel.uiState.value.draftSettings.appGoals
         assertEquals(120, goals.single { it.id == "facebook" }.goalMinutes)
@@ -143,22 +146,23 @@ class PrefViewModelTest {
     fun `unknown app id does not open editors or change state`() {
         val initialState = viewModel.uiState.value
 
-        viewModel.showAppTimeEditor("unknown")
-        viewModel.showAppGoalEditor("unknown")
+        viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened("unknown"))
+        viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened("unknown"))
 
         assertEquals(initialState, viewModel.uiState.value)
     }
 
     @Test
     fun `disabling app limit removes it from validation targets`() {
-        viewModel.showAppTimeEditor("kakao")
-        viewModel.updateHoursInput("0")
-        viewModel.updateMinutesInput("9")
-        assertFalse(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened("kakao"))
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("0"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("9"))
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
+        assertEquals(TimeInputError.BELOW_MINIMUM, viewModel.uiState.value.timeEditor?.error)
 
         // A rejected time input does not change the draft, and a disabled limit is not validated.
-        viewModel.dismissTimeEditor()
-        viewModel.toggleAppLimit("kakao")
+        viewModel.onEvent(PrefUiEvent.TimeEditorDismissed)
+        viewModel.onEvent(PrefUiEvent.AppLimitToggled("kakao"))
 
         val state = viewModel.uiState.value
         assertFalse(state.draftSettings.appGoals.single { it.id == "kakao" }.isLimitEnabled)
@@ -168,10 +172,10 @@ class PrefViewModelTest {
 
     @Test
     fun `saveAppDescription updates selected app and resets editor`() {
-        viewModel.showAppGoalEditor("tiktok")
-        viewModel.updateAppDescription("저녁에는 사용하지 않기")
+        viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened("tiktok"))
+        viewModel.onEvent(PrefUiEvent.AppDescriptionChanged("저녁에는 사용하지 않기"))
 
-        viewModel.saveAppDescription()
+        viewModel.onEvent(PrefUiEvent.AppDescriptionSaved)
 
         val state = viewModel.uiState.value
         assertEquals(
@@ -187,10 +191,10 @@ class PrefViewModelTest {
         val originalDescription = viewModel.uiState.value.draftSettings.appGoals
             .single { it.id == "kakao" }
             .goalDescription
-        viewModel.showAppGoalEditor("kakao")
-        viewModel.updateAppDescription("저장하지 않을 내용")
+        viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened("kakao"))
+        viewModel.onEvent(PrefUiEvent.AppDescriptionChanged("저장하지 않을 내용"))
 
-        viewModel.dismissAppGoalEditor()
+        viewModel.onEvent(PrefUiEvent.AppGoalEditorDismissed)
 
         val state = viewModel.uiState.value
         assertEquals(
@@ -203,10 +207,10 @@ class PrefViewModelTest {
 
     @Test
     fun `saveChanges persists valid draft settings`() {
-        viewModel.selectGender(Gender.FEMALE)
-        viewModel.selectAgeGroup(AgeGroup.THIRTIES)
+        viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
+        viewModel.onEvent(PrefUiEvent.AgeGroupSelected(AgeGroup.THIRTIES))
 
-        assertTrue(viewModel.saveChanges())
+        viewModel.onEvent(PrefUiEvent.SaveChanges)
 
         val state = viewModel.uiState.value
         assertEquals(state.draftSettings, state.savedSettings)
@@ -216,13 +220,13 @@ class PrefViewModelTest {
 
     @Test
     fun `discardChanges restores saved settings and closes every editor`() {
-        viewModel.selectGender(Gender.FEMALE)
-        viewModel.showAgeGroupSelection()
-        viewModel.showTotalTimeEditor()
-        viewModel.showAppGoalEditor("kakao")
-        viewModel.updateAppDescription("임시 입력")
+        viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
+        viewModel.onEvent(PrefUiEvent.AgeGroupSelectionOpened)
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened("kakao"))
+        viewModel.onEvent(PrefUiEvent.AppDescriptionChanged("임시 입력"))
 
-        viewModel.discardChanges()
+        viewModel.onEvent(PrefUiEvent.DiscardChanges)
 
         val state = viewModel.uiState.value
         assertEquals(state.savedSettings, state.draftSettings)
@@ -236,15 +240,26 @@ class PrefViewModelTest {
 
     @Test
     fun `rejected editor input does not pollute the draft saved by saveChanges`() {
-        viewModel.showTotalTimeEditor()
-        viewModel.updateHoursInput("0")
-        viewModel.updateMinutesInput("9")
-        assertFalse(viewModel.confirmGoalTime())
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("0"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("9"))
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
+        assertEquals(TimeInputError.BELOW_MINIMUM, viewModel.uiState.value.timeEditor?.error)
         val savedBeforeAttempt = viewModel.uiState.value.savedSettings
 
-        assertTrue(viewModel.saveChanges())
+        viewModel.onEvent(PrefUiEvent.SaveChanges)
 
         // Invalid editor input never enters the draft, so the valid draft remains saveable.
         assertEquals(savedBeforeAttempt, viewModel.uiState.value.savedSettings)
+    }
+
+    @Test
+    fun `saveChanges emits a one-off settings saved effect`() = runTest(testDispatcher) {
+        viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
+        val effect = async { viewModel.effect.first() }
+
+        viewModel.onEvent(PrefUiEvent.SaveChanges)
+
+        assertEquals(PrefUiEffect.SettingsSaved, effect.await())
     }
 }
