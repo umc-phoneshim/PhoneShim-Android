@@ -1,113 +1,101 @@
 package com.phoneshim.android.ui.features.reminder.viewmodel
 
-import androidx.lifecycle.ViewModel
+import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-
-enum class RestrictionMode { NONE, FULL_PHONE, SPECIFIC_APPS }
-
-data class ReminderTaskUiModel(
-    val id: String,
-    val date: LocalDate,
-    val title: String,
-    val startMinutes: Int,
-    val endMinutes: Int,
-    val restrictionMode: RestrictionMode = RestrictionMode.NONE,
-    val restrictedAppIds: Set<String> = emptySet(),
-)
-
-data class ReminderDraft(
-    val editingTaskId: String? = null,
-    val title: String = "",
-    val startTimeText: String = "",
-    val endTimeText: String = "",
-    val restrictionMode: RestrictionMode = RestrictionMode.NONE,
-    val restrictedAppIds: Set<String> = emptySet(),
-    val titleError: String? = null,
-    val timeError: String? = null,
-)
-
-data class MockRestrictedApp(val id: String, val name: String)
-
-data class ReminderUiState(
-    val todayDate: LocalDate = LocalDate.of(2026, 7, 11),
-    val selectedDate: LocalDate = LocalDate.of(2026, 7, 17),
-    val visibleMonth: YearMonth = YearMonth.of(2026, 7),
-    val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = defaultTasks(),
-    val editingTask: ReminderTaskUiModel? = null,
-    val isTaskPopupVisible: Boolean = false,
-    val isDatePickerVisible: Boolean = false,
-    val draft: ReminderDraft = ReminderDraft(),
-    val mockApps: List<MockRestrictedApp> = listOf(
-        MockRestrictedApp("kakao", "카카오톡"),
-        MockRestrictedApp("youtube", "YouTube"),
-        MockRestrictedApp("instagram", "Instagram"),
-    ),
-    val message: String? = null,
-) {
-    val selectedTasks: List<ReminderTaskUiModel>
-        get() = tasksByDate[selectedDate].orEmpty().sortedBy { it.startMinutes }
-}
 
 @HiltViewModel
-class ReminderViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(ReminderUiState())
-    val uiState: StateFlow<ReminderUiState> = _uiState.asStateFlow()
+class ReminderViewModel @Inject constructor() :
+    BaseViewModel<ReminderUiState, ReminderUiEvent, ReminderUiEffect>(ReminderUiState()) {
 
-    fun selectDate(date: LocalDate) = _uiState.update {
-        it.copy(selectedDate = date, visibleMonth = YearMonth.from(date))
+    override fun handleEvent(event: ReminderUiEvent) {
+        when (event) {
+            is ReminderUiEvent.DateSelected -> selectDate(event)
+            is ReminderUiEvent.MonthMoved -> moveMonth(event)
+            ReminderUiEvent.AddTaskClicked -> openAddPopup()
+            is ReminderUiEvent.EditTaskClicked -> openEditPopup(event)
+            ReminderUiEvent.PopupDismissed -> dismissPopup()
+            is ReminderUiEvent.TitleChanged -> updateTitle(event)
+            is ReminderUiEvent.StartTimeChanged -> updateStartTime(event)
+            is ReminderUiEvent.EndTimeChanged -> updateEndTime(event)
+            is ReminderUiEvent.RestrictionModeChanged -> updateRestrictionMode(event)
+            is ReminderUiEvent.RestrictedAppToggled -> toggleRestrictedApp(event)
+            ReminderUiEvent.SaveTaskClicked -> saveTask()
+            ReminderUiEvent.DeleteTaskClicked -> deleteTask()
+        }
     }
 
-    fun moveMonth(monthOffset: Long) = _uiState.update {
-        it.copy(visibleMonth = it.visibleMonth.plusMonths(monthOffset))
+    private fun selectDate(event: ReminderUiEvent.DateSelected) = setState {
+        copy(selectedDate = event.date, visibleMonth = YearMonth.from(event.date))
     }
 
-    fun openAddPopup() = _uiState.update {
-        it.copy(editingTask = null, draft = ReminderDraft(title = "과제"), isTaskPopupVisible = true)
+    private fun moveMonth(event: ReminderUiEvent.MonthMoved) = setState {
+        copy(visibleMonth = visibleMonth.plusMonths(event.offset))
     }
 
-    fun openEditPopup(task: ReminderTaskUiModel) = _uiState.update {
-        it.copy(
-            editingTask = task,
+    private fun openAddPopup() = setState {
+        copy(editingTask = null, draft = ReminderDraft(title = "과제"), isTaskPopupVisible = true)
+    }
+
+    private fun openEditPopup(event: ReminderUiEvent.EditTaskClicked) = setState {
+        copy(
+            editingTask = event.task,
             draft = ReminderDraft(
-                editingTaskId = task.id,
-                title = task.title,
-                startTimeText = formatMinutes(task.startMinutes),
-                endTimeText = formatMinutes(task.endMinutes),
-                restrictionMode = task.restrictionMode,
-                restrictedAppIds = task.restrictedAppIds,
+                editingTaskId = event.task.id,
+                title = event.task.title,
+                startTimeText = formatMinutes(event.task.startMinutes),
+                endTimeText = formatMinutes(event.task.endMinutes),
+                restrictionMode = event.task.restrictionMode,
+                restrictedAppIds = event.task.restrictedAppIds,
             ),
             isTaskPopupVisible = true,
         )
     }
 
-    fun dismissPopup() = _uiState.update {
-        it.copy(editingTask = null, draft = ReminderDraft(), isTaskPopupVisible = false)
+    private fun dismissPopup() = setState {
+        copy(editingTask = null, draft = ReminderDraft(), isTaskPopupVisible = false)
     }
 
-    fun updateTitle(value: String) = updateDraft {
-        copy(title = value, titleError = if (value.length > 20) "이름은 20자 이내로 입력해 주세요" else null)
+    private fun updateTitle(event: ReminderUiEvent.TitleChanged) = updateDraft {
+        copy(
+            title = event.value,
+            titleError = if (event.value.length > 20) "이름은 20자 이내로 입력해 주세요" else null,
+        )
     }
 
-    fun updateStartTime(value: String) = updateDraft { copy(startTimeText = value.take(5), timeError = null) }
-    fun updateEndTime(value: String) = updateDraft { copy(endTimeText = value.take(5), timeError = null) }
-    fun updateRestrictionMode(mode: RestrictionMode) = updateDraft {
-        copy(restrictionMode = mode, restrictedAppIds = if (mode == RestrictionMode.SPECIFIC_APPS) restrictedAppIds else emptySet())
+    private fun updateStartTime(event: ReminderUiEvent.StartTimeChanged) = updateDraft {
+        copy(startTimeText = event.value.take(5), timeError = null)
     }
 
-    fun toggleRestrictedApp(appId: String) = updateDraft {
-        copy(restrictedAppIds = if (appId in restrictedAppIds) restrictedAppIds - appId else restrictedAppIds + appId)
+    private fun updateEndTime(event: ReminderUiEvent.EndTimeChanged) = updateDraft {
+        copy(endTimeText = event.value.take(5), timeError = null)
     }
 
-    fun saveTask() {
-        val state = _uiState.value
+    private fun updateRestrictionMode(event: ReminderUiEvent.RestrictionModeChanged) = updateDraft {
+        copy(
+            restrictionMode = event.mode,
+            restrictedAppIds = if (event.mode == RestrictionMode.SPECIFIC_APPS) {
+                restrictedAppIds
+            } else {
+                emptySet()
+            },
+        )
+    }
+
+    private fun toggleRestrictedApp(event: ReminderUiEvent.RestrictedAppToggled) = updateDraft {
+        copy(
+            restrictedAppIds = if (event.appId in restrictedAppIds) {
+                restrictedAppIds - event.appId
+            } else {
+                restrictedAppIds + event.appId
+            },
+        )
+    }
+
+    private fun saveTask() {
+        val state = currentState
         val draft = state.draft
         val start = parseTime(draft.startTimeText)
         val end = parseTime(draft.endTimeText)
@@ -123,7 +111,10 @@ class ReminderViewModel @Inject constructor() : ViewModel() {
             else -> null
         }
         if (titleError != null || timeError != null) {
-            _uiState.update { it.copy(draft = draft.copy(titleError = titleError, timeError = timeError), message = timeError ?: titleError) }
+            setState {
+                copy(draft = draft.copy(titleError = titleError, timeError = timeError))
+            }
+            sendEffect(ReminderUiEffect.ShowMessage(requireNotNull(timeError ?: titleError)))
             return
         }
         val task = ReminderTaskUiModel(
@@ -136,24 +127,23 @@ class ReminderViewModel @Inject constructor() : ViewModel() {
             restrictedAppIds = draft.restrictedAppIds,
         )
         val updated = state.tasksByDate[state.selectedDate].orEmpty().filterNot { it.id == task.id } + task
-        _uiState.update {
-            it.copy(
-                tasksByDate = it.tasksByDate + (state.selectedDate to updated.sortedBy(ReminderTaskUiModel::startMinutes)),
+        setState {
+            copy(
+                tasksByDate = tasksByDate + (state.selectedDate to updated.sortedBy(ReminderTaskUiModel::startMinutes)),
                 editingTask = null,
                 draft = ReminderDraft(),
                 isTaskPopupVisible = false,
-                message = null,
             )
         }
         // TODO: 실제 제한 엔진 연동 시 저장된 restrictionMode와 restrictedAppIds를 전달합니다.
     }
 
-    fun deleteTask() {
-        val id = _uiState.value.draft.editingTaskId ?: return
-        _uiState.update { state ->
-            val updated = state.tasksByDate[state.selectedDate].orEmpty().filterNot { it.id == id }
-            state.copy(
-                tasksByDate = state.tasksByDate + (state.selectedDate to updated),
+    private fun deleteTask() {
+        val id = currentState.draft.editingTaskId ?: return
+        setState {
+            val updated = tasksByDate[selectedDate].orEmpty().filterNot { it.id == id }
+            copy(
+                tasksByDate = tasksByDate + (selectedDate to updated),
                 editingTask = null,
                 draft = ReminderDraft(),
                 isTaskPopupVisible = false,
@@ -161,10 +151,8 @@ class ReminderViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun clearMessage() = _uiState.update { it.copy(message = null) }
-
-    private fun updateDraft(transform: ReminderDraft.() -> ReminderDraft) = _uiState.update {
-        it.copy(draft = it.draft.transform())
+    private fun updateDraft(transform: ReminderDraft.() -> ReminderDraft) = setState {
+        copy(draft = draft.transform())
     }
 
     private fun overlaps(state: ReminderUiState, start: Int, end: Int, editingId: String?): Boolean =
@@ -186,13 +174,3 @@ fun parseTime(value: String): Int? {
 }
 
 fun formatMinutes(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
-
-private fun defaultTasks(): Map<LocalDate, List<ReminderTaskUiModel>> {
-    val date = LocalDate.of(2026, 7, 17)
-    return mapOf(
-        date to listOf(
-            ReminderTaskUiModel("mock-1", date, "과제하기", 600, 660),
-            ReminderTaskUiModel("mock-2", date, "과제하기", 780, 840),
-        ),
-    )
-}

@@ -3,8 +3,11 @@ package com.phoneshim.android.ui.features.reminder.viewmodel
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -76,7 +79,7 @@ class ReminderViewModelTest {
         prepareNewTask(title = "", start = "09:00", end = "10:00")
         val tasksBeforeSave = viewModel.uiState.value.selectedTasks
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals("할 일 이름을 입력해 주세요", state.draft.titleError)
@@ -89,7 +92,7 @@ class ReminderViewModelTest {
     fun `saveTask rejects title longer than twenty characters`() {
         prepareNewTask(title = "가".repeat(21), start = "09:00", end = "10:00")
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals("이름은 20자 이내로 입력해 주세요", state.draft.titleError)
@@ -101,7 +104,7 @@ class ReminderViewModelTest {
     fun `saveTask rejects malformed time`() {
         prepareNewTask(title = "운동", start = "invalid", end = "10:00")
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals("시간을 HH:mm 형식으로 입력해 주세요", state.draft.timeError)
@@ -112,14 +115,14 @@ class ReminderViewModelTest {
     @Test
     fun `saveTask rejects end time equal to or earlier than start time`() {
         prepareNewTask(title = "운동", start = "10:00", end = "10:00")
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
         assertEquals(
             "종료 시간은 시작 시간보다 이후여야 합니다",
             viewModel.uiState.value.draft.timeError,
         )
 
-        viewModel.updateEndTime("09:59")
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.EndTimeChanged("09:59"))
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
         assertEquals(
             "종료 시간은 시작 시간보다 이후여야 합니다",
             viewModel.uiState.value.draft.timeError,
@@ -128,13 +131,13 @@ class ReminderViewModelTest {
 
     @Test
     fun `saveTask rejects a task overlapping an existing task`() {
-        viewModel.openAddPopup()
-        viewModel.updateTitle("겹치는 일정")
-        viewModel.updateStartTime("10:30")
-        viewModel.updateEndTime("11:30")
+        viewModel.onEvent(ReminderUiEvent.AddTaskClicked)
+        viewModel.onEvent(ReminderUiEvent.TitleChanged("겹치는 일정"))
+        viewModel.onEvent(ReminderUiEvent.StartTimeChanged("10:30"))
+        viewModel.onEvent(ReminderUiEvent.EndTimeChanged("11:30"))
         val tasksBeforeSave = viewModel.uiState.value.selectedTasks
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals("이미 해당 시간에 등록된 할 일이 있습니다", state.draft.timeError)
@@ -152,7 +155,7 @@ class ReminderViewModelTest {
             restrictedAppId = "youtube",
         )
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         val task = state.selectedTasks.single()
@@ -172,9 +175,9 @@ class ReminderViewModelTest {
     @Test
     fun `saveTask sorts added tasks by start time`() {
         prepareNewTask(title = "두 번째", start = "11:00", end = "12:00")
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
         prepareNewTask(title = "첫 번째", start = "09:00", end = "10:00")
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         assertEquals(
             listOf("첫 번째", "두 번째"),
@@ -185,12 +188,12 @@ class ReminderViewModelTest {
     @Test
     fun `saveTask updates an existing task without creating a duplicate`() {
         val original = viewModel.uiState.value.selectedTasks.first()
-        viewModel.openEditPopup(original)
-        viewModel.updateTitle("수정된 과제")
-        viewModel.updateStartTime("10:15")
-        viewModel.updateEndTime("11:15")
+        viewModel.onEvent(ReminderUiEvent.EditTaskClicked(original))
+        viewModel.onEvent(ReminderUiEvent.TitleChanged("수정된 과제"))
+        viewModel.onEvent(ReminderUiEvent.StartTimeChanged("10:15"))
+        viewModel.onEvent(ReminderUiEvent.EndTimeChanged("11:15"))
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         val updated = state.selectedTasks.single { it.id == original.id }
@@ -204,9 +207,9 @@ class ReminderViewModelTest {
     @Test
     fun `saveTask ignores the edited task itself during overlap validation`() {
         val original = viewModel.uiState.value.selectedTasks.first()
-        viewModel.openEditPopup(original)
+        viewModel.onEvent(ReminderUiEvent.EditTaskClicked(original))
 
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals(2, state.selectedTasks.size)
@@ -219,9 +222,9 @@ class ReminderViewModelTest {
         val originalTasks = viewModel.uiState.value.selectedTasks
         val taskToDelete = originalTasks.first()
         val untouchedTask = originalTasks.last()
-        viewModel.openEditPopup(taskToDelete)
+        viewModel.onEvent(ReminderUiEvent.EditTaskClicked(taskToDelete))
 
-        viewModel.deleteTask()
+        viewModel.onEvent(ReminderUiEvent.DeleteTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals(listOf(untouchedTask), state.selectedTasks)
@@ -233,9 +236,9 @@ class ReminderViewModelTest {
     @Test
     fun `deleteTask does nothing when adding a new task`() {
         val originalTasks = viewModel.uiState.value.selectedTasks
-        viewModel.openAddPopup()
+        viewModel.onEvent(ReminderUiEvent.AddTaskClicked)
 
-        viewModel.deleteTask()
+        viewModel.onEvent(ReminderUiEvent.DeleteTaskClicked)
 
         val state = viewModel.uiState.value
         assertEquals(originalTasks, state.selectedTasks)
@@ -248,14 +251,27 @@ class ReminderViewModelTest {
         val defaultDate = viewModel.uiState.value.selectedDate
         val defaultTasks = viewModel.uiState.value.selectedTasks
         prepareNewTask(title = "다른 날짜 일정", start = "09:00", end = "10:00")
-        viewModel.saveTask()
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
-        viewModel.selectDate(defaultDate)
+        viewModel.onEvent(ReminderUiEvent.DateSelected(defaultDate))
 
         assertEquals(defaultTasks, viewModel.uiState.value.selectedTasks)
         assertEquals(
             "다른 날짜 일정",
             viewModel.uiState.value.tasksByDate.getValue(EMPTY_DATE).single().title,
+        )
+    }
+
+    @Test
+    fun `saveTask emits a one-off validation message effect`() = runTest(testDispatcher) {
+        prepareNewTask(title = "", start = "09:00", end = "10:00")
+        val effect = async { viewModel.effect.first() }
+
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
+
+        assertEquals(
+            ReminderUiEffect.ShowMessage("할 일 이름을 입력해 주세요"),
+            effect.await(),
         )
     }
 
@@ -266,13 +282,15 @@ class ReminderViewModelTest {
         restrictionMode: RestrictionMode = RestrictionMode.NONE,
         restrictedAppId: String? = null,
     ) {
-        viewModel.selectDate(EMPTY_DATE)
-        viewModel.openAddPopup()
-        viewModel.updateTitle(title)
-        viewModel.updateStartTime(start)
-        viewModel.updateEndTime(end)
-        viewModel.updateRestrictionMode(restrictionMode)
-        restrictedAppId?.let(viewModel::toggleRestrictedApp)
+        viewModel.onEvent(ReminderUiEvent.DateSelected(EMPTY_DATE))
+        viewModel.onEvent(ReminderUiEvent.AddTaskClicked)
+        viewModel.onEvent(ReminderUiEvent.TitleChanged(title))
+        viewModel.onEvent(ReminderUiEvent.StartTimeChanged(start))
+        viewModel.onEvent(ReminderUiEvent.EndTimeChanged(end))
+        viewModel.onEvent(ReminderUiEvent.RestrictionModeChanged(restrictionMode))
+        restrictedAppId?.let {
+            viewModel.onEvent(ReminderUiEvent.RestrictedAppToggled(it))
+        }
     }
 
     private companion object {
