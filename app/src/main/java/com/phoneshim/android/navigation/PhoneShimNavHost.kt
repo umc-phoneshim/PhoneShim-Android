@@ -109,6 +109,8 @@ fun PhoneShimNavHost(navController: NavHostController) {
         composable(Routes.MAIN) {
             MainScreen(
                 onNavigateToSetGoal = { navController.navigate(Routes.SET_GOAL_START) },
+                // TODO: 환경설정(PREF) 라우트가 이 브랜치엔 아직 없음. nav-feature 병합 후 실제 경로로 교체.
+                onNavigateToSettings = { },
                 onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
             )
         }

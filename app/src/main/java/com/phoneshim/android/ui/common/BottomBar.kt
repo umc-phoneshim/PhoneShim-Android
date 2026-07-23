@@ -22,8 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.theme.PhoneShimText
-import com.phoneshim.android.ui.theme.PhoneShimTextTokens
+import androidx.compose.material3.Text
+import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 
 /**
@@ -34,8 +34,8 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
  * ```
  * Box {
  *     // 화면 콘텐츠
- *     PhoneShimBottomBar(
- *         currentTab = currentTab,
+ *     BottomBar(
+ *         selectedTab = selectedTab,
  *         onTabSelected = { tab -> ... },
  *         modifier = Modifier
  *             .align(Alignment.BottomCenter)
@@ -45,9 +45,9 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
  * ```
  */
 @Composable
-fun PhoneShimBottomBar(
-    currentTab: PhoneShimTab,
-    onTabSelected: (PhoneShimTab) -> Unit,
+fun BottomBar(
+    selectedTab: BottomBarTab,
+    onTabSelected: (BottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -68,8 +68,8 @@ fun PhoneShimBottomBar(
             horizontalArrangement = Arrangement.spacedBy(36.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PhoneShimTab.entries.forEach { tab ->
-                val isSelected = currentTab == tab
+            BottomBarTab.entries.forEach { tab ->
+                val isSelected = selectedTab == tab
                 val tint = if (isSelected) PhoneShimTheme.colors.brandStrong else PhoneShimTheme.colors.brand
 
                 Column(
@@ -88,9 +88,9 @@ fun PhoneShimBottomBar(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    PhoneShimText(
+                    Text(
                         text = tab.label,
-                        style = PhoneShimTextTokens.label,
+                        style = PhoneShimType.KorLabel,
                         color = tint
                     )
                 }
