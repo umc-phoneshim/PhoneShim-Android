@@ -1,11 +1,15 @@
 package com.phoneshim.android.ui.features.setgoal.viewmodel
 
+import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.domain.model.InstalledApp
+import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // 선택 가능한 앱 최대 개수
@@ -30,13 +34,15 @@ data class AppGoalSetting(
 )
 
 // 목표 설정 플로우(04-1 ~ 04-4) 전체가 공유하는 UI 상태
+// selectedApps/appSettings의 키는 표시명이 아니라 packageName 입니다(차단 엔진 감지 기준).
 data class SetGoalUiState(
     val gender: String? = null,
     val ageGroup: String? = null,
     val goalTime: AppTimeInput = AppTimeInput(),
     val blockAfterGoal: Boolean = false,
-    val selectedApps: List<String> = emptyList(),
-    val appSettings: Map<String, AppGoalSetting> = emptyMap(),
+    val installedApps: List<InstalledApp> = emptyList(),
+    val selectedApps: List<InstalledApp> = emptyList(),
+    val appSettings: Map<String, AppGoalSetting> = emptyMap(), // key = packageName
     val isLoading: Boolean = false,
 ) : UiState {
     // 하루 목표 사용 시간 합계 (분)
@@ -50,9 +56,9 @@ sealed interface SetGoalEvent : UiEvent {
     data class SelectAgeGroup(val ageGroup: String) : SetGoalEvent
     data class SetGoalTime(val timeInput: AppTimeInput) : SetGoalEvent
     data class SetBlockAfterGoal(val enabled: Boolean) : SetGoalEvent
-    data class ToggleApp(val app: String) : SetGoalEvent
-    data class ToggleAccessLimit(val app: String) : SetGoalEvent
-    data class SetAppTime(val app: String, val timeInput: AppTimeInput) : SetGoalEvent
+    data class ToggleApp(val app: InstalledApp) : SetGoalEvent
+    data class ToggleAccessLimit(val packageName: String) : SetGoalEvent
+    data class SetAppTime(val packageName: String, val timeInput: AppTimeInput) : SetGoalEvent
     // 각 단계 '다음' 시 검증 후 통과하면 NavigateNext, 실패하면 ShowMessage
     data object SubmitGenderAge : SetGoalEvent
     data object SubmitTimeSet : SetGoalEvent
@@ -71,7 +77,12 @@ sealed interface SetGoalEffect : UiEffect {
 @HiltViewModel
 class SetGoalViewModel @Inject constructor(
     private val setGoalUseCase: SetGoalUseCase,
+    private val installedAppsRepository: InstalledAppsRepository,
 ) : BaseViewModel<SetGoalUiState, SetGoalEvent, SetGoalEffect>(SetGoalUiState()) {
+
+    init {
+        loadInstalledApps()
+    }
 
     override fun handleEvent(event: SetGoalEvent) {
         when (event) {
@@ -81,9 +92,9 @@ class SetGoalViewModel @Inject constructor(
             is SetGoalEvent.SetBlockAfterGoal -> setState { copy(blockAfterGoal = event.enabled) }
             is SetGoalEvent.ToggleApp -> toggleApp(event.app)
             is SetGoalEvent.ToggleAccessLimit ->
-                updateSetting(event.app) { it.copy(accessLimited = !it.accessLimited) }
+                updateSetting(event.packageName) { it.copy(accessLimited = !it.accessLimited) }
             is SetGoalEvent.SetAppTime ->
-                updateSetting(event.app) { it.copy(timeInput = event.timeInput) }
+                updateSetting(event.packageName) { it.copy(timeInput = event.timeInput) }
             SetGoalEvent.SubmitGenderAge -> submitGenderAge()
             SetGoalEvent.SubmitTimeSet -> submitTimeSet()
             SetGoalEvent.SubmitAppSelection -> submitAppSelection()
@@ -91,17 +102,28 @@ class SetGoalViewModel @Inject constructor(
         }
     }
 
-    // 04-3. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개, 초과 시 안내)
-    private fun toggleApp(app: String) {
+    // 04-3. 주의 앱 선택 화면에 뿌릴 설치 앱 목록 로드 (그래프 진입 시 1회)
+    private fun loadInstalledApps() {
+        viewModelScope.launch {
+            runCatching { installedAppsRepository.getInstalledApps() }
+                .onSuccess { apps -> setState { copy(installedApps = apps) } }
+        }
+    }
+
+    // 04-3. 주의 앱 선택/해제 (최대 MAX_SELECTABLE_APPS개, 초과 시 안내). 키는 packageName.
+    private fun toggleApp(app: InstalledApp) {
         val state = currentState
         when {
-            state.selectedApps.contains(app) -> setState {
-                copy(selectedApps = selectedApps - app, appSettings = appSettings - app)
+            state.selectedApps.any { it.packageName == app.packageName } -> setState {
+                copy(
+                    selectedApps = selectedApps.filterNot { it.packageName == app.packageName },
+                    appSettings = appSettings - app.packageName,
+                )
             }
             state.selectedApps.size < MAX_SELECTABLE_APPS -> setState {
                 copy(
                     selectedApps = selectedApps + app,
-                    appSettings = appSettings + (app to AppGoalSetting()),
+                    appSettings = appSettings + (app.packageName to AppGoalSetting()),
                 )
             }
             else -> sendEffect(
@@ -145,7 +167,11 @@ class SetGoalViewModel @Inject constructor(
         copy(appSettings = appSettings + (app to transform(current)))
     }
 
+    // 04-5. 확인 → 목표 저장 (UiState를 도메인 Goal로 매핑해 UseCase 호출)
     private fun submitGoal() {
-        // TODO: uiState를 Goal 도메인 모델로 변환해 setGoalUseCase 호출
+        viewModelScope.launch {
+            setGoalUseCase(currentState.toGoal())
+                .onFailure { sendEffect(SetGoalEffect.ShowMessage("목표 저장에 실패했어요")) }
+        }
     }
 }

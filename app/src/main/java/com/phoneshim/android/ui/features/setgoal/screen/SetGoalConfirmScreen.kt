@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
@@ -56,7 +57,7 @@ fun SetGoalConfirmScreen(
 
 @Composable
 private fun SetGoalConfirmContent(
-    apps: List<String>,
+    apps: List<InstalledApp>,
     settings: Map<String, AppGoalSetting>,
     totalMinutes: Int,
     onTimeChange: (String, AppTimeInput) -> Unit,
@@ -91,12 +92,13 @@ private fun SetGoalConfirmContent(
 
             SetGoalCard {
                 apps.forEachIndexed { index, app ->
-                    val setting = settings[app] ?: AppGoalSetting()
+                    val setting = settings[app.packageName] ?: AppGoalSetting()
                     AppGoalRow(
-                        app = app,
+                        app = app.label,
                         setting = setting,
-                        onTimeChange = { onTimeChange(app, it) },
-                        onToggleAccessLimit = { onToggleAccessLimit(app) },
+                        onTimeChange = { onTimeChange(app.packageName, it) },
+                        onToggleAccessLimit = { onToggleAccessLimit(app.packageName) },
+                        editable = false,
                     )
                     if (index != apps.lastIndex) {
                         SetGoalCardDivider()
@@ -126,11 +128,15 @@ private fun SetGoalConfirmContent(
 private fun SetGoalConfirmScreenPreview() {
     PhoneShimTheme {
         SetGoalConfirmContent(
-            apps = listOf("카카오톡", "페이스북", "틱톡"),
+            apps = listOf(
+                InstalledApp("com.kakao.talk", "카카오톡"),
+                InstalledApp("com.facebook.katana", "페이스북"),
+                InstalledApp("com.zhiliaoapp.musically", "틱톡"),
+            ),
             settings = mapOf(
-                "카카오톡" to AppGoalSetting(accessLimited = true),
-                "페이스북" to AppGoalSetting(),
-                "틱톡" to AppGoalSetting(),
+                "com.kakao.talk" to AppGoalSetting(accessLimited = true),
+                "com.facebook.katana" to AppGoalSetting(),
+                "com.zhiliaoapp.musically" to AppGoalSetting(),
             ),
             totalMinutes = 210,
             onTimeChange = { _, _ -> },

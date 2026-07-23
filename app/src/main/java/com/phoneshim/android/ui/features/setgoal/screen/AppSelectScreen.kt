@@ -31,12 +31,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
@@ -52,9 +52,6 @@ import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
-// 설치 앱 목록 연동 전 placeholder 목록
-private val SampleApps = listOf("카카오톡", "페이스북", "틱톡", "유튜브")
-
 // 목표 대상으로 절제할 앱을 선택하는 화면 (Figma 04-2. 어플 선택)
 @Composable
 fun AppSelectScreen(
@@ -63,7 +60,7 @@ fun AppSelectScreen(
     onBack: () -> Unit = {},
     viewModel: SetGoalViewModel = hiltViewModel(),
 ) {
-    // TODO: 설치된 앱 목록 조회 연동 (선택 상태는 viewModel이 플로우 전체에 공유)
+    // 설치 앱 목록은 viewModel이 그래프 진입 시 로드, 선택 상태는 플로우 전체에 공유
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -78,8 +75,8 @@ fun AppSelectScreen(
     }
 
     AppSelectContent(
-        apps = SampleApps,
-        selectedApps = uiState.selectedApps,
+        apps = uiState.installedApps,
+        selectedPackages = uiState.selectedApps.mapTo(HashSet()) { it.packageName },
         onToggleApp = { viewModel.onEvent(SetGoalEvent.ToggleApp(it)) },
         onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppSelection) },
         onBack = onBack,
@@ -89,9 +86,9 @@ fun AppSelectScreen(
 
 @Composable
 private fun AppSelectContent(
-    apps: List<String>,
-    selectedApps: List<String>,
-    onToggleApp: (String) -> Unit,
+    apps: List<InstalledApp>,
+    selectedPackages: Set<String>,
+    onToggleApp: (InstalledApp) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -125,14 +122,14 @@ private fun AppSelectContent(
             Column(verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12)) {
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(
-                            PhoneShimType.KorBodyL
-                                .copy(fontWeight = FontWeight.SemiBold)
-                                .toSpanStyle(),
-                        ) {
+                        withStyle(PhoneShimType.KorBodyL.toSpanStyle()) {
                             append("앱 선택 ")
                         }
-                        withStyle(PhoneShimType.KorCaption.toSpanStyle()) {
+                        withStyle(
+                            PhoneShimType.KorBodyL
+                                .toSpanStyle()
+                                .copy(color = PhoneShimTheme.colors.textTertiary),
+                        ) {
                             append("(최대 5개)")
                         }
                     },
@@ -142,13 +139,14 @@ private fun AppSelectContent(
                 SetGoalCard {
                     apps.forEachIndexed { index, app ->
                         AppInfoRow(
-                            appName = app,
+                            appName = app.label,
+                            appNameStyle = PhoneShimType.KorCaption,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
                                 .clickable { onToggleApp(app) },
                             trailingContent = {
-                                AppCheckCircle(checked = selectedApps.contains(app))
+                                AppCheckCircle(checked = selectedPackages.contains(app.packageName))
                             },
                         )
                         if (index != apps.lastIndex) {
@@ -156,7 +154,9 @@ private fun AppSelectContent(
                         }
                     }
 
-                    SetGoalCardDivider()
+                    if (apps.isNotEmpty()) {
+                        SetGoalCardDivider()
+                    }
 
                     // TODO: 기타 어플 추가 플로우 연동
                     Row(
@@ -170,14 +170,16 @@ private fun AppSelectContent(
                         Box(
                             modifier = Modifier
                                 .size(20.dp)
-                                .border(1.dp, PhoneShimTheme.colors.textTertiary, CircleShape),
+                                .clip(CircleShape)
+                                .background(PhoneShimTheme.colors.background)
+                                .border(1.dp, PhoneShimTheme.colors.border, CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_plus_button),
                                 contentDescription = null,
                                 tint = PhoneShimTheme.colors.textTertiary,
-                                modifier = Modifier.size(12.dp),
+                                modifier = Modifier.size(10.dp),
                             )
                         }
                         Text(
@@ -209,11 +211,11 @@ private fun AppCheckCircle(
             .size(24.dp)
             .clip(CircleShape)
             .background(
-                if (checked) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.surface,
+                if (checked) PhoneShimTheme.colors.brandStrong else PhoneShimTheme.colors.surface,
             )
             .border(
                 width = 1.dp,
-                color = if (checked) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.border,
+                color = if (checked) PhoneShimTheme.colors.brandStrong else PhoneShimTheme.colors.textTertiary,
                 shape = CircleShape,
             ),
         contentAlignment = Alignment.Center,
@@ -232,10 +234,16 @@ private fun AppCheckCircle(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun AppSelectScreenPreview() {
+    val sample = listOf(
+        InstalledApp("com.kakao.talk", "카카오톡"),
+        InstalledApp("com.facebook.katana", "페이스북"),
+        InstalledApp("com.zhiliaoapp.musically", "틱톡"),
+        InstalledApp("com.google.android.youtube", "유튜브"),
+    )
     PhoneShimTheme {
         AppSelectContent(
-            apps = SampleApps,
-            selectedApps = listOf("카카오톡", "페이스북", "틱톡"),
+            apps = sample,
+            selectedPackages = setOf("com.kakao.talk", "com.facebook.katana", "com.zhiliaoapp.musically"),
             onToggleApp = {},
             onNext = {},
             onBack = {},

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
@@ -75,7 +76,7 @@ fun AccessGoalSetScreen(
 
 @Composable
 private fun AccessGoalSetContent(
-    apps: List<String>,
+    apps: List<InstalledApp>,
     settings: Map<String, AppGoalSetting>,
     totalMinutes: Int,
     onTimeChange: (String, AppTimeInput) -> Unit,
@@ -105,7 +106,7 @@ private fun AccessGoalSetContent(
         ) {
             SetGoalStepIndicator(currentStep = 4)
             SetGoalTitle(
-                title = "선택한 어플의\n목표 시간과 목표를 설정해주세요",
+                title = "선택한 어플의 목표시간을 설정해주세요!",
                 subtitle = "‘주의 어플’의 목표 시간을 설정해주세요!\n" +
                     "목표 시간 이후 어플의 제한을 원한다면,\n" +
                     "제한 버튼을 클릭하여 제한을 활성화해주세요",
@@ -114,12 +115,12 @@ private fun AccessGoalSetContent(
 
             SetGoalCard {
                 apps.forEachIndexed { index, app ->
-                    val setting = settings[app] ?: AppGoalSetting()
+                    val setting = settings[app.packageName] ?: AppGoalSetting()
                     AppGoalRow(
-                        app = app,
+                        app = app.label,
                         setting = setting,
-                        onTimeChange = { onTimeChange(app, it) },
-                        onToggleAccessLimit = { onToggleAccessLimit(app) },
+                        onTimeChange = { onTimeChange(app.packageName, it) },
+                        onToggleAccessLimit = { onToggleAccessLimit(app.packageName) },
                     )
                     if (index != apps.lastIndex) {
                         SetGoalCardDivider()
@@ -144,7 +145,8 @@ private fun AccessGoalSetContent(
     }
 }
 
-// 앱 이름 + 목표 시간 + 접근 제한 토글 행
+// 앱 이름 + 목표 시간(입력/표시) + 접근 제한 토글 행
+// editable=true → 04-4 처럼 시/분 입력 박스, false → 04-5 처럼 텍스트로 표시
 @Composable
 fun AppGoalRow(
     app: String,
@@ -152,40 +154,74 @@ fun AppGoalRow(
     onTimeChange: (AppTimeInput) -> Unit,
     onToggleAccessLimit: () -> Unit,
     modifier: Modifier = Modifier,
+    editable: Boolean = true,
 ) {
     AppInfoRow(
         appName = app,
+        appNameStyle = PhoneShimType.KorCaption,
         modifier = modifier
             .fillMaxWidth()
             .height(28.dp),
         trailingContent = {
-            TimeField(
-                value = setting.timeInput.hour,
-                onValueChange = { onTimeChange(setting.timeInput.copy(hour = it)) },
-            )
-            Text(
-                text = "시간",
-                style = PhoneShimType.KorLabel,
-                color = PhoneShimTheme.colors.textPrimary,
-                modifier = Modifier.padding(horizontal = PhoneShimDimens.spacing4),
-            )
-            TimeField(
-                value = setting.timeInput.minute,
-                onValueChange = { onTimeChange(setting.timeInput.copy(minute = it)) },
-            )
-            Text(
-                text = "분",
-                style = PhoneShimType.KorLabel,
-                color = PhoneShimTheme.colors.textPrimary,
-                modifier = Modifier.padding(start = PhoneShimDimens.spacing4),
-            )
-            Spacer(modifier = Modifier.width(PhoneShimDimens.spacing8))
-            AccessLimitIcon(active = setting.accessLimited, onClick = onToggleAccessLimit)
+            // 접근 제한 아이콘과 시간 묶음 사이 간격 12
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+            ) {
+                // 시간/분 묶음 사이 간격 8
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                ) {
+                    TimeUnitGroup(
+                        value = setting.timeInput.hour,
+                        unit = "시간",
+                        editable = editable,
+                        onValueChange = { onTimeChange(setting.timeInput.copy(hour = it)) },
+                    )
+                    TimeUnitGroup(
+                        value = setting.timeInput.minute,
+                        unit = "분",
+                        editable = editable,
+                        onValueChange = { onTimeChange(setting.timeInput.copy(minute = it)) },
+                    )
+                }
+                AccessLimitIcon(active = setting.accessLimited, onClick = onToggleAccessLimit)
+            }
         },
     )
 }
 
-// 시/분 입력용 소형 텍스트 필드 (2자리)
+// 숫자(입력 or 표시) + 단위("시간"/"분") 묶음, 사이 간격 4
+@Composable
+private fun TimeUnitGroup(
+    value: String,
+    unit: String,
+    editable: Boolean,
+    onValueChange: (String) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+    ) {
+        if (editable) {
+            TimeField(value = value, onValueChange = onValueChange)
+        } else {
+            Text(
+                text = value.ifEmpty { "00" },
+                style = PhoneShimType.EngLabel,
+                color = PhoneShimTheme.colors.textPrimary,
+            )
+        }
+        Text(
+            text = unit,
+            style = PhoneShimType.KorLabel,
+            color = PhoneShimTheme.colors.textSecondary,
+        )
+    }
+}
+
+// 시/분 입력용 소형 텍스트 필드 (2자리, Figma 36x28 라운드 박스)
 @Composable
 private fun TimeField(
     value: String,
@@ -195,13 +231,13 @@ private fun TimeField(
     BasicTextField(
         value = value,
         onValueChange = { new -> onValueChange(new.filter(Char::isDigit).take(2)) },
-        textStyle = PhoneShimType.KorLabel.copy(
+        textStyle = PhoneShimType.EngLabel.copy(
             color = PhoneShimTheme.colors.textPrimary,
             textAlign = TextAlign.Center,
         ),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
-        modifier = modifier.size(width = 32.dp, height = 24.dp),
+        modifier = modifier.size(width = 36.dp, height = 28.dp),
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier
@@ -235,7 +271,7 @@ private fun AccessLimitIcon(
     ) {
         Box(
             modifier = Modifier
-                .width(8.dp)
+                .width(12.dp)
                 .height(1.5.dp)
                 .background(color),
         )
@@ -247,11 +283,15 @@ private fun AccessLimitIcon(
 private fun AccessGoalSetScreenPreview() {
     PhoneShimTheme {
         AccessGoalSetContent(
-            apps = listOf("카카오톡", "페이스북", "틱톡"),
+            apps = listOf(
+                InstalledApp("com.kakao.talk", "카카오톡"),
+                InstalledApp("com.facebook.katana", "페이스북"),
+                InstalledApp("com.zhiliaoapp.musically", "틱톡"),
+            ),
             settings = mapOf(
-                "카카오톡" to AppGoalSetting(accessLimited = true),
-                "페이스북" to AppGoalSetting(),
-                "틱톡" to AppGoalSetting(),
+                "com.kakao.talk" to AppGoalSetting(accessLimited = true),
+                "com.facebook.katana" to AppGoalSetting(),
+                "com.zhiliaoapp.musically" to AppGoalSetting(),
             ),
             totalMinutes = 210,
             onTimeChange = { _, _ -> },

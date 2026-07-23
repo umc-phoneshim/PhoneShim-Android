@@ -2,7 +2,7 @@ package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.GoalResponse
-import com.phoneshim.android.domain.model.AppUsage
+import com.phoneshim.android.domain.model.AppGoal
 import com.phoneshim.android.domain.model.Goal
 import com.phoneshim.android.domain.repository.GoalRepository
 import javax.inject.Inject
@@ -15,22 +15,23 @@ class GoalRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveGoal(goal: Goal): Result<Unit> = runCatching {
+        // TODO: 서버 goal 계약 확정 시 앱별 시간/성별/나이까지 반영 (현재 GoalResponse는 스칼라 구조)
         goalApi.saveGoal(
             GoalResponse(
-                id = goal.id,
-                targetPackageNames = goal.targetApps.map { it.packageName },
-                dailyUsageLimitMinutes = goal.dailyUsageLimitMinutes,
-                accessCountLimit = goal.accessCountLimit,
-                description = goal.description,
+                id = goal.id.orEmpty(),
+                targetPackageNames = goal.apps.map { it.packageName },
+                dailyUsageLimitMinutes = goal.dailyGoalMinutes,
+                accessCountLimit = goal.apps.count { it.accessLimited },
+                description = "",
             ),
         )
     }
 
     private fun GoalResponse.toDomain(): Goal = Goal(
         id = id,
-        targetApps = targetPackageNames.map { AppUsage(packageName = it, appName = it, usageMinutes = 0) },
-        dailyUsageLimitMinutes = dailyUsageLimitMinutes,
-        accessCountLimit = accessCountLimit,
-        description = description,
+        dailyGoalMinutes = dailyUsageLimitMinutes,
+        apps = targetPackageNames.map {
+            AppGoal(packageName = it, appName = it, goalMinutes = 0, accessLimited = false)
+        },
     )
 }

@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.ui.common.PrimaryButton
@@ -68,7 +67,6 @@ fun SetGoalStartScreen(
             Text(
                 text = "쉼이와 함께 목표 설정을 해볼까요?",
                 style = PhoneShimType.KorH3,
-                fontWeight = FontWeight.Bold,
                 color = PhoneShimTheme.colors.textPrimary,
             )
             Text(

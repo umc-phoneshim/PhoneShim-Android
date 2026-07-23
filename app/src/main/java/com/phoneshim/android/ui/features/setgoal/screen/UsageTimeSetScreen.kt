@@ -2,7 +2,9 @@ package com.phoneshim.android.ui.features.setgoal.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.Toggle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
-import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -108,39 +111,56 @@ private fun UsageTimeSetContent(
                 subtitle = "하루 동안 사용할 목표 시간을 설정해요",
             )
 
-            // 단일 총 목표 시간 클럭 (00 시간 00 분)
-            SetGoalCard {
+            // 단일 총 목표 시간 클럭 카드 (Figma 04-2: 연한 초록 배경 + 브랜드 테두리, p16)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(PhoneShimTheme.colors.brandSubtle)
+                    .border(1.dp, PhoneShimTheme.colors.brand, MaterialTheme.shapes.medium)
+                    .padding(PhoneShimDimens.spacing16),
+                contentAlignment = Alignment.Center,
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = PhoneShimDimens.spacing16),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ClockField(
-                        value = goalTime.hour,
-                        onValueChange = { onTimeChange(goalTime.copy(hour = it)) },
-                    )
-                    ClockUnit("시간")
-                    ClockField(
-                        value = goalTime.minute,
-                        onValueChange = { onTimeChange(goalTime.copy(minute = it)) },
-                        modifier = Modifier.padding(start = PhoneShimDimens.spacing16),
-                    )
-                    ClockUnit("분")
+                    // 시간 그룹 (숫자 + 단위, 사이 간격 없음)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ClockField(
+                            value = goalTime.hour,
+                            onValueChange = { onTimeChange(goalTime.copy(hour = it)) },
+                        )
+                        ClockUnit("시간")
+                    }
+                    // 분 그룹
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ClockField(
+                            value = goalTime.minute,
+                            onValueChange = { onTimeChange(goalTime.copy(minute = it)) },
+                        )
+                        ClockUnit("분")
+                    }
                 }
             }
 
+            // 목표 시간 이후 폰 금지 토글 (Figma 04-2: 텍스트 묶음 + 토글, gap 16)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.spacedBy(
+                    space = PhoneShimDimens.spacing16,
+                    alignment = Alignment.CenterHorizontally,
+                ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+                ) {
                     Text(
                         text = "목표 시간 이후 폰 금지",
                         style = PhoneShimType.KorCaption,
-                        color = PhoneShimTheme.colors.textPrimary,
+                        color = PhoneShimTheme.colors.textSecondary,
                     )
                     Text(
                         text = "(기본 어플만 사용 가능합니다.)",
@@ -151,7 +171,6 @@ private fun UsageTimeSetContent(
                 Toggle(
                     checked = blockAfterGoal,
                     onCheckedChange = onBlockAfterGoalChange,
-                    modifier = Modifier.padding(start = PhoneShimDimens.spacing32),
                 )
             }
         }
@@ -177,15 +196,13 @@ private fun ClockField(
     BasicTextField(
         value = value,
         onValueChange = { new -> onValueChange(new.filter(Char::isDigit).take(2)) },
-        textStyle = PhoneShimType.KorH3.copy(
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
+        textStyle = PhoneShimType.EngDisplay.copy(
             color = PhoneShimTheme.colors.textPrimary,
             textAlign = TextAlign.Center,
         ),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
-        modifier = modifier.width(52.dp),
+        modifier = modifier.width(56.dp),
     )
 }
 
@@ -194,9 +211,8 @@ private fun ClockField(
 private fun ClockUnit(text: String) {
     Text(
         text = text,
-        style = PhoneShimType.KorBodyL,
+        style = PhoneShimType.KorH2,
         color = PhoneShimTheme.colors.textPrimary,
-        modifier = Modifier.padding(start = PhoneShimDimens.spacing4),
     )
 }
 
