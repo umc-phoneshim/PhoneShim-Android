@@ -15,7 +15,28 @@ class GoalRepositoryImpl @Inject constructor(
     private val goalDao: GoalDao,
 ) : GoalRepository {
     override suspend fun getGoal(): Result<Goal?> = runCatching {
-        goalApi.getGoal()?.toDomain()
+        // 서버(원본) 우선, 네트워크 실패/오프라인이면 로컬 캐시로 폴백.
+        runCatching { goalApi.getGoal()?.toDomain() }.getOrNull() ?: getLocalGoal()
+    }
+
+    // 차단 엔진 캐시(phone_goal_cache/app_goal_cache)에서 목표를 복원. 저장된 게 없으면 null.
+    // 성별/나이는 캐시에 없어(엔진 미사용) null로 둔다 — 메인은 목표 시간/설정여부만 필요.
+    private suspend fun getLocalGoal(): Goal? {
+        val phone = goalDao.getPhoneGoal()
+        val apps = goalDao.getAppGoals()
+        if (phone == null && apps.isEmpty()) return null
+        return Goal(
+            dailyGoalMinutes = phone?.goalMinutes ?: 0,
+            blockAfterGoal = phone?.limitEnabled ?: false,
+            apps = apps.map {
+                AppGoal(
+                    packageName = it.packageName,
+                    appName = it.appLabel,
+                    goalMinutes = it.goalMinutes,
+                    accessLimited = it.limitEnabled,
+                )
+            },
+        )
     }
 
     override suspend fun saveGoal(goal: Goal): Result<Unit> = runCatching {
