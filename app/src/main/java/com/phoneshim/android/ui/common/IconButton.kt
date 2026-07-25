@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -32,12 +33,14 @@ fun IconButton(
     modifier: Modifier = Modifier,
     iconWidth: Dp = 16.dp,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.6f)
             .background(backgroundColor, RoundedCornerShape(PhoneShimDimens.spacing12))
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(PhoneShimDimens.spacing16),
         horizontalArrangement = Arrangement.spacedBy(
             PhoneShimDimens.spacing12,

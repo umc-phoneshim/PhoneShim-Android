@@ -29,6 +29,10 @@ object PhoneShimPalette {
     val SoftCream = Color(0xFFFFFDF7)
     val Cream = Color(0xFFFAF7F0) // Figma Color System 명세에 맞춰 수정 (기존 #FCFAF2)
 
+    // Login
+    val KakaoYellow = Color(0xFFFEE500)
+    val LoginButtonText = Color(0xFF3A1D1D)
+
     // Semantic
     val Success = Color(0xFF7DAA64)
     val Warning = Color(0xFFFFD5CE)
