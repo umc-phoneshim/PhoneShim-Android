@@ -1,5 +1,9 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
+import com.phoneshim.android.ui.common.base.UiEffect
+import com.phoneshim.android.ui.common.base.UiEvent
+import com.phoneshim.android.ui.common.base.UiState
+
 enum class Gender {
     MALE,
     FEMALE,
@@ -64,7 +68,32 @@ data class PrefUiState(
     val editingAppId: String? = null,
     val appDescriptionInput: String = "",
     val validation: PrefValidationResult = PrefValidationResult(),
-)
+) : UiState
+
+sealed interface PrefUiEvent : UiEvent {
+    data object GenderSelectionOpened : PrefUiEvent
+    data object AgeGroupSelectionOpened : PrefUiEvent
+    data object SelectionPopupDismissed : PrefUiEvent
+    data class GenderSelected(val gender: Gender) : PrefUiEvent
+    data class AgeGroupSelected(val ageGroup: AgeGroup) : PrefUiEvent
+    data object TotalTimeEditorOpened : PrefUiEvent
+    data class AppTimeEditorOpened(val appId: String) : PrefUiEvent
+    data class HoursInputChanged(val value: String) : PrefUiEvent
+    data class MinutesInputChanged(val value: String) : PrefUiEvent
+    data object TimeEditorDismissed : PrefUiEvent
+    data object GoalTimeConfirmed : PrefUiEvent
+    data class AppLimitToggled(val appId: String) : PrefUiEvent
+    data class AppGoalEditorOpened(val appId: String) : PrefUiEvent
+    data class AppDescriptionChanged(val value: String) : PrefUiEvent
+    data object AppGoalEditorDismissed : PrefUiEvent
+    data object AppDescriptionSaved : PrefUiEvent
+    data object SaveChanges : PrefUiEvent
+    data object DiscardChanges : PrefUiEvent
+}
+
+sealed interface PrefUiEffect : UiEffect {
+    data object SettingsSaved : PrefUiEffect
+}
 
 object PrefMockData {
     const val DEFAULT_GOAL_DESCRIPTION =
