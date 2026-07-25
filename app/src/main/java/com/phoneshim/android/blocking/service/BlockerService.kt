@@ -45,6 +45,7 @@ class BlockerService : Service() {
     @Inject lateinit var usageReader: UsageMinutesReader
     @Inject lateinit var engine: BlockPolicyEngine
 
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var overlay: BlockOverlayManager
     private lateinit var powerManager: PowerManager
@@ -99,6 +100,9 @@ class BlockerService : Service() {
 
     // 지금 떠 있는 화면이 '앱 하드 차단'인가(= 확인 누르면 홈으로 보낼 대상인가).
     private var showingAppBlock: Boolean = false
+
+    // 하드 차단이 시작된 시각(0 = 차단 아님). 이 이후의 시간은 사용량 집계에서 제외한다.
+    private var blockActiveSinceMs: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -156,8 +160,11 @@ class BlockerService : Service() {
             lastForegroundPackage = pkg
         }
 
-        val phoneUsed = usageReader.usedMinutesToday(null)
-        val appUsed = usageReader.usedMinutesToday(pkg)
+        // 차단이 떠 있는 동안은 '차단 시작 시각'을 상한으로 줘서, 막힌 시간이 사용량에
+        // 쌓이지 않게 한다(못 썼는데 목표를 깎아먹는 것 방지). 차단이 아니면 now(=실시간).
+        val ceiling = if (blockActiveSinceMs != 0L) blockActiveSinceMs else System.currentTimeMillis()
+        val phoneUsed = usageReader.usedMinutesToday(null, ceiling)
+        val appUsed = usageReader.usedMinutesToday(pkg, ceiling)
 
         // 이미 이번 세션에 물었거나 / 방금 나갔다 1분 내 재진입이면 스킵
         val recentlyReentered = pkg == lastExitedPackage &&
@@ -178,6 +185,16 @@ class BlockerService : Service() {
         }
         // 지금 떠 있는 게 '앱 하드 차단'인지. Dismiss(확인) 의 의미가 알림과 달라서 구분한다.
         showingAppBlock = suppressed is BlockDecision.AppBlocked
+
+        // 하드 차단(전체/앱)이 시작되는 순간을 기록. 이 시각 이후는 사용량에 안 쌓인다.
+        // 차단이 풀리면(Allow 등) 초기화해 실시간 집계로 복귀.
+        val isHardBlock = suppressed is BlockDecision.PhoneBlocked ||
+                suppressed is BlockDecision.AppBlocked
+        blockActiveSinceMs = when {
+            isHardBlock && blockActiveSinceMs == 0L -> System.currentTimeMillis()
+            !isHardBlock -> 0L
+            else -> blockActiveSinceMs
+        }
 
         withContext(Dispatchers.Main) {
             val withinActionGrace = System.currentTimeMillis() < overlaySuppressedUntilMs

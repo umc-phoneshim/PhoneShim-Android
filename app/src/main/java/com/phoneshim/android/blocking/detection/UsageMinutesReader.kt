@@ -43,11 +43,23 @@ class UsageMinutesReader @Inject constructor(
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
 
-    /** packageName == null 이면 전체 폰 합계. */
-    fun usedMinutesToday(packageName: String?): Int {
+    /**
+     * packageName == null 이면 전체 폰 합계.
+     *
+     * [openSessionCeilingMs] — 아직 안 끝난 세션을 이 시각까지만 집계한다.
+     * 차단 오버레이가 떠 있는 동안은 사용자가 실제로 못 쓰는데도 UsageEvents 상으로는
+     * 아래 앱이 계속 포그라운드로 남아 세션이 안 끊긴다. 그대로 두면 막힌 시간이 사용량으로
+     * 쌓여, 못 썼는데 목표를 깎아먹고 차단이 풀리자마자 다시 걸린다.
+     * 그래서 차단 중에는 서비스가 '차단 시작 시각'을 넘겨 그 이후는 세지 않게 한다.
+     * 차단이 아닐 때는 now 를 넘기면 되고(실시간 집계 유지), 이게 기본값이다.
+     */
+    fun usedMinutesToday(
+        packageName: String?,
+        openSessionCeilingMs: Long = System.currentTimeMillis(),
+    ): Int {
         val start = startOfToday()
         val now = System.currentTimeMillis()
-        val perPackageMs = aggregateByEvents(start, now)
+        val perPackageMs = aggregateByEvents(start, now, openSessionCeilingMs)
 
         val totalMs = if (packageName == null) {
             perPackageMs
@@ -63,9 +75,9 @@ class UsageMinutesReader @Inject constructor(
 
     /**
      * [start,now) 구간의 패키지별 포그라운드 체류 시간.
-     * 진행 중인 세션은 now 까지로 쳐서 더함.
+     * 진행 중인 세션은 [ceilingMs] 까지로 쳐서 더함(차단 중 상한 처리, 위 주석 참고).
      */
-    private fun aggregateByEvents(start: Long, now: Long): Map<String, Long> {
+    private fun aggregateByEvents(start: Long, now: Long, ceilingMs: Long): Map<String, Long> {
         val total = HashMap<String, Long>()
         val openedAt = HashMap<String, Long>() // 아직 종료 안 된 세션의 시작 시각
 
@@ -86,10 +98,12 @@ class UsageMinutesReader @Inject constructor(
             }
         }
 
-        // 아직 열려 있는 세션 반영.
-        // 이 한 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않는다.
+        // 아직 열려 있는 세션 반영. 단 ceiling 을 넘기지 않는다.
+        // 이 한 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않고,
+        // ceiling 이 없으면 차단 중에도 계속 쌓인다.
+        val end = minOf(now, ceilingMs)
         for ((pkg, from) in openedAt) {
-            if (now > from) total[pkg] = (total[pkg] ?: 0L) + (now - from)
+            if (end > from) total[pkg] = (total[pkg] ?: 0L) + (end - from)
         }
         return total
     }
