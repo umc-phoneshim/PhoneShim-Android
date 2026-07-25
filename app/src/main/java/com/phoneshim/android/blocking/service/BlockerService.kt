@@ -274,9 +274,13 @@ class BlockerService : Service() {
                 launchDefaultApp(Intent.ACTION_MAIN, category = Intent.CATEGORY_APP_MESSAGING)
             }
             is OverlayAction.ReasonSubmitted -> {
-                // #4: detector 재조회 금지. 프롬프트가 들고 있던 패키지를 그대로 사용.
+                /*
+                 * 사용 이유는 UI의 Repository 저장이 성공한 뒤에만 이 액션으로 도착한다.
+                 * 서비스는 저장을 다시 수행하지 않고 질문 완료 세션과 오버레이만 정리한다.
+                 * detector를 재조회하면 화면 전환 순간 다른 패키지를 기록할 수 있으므로
+                 * 프롬프트가 확정해서 전달한 패키지 이름을 그대로 사용한다.
+                 */
                 reasonAskedForPackage = action.packageName
-                // TODO(report): action.reason 저장
                 overlay.hide()
             }
         }
