@@ -27,13 +27,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
-import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -65,7 +65,7 @@ fun SetGoalTopBar(
         Text(
             text = "목표 설정",
             style = PhoneShimType.KorBodyL,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = PhoneShimTheme.colors.textPrimary,
             modifier = Modifier.align(Alignment.Center),
         )
@@ -94,7 +94,7 @@ fun SetGoalStepIndicator(
                         if (isActive) {
                             PhoneShimTheme.colors.brandStrong
                         } else {
-                            PhoneShimTheme.colors.surface
+                            Color.Transparent
                         },
                     )
                     .border(1.dp, PhoneShimTheme.colors.brandStrong, CircleShape),
@@ -140,7 +140,6 @@ fun SetGoalTitle(
         Text(
             text = title,
             style = PhoneShimType.KorH3,
-            fontWeight = FontWeight.Bold,
             color = PhoneShimTheme.colors.textPrimary,
             textAlign = TextAlign.Center,
         )
@@ -154,13 +153,22 @@ fun SetGoalTitle(
 }
 
 // 흰색 라운드 카드 컨테이너 (목록형 콘텐츠 감싸기)
+// Figma 04-x 카드: 기본 내부 여백 12dp (완료 화면 카드만 16dp)
 @Composable
 fun SetGoalCard(
     modifier: Modifier = Modifier,
+    contentPadding: Dp = PhoneShimDimens.spacing12,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    SectionCard(
-        modifier = modifier.fillMaxWidth(),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(PhoneShimTheme.colors.surface)
+            .border(1.dp, PhoneShimPalette.Primary300, MaterialTheme.shapes.medium)
+            .padding(contentPadding),
+        verticalArrangement = verticalArrangement,
         content = content,
     )
 }
@@ -221,8 +229,6 @@ fun SetGoalBottomButtons(
                 modifier = Modifier.weight(1f),
                 size = PhoneShimButtonSize.Medium,
                 fullWidth = false,
-                accentColor = PhoneShimPalette.Primary400,
-                pressedAccentColor = PhoneShimPalette.Primary500,
                 labelStyle = PhoneShimType.KorCaption,
             )
         } else {

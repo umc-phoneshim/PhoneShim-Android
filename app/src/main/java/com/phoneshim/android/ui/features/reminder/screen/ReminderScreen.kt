@@ -53,6 +53,8 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.features.reminder.component.ReminderSetPopup
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderTaskUiModel
+import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEffect
+import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEvent
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiState
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderViewModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.formatMinutes
@@ -87,10 +89,11 @@ fun ReminderRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessage()
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is ReminderUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+            }
         }
     }
     ReminderScreen(
@@ -101,19 +104,23 @@ fun ReminderRoute(
         onNavigateToMain = onNavigateToMain,
         onNavigateToReminder = onNavigateToReminder,
         onNavigateToReport = onNavigateToReport,
-        onSelectDate = viewModel::selectDate,
-        onPreviousMonth = { viewModel.moveMonth(-1) },
-        onNextMonth = { viewModel.moveMonth(1) },
-        onAddTask = viewModel::openAddPopup,
-        onEditTask = viewModel::openEditPopup,
-        onDismissPopup = viewModel::dismissPopup,
-        onTitleChange = viewModel::updateTitle,
-        onStartTimeChange = viewModel::updateStartTime,
-        onEndTimeChange = viewModel::updateEndTime,
-        onRestrictionModeChange = viewModel::updateRestrictionMode,
-        onToggleRestrictedApp = viewModel::toggleRestrictedApp,
-        onSaveTask = viewModel::saveTask,
-        onDeleteTask = viewModel::deleteTask,
+        onSelectDate = { viewModel.onEvent(ReminderUiEvent.DateSelected(it)) },
+        onPreviousMonth = { viewModel.onEvent(ReminderUiEvent.MonthMoved(-1)) },
+        onNextMonth = { viewModel.onEvent(ReminderUiEvent.MonthMoved(1)) },
+        onAddTask = { viewModel.onEvent(ReminderUiEvent.AddTaskClicked) },
+        onEditTask = { viewModel.onEvent(ReminderUiEvent.EditTaskClicked(it)) },
+        onDismissPopup = { viewModel.onEvent(ReminderUiEvent.PopupDismissed) },
+        onTitleChange = { viewModel.onEvent(ReminderUiEvent.TitleChanged(it)) },
+        onStartTimeChange = { viewModel.onEvent(ReminderUiEvent.StartTimeChanged(it)) },
+        onEndTimeChange = { viewModel.onEvent(ReminderUiEvent.EndTimeChanged(it)) },
+        onRestrictionModeChange = {
+            viewModel.onEvent(ReminderUiEvent.RestrictionModeChanged(it))
+        },
+        onToggleRestrictedApp = {
+            viewModel.onEvent(ReminderUiEvent.RestrictedAppToggled(it))
+        },
+        onSaveTask = { viewModel.onEvent(ReminderUiEvent.SaveTaskClicked) },
+        onDeleteTask = { viewModel.onEvent(ReminderUiEvent.DeleteTaskClicked) },
         modifier = modifier,
     )
 }

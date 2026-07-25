@@ -2,10 +2,13 @@ package com.phoneshim.android.ui.features.pref.screen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBarTab
+import com.phoneshim.android.ui.features.pref.viewmodel.PrefUiEffect
+import com.phoneshim.android.ui.features.pref.viewmodel.PrefUiEvent
 import com.phoneshim.android.ui.features.pref.viewmodel.PrefViewModel
 
 @Composable
@@ -22,8 +25,16 @@ fun PrefRoute(
     val uiState by viewModel.uiState.collectAsState()
 
     val discardAndGoBack = {
-        viewModel.discardChanges()
+        viewModel.onEvent(PrefUiEvent.DiscardChanges)
         onBack()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                PrefUiEffect.SettingsSaved -> onSave()
+            }
+        }
     }
 
     BackHandler(onBack = discardAndGoBack)
@@ -32,7 +43,7 @@ fun PrefRoute(
         uiState = uiState,
         selectedBottomTab = selectedBottomTab,
         onBottomNavSelected = { tab ->
-            viewModel.discardChanges()
+            viewModel.onEvent(PrefUiEvent.DiscardChanges)
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
                 BottomBarTab.REMINDER -> onNavigateToReminder()
@@ -41,27 +52,29 @@ fun PrefRoute(
         },
         onBack = discardAndGoBack,
         onCancel = {
-            viewModel.discardChanges()
+            viewModel.onEvent(PrefUiEvent.DiscardChanges)
             onCancel()
         },
-        onSave = {
-            if (viewModel.saveChanges()) onSave()
+        onSave = { viewModel.onEvent(PrefUiEvent.SaveChanges) },
+        onGenderClick = { viewModel.onEvent(PrefUiEvent.GenderSelectionOpened) },
+        onAgeGroupClick = { viewModel.onEvent(PrefUiEvent.AgeGroupSelectionOpened) },
+        onGenderSelected = { viewModel.onEvent(PrefUiEvent.GenderSelected(it)) },
+        onAgeGroupSelected = { viewModel.onEvent(PrefUiEvent.AgeGroupSelected(it)) },
+        onSelectionDismissed = { viewModel.onEvent(PrefUiEvent.SelectionPopupDismissed) },
+        onTotalGoalClick = { viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened) },
+        onHoursChanged = { viewModel.onEvent(PrefUiEvent.HoursInputChanged(it)) },
+        onMinutesChanged = { viewModel.onEvent(PrefUiEvent.MinutesInputChanged(it)) },
+        onTimeEditorDismissed = { viewModel.onEvent(PrefUiEvent.TimeEditorDismissed) },
+        onTimeEditorConfirmed = { viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed) },
+        onEditAppTime = { viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened(it)) },
+        onToggleLimit = { viewModel.onEvent(PrefUiEvent.AppLimitToggled(it)) },
+        onEditAppGoal = { viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened(it)) },
+        onAppDescriptionChanged = {
+            viewModel.onEvent(PrefUiEvent.AppDescriptionChanged(it))
         },
-        onGenderClick = viewModel::showGenderSelection,
-        onAgeGroupClick = viewModel::showAgeGroupSelection,
-        onGenderSelected = viewModel::selectGender,
-        onAgeGroupSelected = viewModel::selectAgeGroup,
-        onSelectionDismissed = viewModel::dismissSelectionPopup,
-        onTotalGoalClick = viewModel::showTotalTimeEditor,
-        onHoursChanged = viewModel::updateHoursInput,
-        onMinutesChanged = viewModel::updateMinutesInput,
-        onTimeEditorDismissed = viewModel::dismissTimeEditor,
-        onTimeEditorConfirmed = { viewModel.confirmGoalTime() },
-        onEditAppTime = viewModel::showAppTimeEditor,
-        onToggleLimit = viewModel::toggleAppLimit,
-        onEditAppGoal = viewModel::showAppGoalEditor,
-        onAppDescriptionChanged = viewModel::updateAppDescription,
-        onAppGoalEditorDismissed = viewModel::dismissAppGoalEditor,
-        onAppGoalSaved = viewModel::saveAppDescription,
+        onAppGoalEditorDismissed = {
+            viewModel.onEvent(PrefUiEvent.AppGoalEditorDismissed)
+        },
+        onAppGoalSaved = { viewModel.onEvent(PrefUiEvent.AppDescriptionSaved) },
     )
 }

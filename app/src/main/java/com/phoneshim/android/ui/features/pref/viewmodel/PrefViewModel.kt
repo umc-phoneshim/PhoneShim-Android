@@ -1,41 +1,59 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
-import androidx.lifecycle.ViewModel
+import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 private const val MINIMUM_GOAL_MINUTES = 10
 
 @HiltViewModel
-class PrefViewModel @Inject constructor() : ViewModel() {
+class PrefViewModel @Inject constructor() :
+    BaseViewModel<PrefUiState, PrefUiEvent, PrefUiEffect>(PrefUiState()) {
 
-    private val _uiState = MutableStateFlow(PrefUiState())
-    val uiState: StateFlow<PrefUiState> = _uiState.asStateFlow()
+    override fun handleEvent(event: PrefUiEvent) {
+        when (event) {
+            PrefUiEvent.GenderSelectionOpened -> showGenderSelection()
+            PrefUiEvent.AgeGroupSelectionOpened -> showAgeGroupSelection()
+            PrefUiEvent.SelectionPopupDismissed -> dismissSelectionPopup()
+            is PrefUiEvent.GenderSelected -> selectGender(event)
+            is PrefUiEvent.AgeGroupSelected -> selectAgeGroup(event)
+            PrefUiEvent.TotalTimeEditorOpened -> showTotalTimeEditor()
+            is PrefUiEvent.AppTimeEditorOpened -> showAppTimeEditor(event)
+            is PrefUiEvent.HoursInputChanged -> updateHoursInput(event)
+            is PrefUiEvent.MinutesInputChanged -> updateMinutesInput(event)
+            PrefUiEvent.TimeEditorDismissed -> dismissTimeEditor()
+            PrefUiEvent.GoalTimeConfirmed -> confirmGoalTime()
+            is PrefUiEvent.AppLimitToggled -> toggleAppLimit(event)
+            is PrefUiEvent.AppGoalEditorOpened -> showAppGoalEditor(event)
+            is PrefUiEvent.AppDescriptionChanged -> updateAppDescription(event)
+            PrefUiEvent.AppGoalEditorDismissed -> dismissAppGoalEditor()
+            PrefUiEvent.AppDescriptionSaved -> saveAppDescription()
+            PrefUiEvent.SaveChanges -> saveChanges()
+            PrefUiEvent.DiscardChanges -> discardChanges()
+        }
+    }
 
-    fun showGenderSelection() = updateState { copy(selectionPopup = SelectionPopup.GENDER) }
+    private fun showGenderSelection() = setState { copy(selectionPopup = SelectionPopup.GENDER) }
 
-    fun showAgeGroupSelection() = updateState { copy(selectionPopup = SelectionPopup.AGE_GROUP) }
+    private fun showAgeGroupSelection() = setState { copy(selectionPopup = SelectionPopup.AGE_GROUP) }
 
-    fun dismissSelectionPopup() = updateState { copy(selectionPopup = null) }
+    private fun dismissSelectionPopup() = setState { copy(selectionPopup = null) }
 
-    fun selectGender(gender: Gender) = updateState {
+    private fun selectGender(event: PrefUiEvent.GenderSelected) = setState {
         copy(
-            draftSettings = draftSettings.copy(gender = gender),
+            draftSettings = draftSettings.copy(gender = event.gender),
             selectionPopup = null,
         )
     }
 
-    fun selectAgeGroup(ageGroup: AgeGroup) = updateState {
+    private fun selectAgeGroup(event: PrefUiEvent.AgeGroupSelected) = setState {
         copy(
-            draftSettings = draftSettings.copy(ageGroup = ageGroup),
+            draftSettings = draftSettings.copy(ageGroup = event.ageGroup),
             selectionPopup = null,
         )
     }
 
-    fun showTotalTimeEditor() = updateState {
+    private fun showTotalTimeEditor() = setState {
         val totalMinutes = draftSettings.totalGoalMinutes
         copy(
             timeEditor = TimeEditorState(
@@ -46,44 +64,45 @@ class PrefViewModel @Inject constructor() : ViewModel() {
         )
     }
 
-    fun showAppTimeEditor(appId: String) = updateState {
-        val appGoal = draftSettings.appGoals.firstOrNull { it.id == appId } ?: return@updateState this
+    private fun showAppTimeEditor(event: PrefUiEvent.AppTimeEditorOpened) = setState {
+        val appGoal = draftSettings.appGoals.firstOrNull { it.id == event.appId }
+            ?: return@setState this
         copy(
             timeEditor = TimeEditorState(
-                target = TimeEditTarget.AppGoal(appId),
+                target = TimeEditTarget.AppGoal(event.appId),
                 hoursInput = (appGoal.goalMinutes / 60).toString(),
                 minutesInput = (appGoal.goalMinutes % 60).toString(),
             ),
         )
     }
 
-    fun updateHoursInput(value: String) = updateTimeEditor { editor ->
-        editor.copy(hoursInput = value.filter(Char::isDigit), error = null)
+    private fun updateHoursInput(event: PrefUiEvent.HoursInputChanged) = updateTimeEditor { editor ->
+        editor.copy(hoursInput = event.value.filter(Char::isDigit), error = null)
     }
 
-    fun updateMinutesInput(value: String) = updateTimeEditor { editor ->
-        editor.copy(minutesInput = value.filter(Char::isDigit), error = null)
+    private fun updateMinutesInput(event: PrefUiEvent.MinutesInputChanged) = updateTimeEditor { editor ->
+        editor.copy(minutesInput = event.value.filter(Char::isDigit), error = null)
     }
 
-    fun dismissTimeEditor() = updateState { copy(timeEditor = null) }
+    private fun dismissTimeEditor() = setState { copy(timeEditor = null) }
 
-    fun confirmGoalTime(): Boolean {
-        val editor = _uiState.value.timeEditor ?: return false
+    private fun confirmGoalTime() {
+        val editor = currentState.timeEditor ?: return
         val hours = editor.hoursInput.toIntOrNull() ?: 0
         val minutes = editor.minutesInput.toIntOrNull() ?: 0
 
         if (minutes !in 0..59) {
             updateTimeEditor { it.copy(error = TimeInputError.INVALID_MINUTE_RANGE) }
-            return false
+            return
         }
 
         val totalMinutes = hours * 60 + minutes
         if (totalMinutes < MINIMUM_GOAL_MINUTES) {
             updateTimeEditor { it.copy(error = TimeInputError.BELOW_MINIMUM) }
-            return false
+            return
         }
 
-        updateState {
+        setState {
             val updatedDraft = when (val target = editor.target) {
                 TimeEditTarget.TotalGoal -> draftSettings.copy(totalGoalMinutes = totalMinutes)
                 is TimeEditTarget.AppGoal -> draftSettings.copy(
@@ -98,13 +117,16 @@ class PrefViewModel @Inject constructor() : ViewModel() {
                 validation = validate(updatedDraft),
             )
         }
-        return true
     }
 
-    fun toggleAppLimit(appId: String) = updateState {
+    private fun toggleAppLimit(event: PrefUiEvent.AppLimitToggled) = setState {
         val updatedDraft = draftSettings.copy(
             appGoals = draftSettings.appGoals.map { goal ->
-                if (goal.id == appId) goal.copy(isLimitEnabled = !goal.isLimitEnabled) else goal
+                if (goal.id == event.appId) {
+                    goal.copy(isLimitEnabled = !goal.isLimitEnabled)
+                } else {
+                    goal
+                }
             },
         )
         copy(
@@ -113,22 +135,25 @@ class PrefViewModel @Inject constructor() : ViewModel() {
         )
     }
 
-    fun showAppGoalEditor(appId: String) = updateState {
-        val appGoal = draftSettings.appGoals.firstOrNull { it.id == appId } ?: return@updateState this
+    private fun showAppGoalEditor(event: PrefUiEvent.AppGoalEditorOpened) = setState {
+        val appGoal = draftSettings.appGoals.firstOrNull { it.id == event.appId }
+            ?: return@setState this
         copy(
-            editingAppId = appId,
+            editingAppId = event.appId,
             appDescriptionInput = appGoal.goalDescription,
         )
     }
 
-    fun updateAppDescription(value: String) = updateState { copy(appDescriptionInput = value) }
+    private fun updateAppDescription(event: PrefUiEvent.AppDescriptionChanged) = setState {
+        copy(appDescriptionInput = event.value)
+    }
 
-    fun dismissAppGoalEditor() = updateState {
+    private fun dismissAppGoalEditor() = setState {
         copy(editingAppId = null, appDescriptionInput = "")
     }
 
-    fun saveAppDescription() = updateState {
-        val appId = editingAppId ?: return@updateState this
+    private fun saveAppDescription() = setState {
+        val appId = editingAppId ?: return@setState this
         val updatedDraft = draftSettings.copy(
             appGoals = draftSettings.appGoals.map { goal ->
                 if (goal.id == appId) goal.copy(goalDescription = appDescriptionInput) else goal
@@ -141,21 +166,21 @@ class PrefViewModel @Inject constructor() : ViewModel() {
         )
     }
 
-    fun validateDraft(): PrefValidationResult {
-        val result = validate(_uiState.value.draftSettings)
-        updateState { copy(validation = result) }
+    private fun validateDraft(): PrefValidationResult {
+        val result = validate(currentState.draftSettings)
+        setState { copy(validation = result) }
         return result
     }
 
-    fun saveChanges(): Boolean {
+    private fun saveChanges() {
         val result = validateDraft()
-        if (!result.isValid) return false
+        if (!result.isValid) return
 
-        updateState { copy(savedSettings = draftSettings) }
-        return true
+        setState { copy(savedSettings = draftSettings) }
+        sendEffect(PrefUiEffect.SettingsSaved)
     }
 
-    fun discardChanges() = updateState {
+    private fun discardChanges() = setState {
         copy(
             draftSettings = savedSettings,
             selectionPopup = null,
@@ -165,8 +190,6 @@ class PrefViewModel @Inject constructor() : ViewModel() {
             validation = PrefValidationResult(),
         )
     }
-
-    fun restoreDraftFromSaved() = discardChanges()
 
     private fun validate(settings: PrefSettings): PrefValidationResult {
         val isTotalGoalInvalid = settings.totalGoalMinutes < MINIMUM_GOAL_MINUTES
@@ -181,11 +204,7 @@ class PrefViewModel @Inject constructor() : ViewModel() {
         )
     }
 
-    private inline fun updateState(transform: PrefUiState.() -> PrefUiState) {
-        _uiState.value = _uiState.value.transform()
-    }
-
-    private inline fun updateTimeEditor(transform: (TimeEditorState) -> TimeEditorState) {
-        updateState { copy(timeEditor = timeEditor?.let(transform)) }
+    private fun updateTimeEditor(transform: (TimeEditorState) -> TimeEditorState) {
+        setState { copy(timeEditor = timeEditor?.let(transform)) }
     }
 }

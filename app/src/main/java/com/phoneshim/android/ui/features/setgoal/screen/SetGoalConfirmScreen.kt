@@ -12,14 +12,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.ui.common.GoalTimeCard
-import com.phoneshim.android.ui.features.setgoal.component.AccessCountPopup
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
@@ -28,6 +25,7 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -42,43 +40,32 @@ fun SetGoalConfirmScreen(
 ) {
     // 04-1~04-4에서 설정한 값을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
-    var countEditingApp by remember { mutableStateOf<String?>(null) }
-
     SetGoalConfirmContent(
         apps = uiState.selectedApps,
         settings = uiState.appSettings,
-        onEditAccessCount = { countEditingApp = it },
+        totalMinutes = uiState.totalMinutes,
+        onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
+        onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
         onConfirm = {
-            viewModel.submitGoal()
+            viewModel.onEvent(SetGoalEvent.SubmitGoal)
             onConfirm()
         },
         onBack = onBack,
         modifier = modifier,
     )
-
-    countEditingApp?.let { app ->
-        AccessCountPopup(
-            initialCount = uiState.appSettings[app]?.accessCount ?: 0,
-            onConfirm = { count ->
-                viewModel.setAccessCount(app, count)
-                countEditingApp = null
-            },
-            onDismiss = { countEditingApp = null },
-        )
-    }
 }
 
 @Composable
 private fun SetGoalConfirmContent(
-    apps: List<String>,
+    apps: List<InstalledApp>,
     settings: Map<String, AppGoalSetting>,
-    onEditAccessCount: (String) -> Unit,
+    totalMinutes: Int,
+    onTimeChange: (String, AppTimeInput) -> Unit,
+    onToggleAccessLimit: (String) -> Unit,
     onConfirm: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalMinutes = apps.sumOf { settings[it]?.timeInput?.totalMinutes ?: 0 }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -105,12 +92,13 @@ private fun SetGoalConfirmContent(
 
             SetGoalCard {
                 apps.forEachIndexed { index, app ->
-                    val setting = settings[app] ?: AppGoalSetting()
+                    val setting = settings[app.packageName] ?: AppGoalSetting()
                     AppGoalRow(
-                        app = app,
+                        app = app.label,
                         setting = setting,
-                        onEditAccessCount = { onEditAccessCount(app) },
-                        onEditGoal = { },
+                        onTimeChange = { onTimeChange(app.packageName, it) },
+                        onToggleAccessLimit = { onToggleAccessLimit(app.packageName) },
+                        editable = false,
                     )
                     if (index != apps.lastIndex) {
                         SetGoalCardDivider()
@@ -140,13 +128,19 @@ private fun SetGoalConfirmContent(
 private fun SetGoalConfirmScreenPreview() {
     PhoneShimTheme {
         SetGoalConfirmContent(
-            apps = listOf("카카오톡", "페이스북", "틱톡"),
-            settings = mapOf(
-                "카카오톡" to AppGoalSetting(AppTimeInput("01", "00"), accessLimited = true),
-                "페이스북" to AppGoalSetting(AppTimeInput("01", "30")),
-                "틱톡" to AppGoalSetting(AppTimeInput("01", "00")),
+            apps = listOf(
+                InstalledApp("com.kakao.talk", "카카오톡"),
+                InstalledApp("com.facebook.katana", "페이스북"),
+                InstalledApp("com.zhiliaoapp.musically", "틱톡"),
             ),
-            onEditAccessCount = {},
+            settings = mapOf(
+                "com.kakao.talk" to AppGoalSetting(accessLimited = true),
+                "com.facebook.katana" to AppGoalSetting(),
+                "com.zhiliaoapp.musically" to AppGoalSetting(),
+            ),
+            totalMinutes = 210,
+            onTimeChange = { _, _ -> },
+            onToggleAccessLimit = {},
             onConfirm = {},
             onBack = {},
         )
