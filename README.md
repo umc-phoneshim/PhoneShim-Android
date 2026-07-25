@@ -137,7 +137,7 @@ Figma 프로토타입([바로가기](https://www.figma.com/design/jkpXsoAOUUuTvP
 
 | **화면** | **스크린 ID** | **담당자** | **상태 · 비고** |
 | --- | --- | --- | --- |
-| **01. 스플래시** | `SplashScreen` | 너울 | ✅ 완료 |
+| **01. 스플래시** | `SplashScreen` | 너울 | ⬜ 예정 |
 | **02. 로그인** | `LoginScreen` | 너울 | 🟡 UI 완료 · MVI 로직/테스트 진행 (PR #28) |
 | **회원가입** | `SignUpScreen` | 너울 | 🟡 UI 완료 · 로직 진행 |
 | **03. 접근 권한 동의(팝업)** | `PermissionConsentPopup` | 노뱅 | ✅ 완료 · 차단 권한 요청 연동 |
