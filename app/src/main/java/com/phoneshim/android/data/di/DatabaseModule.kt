@@ -6,6 +6,7 @@ import com.phoneshim.android.data.database.dao.GoalDao
 import com.phoneshim.android.data.database.dao.ReminderDao
 import com.phoneshim.android.data.database.dao.ReminderRestrictionDao
 import com.phoneshim.android.data.database.dao.TimetableDao
+import com.phoneshim.android.data.database.dao.UserProfileDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,5 +38,8 @@ object DatabaseModule {
     @Provides
     fun provideReminderRestrictionDao(database: PhoneShimDatabase): ReminderRestrictionDao =
         database.reminderRestrictionDao()
+
+    @Provides
+    fun provideUserProfileDao(database: PhoneShimDatabase): UserProfileDao = database.userProfileDao()
 }
 
