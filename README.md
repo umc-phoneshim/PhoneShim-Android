@@ -39,8 +39,8 @@
 | **Asynchronous** | Coroutines & Flow | 비동기 데이터 스트림 처리 및 상태 관리 |
 | **DI** | Hilt | 의존성 주입 최적화 |
 | **Network** | Retrofit2, OkHttp3 | RESTful API 통신 및 로깅 인터셉터 |
-| **Realtime** | Socket.io Client | 실시간 그룹 스터디룸 및 타이머 상태 동기화 |
-| **Local DB** | Room / DataStore | 공부 기록 로컬 캐싱 및 유저 설정 저장 |
+| **Realtime** | Socket.io Client | 실시간및 타이머 상태 동기화 |
+| **Local DB** | Room / DataStore | 로컬 캐싱 및 유저 설정 저장 |
 
 ---
 
