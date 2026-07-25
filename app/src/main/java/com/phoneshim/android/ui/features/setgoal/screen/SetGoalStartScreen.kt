@@ -17,9 +17,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.PermissionConsentPopup
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -36,6 +37,18 @@ fun SetGoalStartScreen(
     showPermissionConsent: Boolean = true,
 ) {
     var permissionConsentVisible by remember { mutableStateOf(showPermissionConsent) }
+
+    // 차단 엔진용 특수 권한(사용정보 접근·오버레이) 요청 왕복 헬퍼.
+    // 설정 화면을 순서대로 띄우고 돌아와 다시 확인하며, 둘 다 허용되면 엔진을 시작한다.
+    // 프리뷰에선 ActivityResult 런처를 만들 수 없어 생성하지 않는다.
+    val permissionRequest = if (LocalInspectionMode.current) {
+        null
+    } else {
+        rememberBlockingPermissionRequest { _ ->
+            // 권한 왕복 종료(허용/미허용 무관) → 동의 팝업 닫기. 허용됐다면 엔진은 이미 시작됨.
+            permissionConsentVisible = false
+        }
+    }
 
     Column(
         modifier = modifier
@@ -68,7 +81,6 @@ fun SetGoalStartScreen(
             Text(
                 text = "쉼이와 함께 목표 설정을 해볼까요?",
                 style = PhoneShimType.KorH3,
-                fontWeight = FontWeight.Bold,
                 color = PhoneShimTheme.colors.textPrimary,
             )
             Text(
@@ -98,8 +110,9 @@ fun SetGoalStartScreen(
 
     if (permissionConsentVisible) {
         PermissionConsentPopup(
-            // TODO: 실제 사용통계/오버레이/알림 권한 요청 연동
-            onAllowAll = { permissionConsentVisible = false },
+            // "모두 허용하기" → 특수 권한 설정 화면으로 안내(왕복). 완료 시 콜백에서 팝업을 닫는다.
+            // (프리뷰 등 헬퍼가 없을 때는 팝업만 닫는다.)
+            onAllowAll = { permissionRequest?.launch() ?: run { permissionConsentVisible = false } },
             onDismiss = { permissionConsentVisible = false },
         )
     }
