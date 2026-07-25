@@ -176,7 +176,7 @@ private fun AppSelectContent(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_plus_button),
+                                painter = painterResource(R.drawable.ic_plus),
                                 contentDescription = null,
                                 tint = PhoneShimTheme.colors.textTertiary,
                                 modifier = Modifier.size(10.dp),
