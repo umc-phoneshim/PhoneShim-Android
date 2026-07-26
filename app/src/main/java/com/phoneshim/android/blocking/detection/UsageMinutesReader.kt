@@ -53,28 +53,37 @@ class UsageMinutesReader @Inject constructor(
      * 그래서 차단 중에는 서비스가 '차단 시작 시각'을 넘겨 그 이후는 세지 않게 한다.
      * 차단이 아닐 때는 now 를 넘기면 되고(실시간 집계 유지), 이게 기본값이다.
      */
-    fun usedMinutesToday(
-        packageName: String?,
+    /**
+     * 폰 전체 사용량과 특정 앱 사용량을 **한 번의 이벤트 조회로** 함께 계산한다.
+     *
+     * 두 값을 따로 구하면 자정~현재 구간을 두 번 파싱하게 되는데,
+     * 이 계산은 매 tick(1초)마다 돌고 하루가 갈수록 이벤트가 쌓여
+     * 시간이 지날수록 비용이 커진다(발열·배터리 소모).
+     *
+     * [openSessionCeilingMs] 아직 안 끝난 세션을 이 시각까지만 집계(차단 중 상한).
+     * [countFromMs] 집계 시작 하한. 목표를 정한 당일에는 그 시각부터 센다.
+     *   다음날부터는 startOfToday() 가 이 값을 앞질러 자동으로 자정 기준이 된다.
+     */
+    fun usageSnapshot(
+        packageName: String,
         openSessionCeilingMs: Long = System.currentTimeMillis(),
         countFromMs: Long = 0L,
-    ): Int {
-        // 자정 기준이 원칙이지만, 목표를 정한 당일에는 그 시각부터 센다.
-        // (목표 설정 전에 이미 쓴 시간까지 반영하면 온보딩 직후 바로 차단된다.)
-        // 다음날부터는 startOfToday() 가 countFromMs 를 앞질러 자동으로 자정 기준이 된다.
+    ): UsageSnapshot {
         val start = maxOf(startOfToday(), countFromMs)
         val now = System.currentTimeMillis()
         val perPackageMs = aggregateByEvents(start, now, openSessionCeilingMs)
 
-        val totalMs = if (packageName == null) {
-            perPackageMs
-                .filterKeys { it !in launcherPackages }
-                .filterKeys { it != context.packageName }
-                .filterKeys { !isSystemApp(it) }
-                .values.sum()
-        } else {
-            perPackageMs[packageName] ?: 0L
-        }
-        return (totalMs / 60_000L).toInt()
+        val phoneMs = perPackageMs
+            .filterKeys { it !in launcherPackages }
+            .filterKeys { it != context.packageName }
+            .filterKeys { !isSystemApp(it) }
+            .values.sum()
+        val appMs = perPackageMs[packageName] ?: 0L
+
+        return UsageSnapshot(
+            phoneMinutes = (phoneMs / 60_000L).toInt(),
+            appMinutes = (appMs / 60_000L).toInt(),
+        )
     }
 
     /**
@@ -119,12 +128,24 @@ class UsageMinutesReader @Inject constructor(
             .toSet()
     }
 
-    private fun isSystemApp(pkg: String): Boolean = try {
-        val info = pm.getApplicationInfo(pkg, 0)
-        // 시스템 앱이되, 사용자가 스토어에서 업데이트한 것(FLAG_UPDATED_SYSTEM_APP)은 실사용으로 인정
-        (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
-                (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
-    } catch (e: PackageManager.NameNotFoundException) {
-        false
+    // 패키지의 시스템 앱 여부는 설치 후 변하지 않는다. PackageManager 조회는 IPC 라
+    // 매 tick 마다 사용 패키지 수만큼 부르면 비용이 크므로 한 번만 조회하고 캐싱한다.
+    private val systemAppCache = HashMap<String, Boolean>()
+
+    private fun isSystemApp(pkg: String): Boolean = systemAppCache.getOrPut(pkg) {
+        try {
+            val info = pm.getApplicationInfo(pkg, 0)
+            // 시스템 앱이되, 사용자가 스토어에서 업데이트한 것(FLAG_UPDATED_SYSTEM_APP)은 실사용으로 인정
+            (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
+                    (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
     }
 }
+
+/** 한 번의 조회로 얻은 사용량 스냅샷(분). */
+data class UsageSnapshot(
+    val phoneMinutes: Int,
+    val appMinutes: Int,
+)

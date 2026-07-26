@@ -172,8 +172,10 @@ class BlockerService : Service() {
         // 쌓이지 않게 한다(못 썼는데 목표를 깎아먹는 것 방지). 차단이 아니면 now(=실시간).
         val ceiling = if (blockActiveSinceMs != 0L) blockActiveSinceMs else System.currentTimeMillis()
         val countFrom = resolveGoalFirstSeenAt()
-        val phoneUsed = usageReader.usedMinutesToday(null, ceiling, countFrom)
-        val appUsed = usageReader.usedMinutesToday(pkg, ceiling, countFrom)
+        // 전체·앱 사용량을 한 번의 조회로 함께 구한다(따로 부르면 같은 구간을 두 번 파싱).
+        val usage = usageReader.usageSnapshot(pkg, ceiling, countFrom)
+        val phoneUsed = usage.phoneMinutes
+        val appUsed = usage.appMinutes
 
         // 이미 이번 세션에 물었거나 / 방금 나갔다 1분 내 재진입이면 스킵
         val exitedAt = lastExitAtByPackage[pkg] ?: 0L
