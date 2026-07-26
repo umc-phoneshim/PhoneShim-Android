@@ -16,8 +16,8 @@ import com.phoneshim.android.ui.features.auth.screen.SignUpScreen
 import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.main.screen.MainScreen
-import com.phoneshim.android.ui.features.mypage.screen.MyScreen
-import com.phoneshim.android.ui.features.mypage.screen.MySideMenuScreen
+import com.phoneshim.android.ui.features.mypage.screen.MyRoute
+import com.phoneshim.android.ui.features.mypage.screen.MySideMenuRoute
 import com.phoneshim.android.ui.features.pref.screen.PrefRoute
 import com.phoneshim.android.ui.features.reminder.screen.ReminderRoute
 import com.phoneshim.android.ui.features.report.screen.ReportAiSuggestScreen
@@ -201,16 +201,19 @@ fun PhoneShimNavHost(navController: NavHostController) {
         // 마이페이지 화면
         composable(Routes.MY_PAGE) {
             val sourceTab = navController.previousBackStackEntry?.destination?.route.toBottomBarTab()
-            MyScreen(
+            MyRoute(
                 onNavigateToSideMenu = { navController.navigate(Routes.MY_SIDE_MENU) },
                 selectedBottomTab = sourceTab,
                 onNavigateToMain = { navController.navigateFromTransientToTopLevel(Routes.MAIN) },
                 onNavigateToReminder = { navController.navigateFromTransientToTopLevel(Routes.REMINDER) },
                 onNavigateToReport = { navController.navigateFromTransientToTopLevel(Routes.TIMETABLE) },
+                // TODO: 로그아웃 API 연동 후 Routes.LOGIN 으로 이동하도록 연결하세요.
+                onNavigateToLogin = { },
             )
         }
         composable(Routes.MY_SIDE_MENU) {
-            MySideMenuScreen(
+            MySideMenuRoute(
+                // TODO: 탈퇴 완료 화면/로그인 화면 이동을 연결하세요.
                 onNavigateToWithdraw = { },
                 onDismiss = { navController.popBackStack() },
             )
