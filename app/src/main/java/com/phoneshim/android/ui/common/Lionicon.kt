@@ -1,7 +1,5 @@
 package com.phoneshim.android.ui.common
 
-package com.phoneshim.android.ui.common
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
