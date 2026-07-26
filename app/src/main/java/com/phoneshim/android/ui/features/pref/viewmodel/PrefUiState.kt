@@ -29,6 +29,7 @@ data class PrefSettings(
     val gender: Gender,
     val ageGroup: AgeGroup,
     val totalGoalMinutes: Int,
+    val isTotalLimitEnabled: Boolean,
     val appGoals: List<AppGoal>,
 )
 
@@ -46,6 +47,7 @@ data class TimeEditorState(
     val target: TimeEditTarget,
     val hoursInput: String,
     val minutesInput: String,
+    val isLimitEnabled: Boolean = false,
     val error: TimeInputError? = null,
 )
 
@@ -80,6 +82,7 @@ sealed interface PrefUiEvent : UiEvent {
     data class AppTimeEditorOpened(val appId: String) : PrefUiEvent
     data class HoursInputChanged(val value: String) : PrefUiEvent
     data class MinutesInputChanged(val value: String) : PrefUiEvent
+    data object TimeEditorLimitToggled : PrefUiEvent
     data object TimeEditorDismissed : PrefUiEvent
     data object GoalTimeConfirmed : PrefUiEvent
     data class AppLimitToggled(val appId: String) : PrefUiEvent
@@ -103,6 +106,7 @@ object PrefMockData {
         gender = Gender.MALE,
         ageGroup = AgeGroup.TWENTIES,
         totalGoalMinutes = 210,
+        isTotalLimitEnabled = true,
         appGoals = listOf(
             AppGoal(
                 id = "kakao",
