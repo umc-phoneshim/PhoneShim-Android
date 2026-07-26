@@ -44,34 +44,24 @@ class UsageMinutesReader @Inject constructor(
     }.timeInMillis
 
     /**
-     * packageName == null 이면 전체 폰 합계.
-     *
-     * [openSessionCeilingMs] — 아직 안 끝난 세션을 이 시각까지만 집계한다.
-     * 차단 오버레이가 떠 있는 동안은 사용자가 실제로 못 쓰는데도 UsageEvents 상으로는
-     * 아래 앱이 계속 포그라운드로 남아 세션이 안 끊긴다. 그대로 두면 막힌 시간이 사용량으로
-     * 쌓여, 못 썼는데 목표를 깎아먹고 차단이 풀리자마자 다시 걸린다.
-     * 그래서 차단 중에는 서비스가 '차단 시작 시각'을 넘겨 그 이후는 세지 않게 한다.
-     * 차단이 아닐 때는 now 를 넘기면 되고(실시간 집계 유지), 이게 기본값이다.
-     */
-    /**
      * 폰 전체 사용량과 특정 앱 사용량을 **한 번의 이벤트 조회로** 함께 계산한다.
      *
      * 두 값을 따로 구하면 자정~현재 구간을 두 번 파싱하게 되는데,
      * 이 계산은 매 tick(1초)마다 돌고 하루가 갈수록 이벤트가 쌓여
      * 시간이 지날수록 비용이 커진다(발열·배터리 소모).
      *
-     * [openSessionCeilingMs] 아직 안 끝난 세션을 이 시각까지만 집계(차단 중 상한).
+     * [blockedIntervals] 차단이 걸려 있던 구간. 세션과 겹치는 만큼 사용량에서 제외한다.
      * [countFromMs] 집계 시작 하한. 목표를 정한 당일에는 그 시각부터 센다.
      *   다음날부터는 startOfToday() 가 이 값을 앞질러 자동으로 자정 기준이 된다.
      */
     fun usageSnapshot(
         packageName: String,
-        openSessionCeilingMs: Long = System.currentTimeMillis(),
+        blockedIntervals: List<BlockedInterval> = emptyList(),
         countFromMs: Long = 0L,
     ): UsageSnapshot {
         val start = maxOf(startOfToday(), countFromMs)
         val now = System.currentTimeMillis()
-        val perPackageMs = aggregateByEvents(start, now, openSessionCeilingMs)
+        val perPackageMs = aggregateByEvents(start, now, blockedIntervals)
 
         val phoneMs = perPackageMs
             .filterKeys { it !in launcherPackages }
@@ -88,9 +78,13 @@ class UsageMinutesReader @Inject constructor(
 
     /**
      * [start,now) 구간의 패키지별 포그라운드 체류 시간.
-     * 진행 중인 세션은 [ceilingMs] 까지로 쳐서 더함(차단 중 상한 처리, 위 주석 참고).
+     * 각 세션에서 [blockedIntervals] 와 겹치는 시간은 제외한다.
      */
-    private fun aggregateByEvents(start: Long, now: Long, ceilingMs: Long): Map<String, Long> {
+    private fun aggregateByEvents(
+        start: Long,
+        now: Long,
+        blockedIntervals: List<BlockedInterval>,
+    ): Map<String, Long> {
         val total = HashMap<String, Long>()
         val openedAt = HashMap<String, Long>() // 아직 종료 안 된 세션의 시작 시각
 
@@ -104,21 +98,40 @@ class UsageMinutesReader @Inject constructor(
                     openedAt[pkg] = event.timeStamp
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val from = openedAt.remove(pkg) ?: continue
-                    if (event.timeStamp > from) {
-                        total[pkg] = (total[pkg] ?: 0L) + (event.timeStamp - from)
-                    }
+                    val counted = countedMs(pkg, from, event.timeStamp, blockedIntervals)
+                    if (counted > 0L) total[pkg] = (total[pkg] ?: 0L) + counted
                 }
             }
         }
 
-        // 아직 열려 있는 세션 반영. 단 ceiling 을 넘기지 않는다.
-        // 이 한 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않고,
-        // ceiling 이 없으면 차단 중에도 계속 쌓인다.
-        val end = minOf(now, ceilingMs)
+        // 아직 열려 있는 세션 반영. 이 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않는다.
+        // 차단 중인 앱도 세션이 열린 채로 남으므로, 여기서도 차단 구간을 제외한다.
         for ((pkg, from) in openedAt) {
-            if (end > from) total[pkg] = (total[pkg] ?: 0L) + (end - from)
+            val counted = countedMs(pkg, from, now, blockedIntervals)
+            if (counted > 0L) total[pkg] = (total[pkg] ?: 0L) + counted
         }
         return total
+    }
+
+    /**
+     * 세션 [from,to) 중 실제로 사용한 것으로 인정할 시간.
+     * 해당 패키지를 막고 있던 차단 구간과 겹치는 만큼 뺀다.
+     *
+     * 동시에 두 종류의 차단이 걸리지는 않으므로(판정은 매 tick 하나만 내려간다)
+     * 구간끼리 겹치지 않는다고 보고 단순 합산한다. 음수 방어만 둔다.
+     */
+    private fun countedMs(
+        pkg: String,
+        from: Long,
+        to: Long,
+        blockedIntervals: List<BlockedInterval>,
+    ): Long {
+        if (to <= from) return 0L
+        var blocked = 0L
+        for (interval in blockedIntervals) {
+            if (interval.covers(pkg)) blocked += interval.overlapMs(from, to)
+        }
+        return ((to - from) - blocked).coerceAtLeast(0L)
     }
 
     private fun resolveLauncherPackages(): Set<String> {

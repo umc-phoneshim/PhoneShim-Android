@@ -11,6 +11,8 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Telephony
 import android.telecom.TelecomManager
+import com.phoneshim.android.blocking.detection.BlockScope
+import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.ForegroundAppDetector
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
 import com.phoneshim.android.blocking.overlay.BlockOverlayManager
@@ -104,8 +106,12 @@ class BlockerService : Service() {
     // 지금 떠 있는 화면이 '앱 하드 차단'인가(= 확인 누르면 홈으로 보낼 대상인가).
     private var showingAppBlock: Boolean = false
 
-    // 하드 차단이 시작된 시각(0 = 차단 아님). 이 이후의 시간은 사용량 집계에서 제외한다.
-    private var blockActiveSinceMs: Long = 0L
+    // 차단이 걸려 있던 구간들. 사용량 집계에서 이 시간을 제외한다. 자정에 비운다.
+    // (차단 중에는 못 쓰는데도 OS 상으로는 세션이 살아 있어, 빼주지 않으면
+    //  차단이 풀리는 순간 막혀 있던 시간이 통째로 사용량에 반영된다.)
+    private val blockedIntervals = mutableListOf<BlockedInterval>()
+    private var openBlockStartMs: Long = 0L
+    private var openBlockScope: BlockScope? = null
 
     // 목표를 처음 인식한 시각. 그날은 이 시각부터 사용량을 센다(온보딩 직후 즉시 차단 방지).
     // 한 번 기록하면 덮어쓰지 않는다 — 매 tick 갱신하면 사용량이 항상 0이 되고,
@@ -168,12 +174,9 @@ class BlockerService : Service() {
             lastForegroundPackage = pkg
         }
 
-        // 차단이 떠 있는 동안은 '차단 시작 시각'을 상한으로 줘서, 막힌 시간이 사용량에
-        // 쌓이지 않게 한다(못 썼는데 목표를 깎아먹는 것 방지). 차단이 아니면 now(=실시간).
-        val ceiling = if (blockActiveSinceMs != 0L) blockActiveSinceMs else System.currentTimeMillis()
         val countFrom = resolveGoalFirstSeenAt()
         // 전체·앱 사용량을 한 번의 조회로 함께 구한다(따로 부르면 같은 구간을 두 번 파싱).
-        val usage = usageReader.usageSnapshot(pkg, ceiling, countFrom)
+        val usage = usageReader.usageSnapshot(pkg, currentBlockedIntervals(), countFrom)
         val phoneUsed = usage.phoneMinutes
         val appUsed = usage.appMinutes
 
@@ -182,6 +185,10 @@ class BlockerService : Service() {
         val recentlyReentered = exitedAt != 0L &&
                 System.currentTimeMillis() - exitedAt < REASON_COOLDOWN_MS
         val asked = pkg == reasonAskedForPackage || recentlyReentered
+        // 쿨다운으로 면제된 재진입은 '이미 물어본 상태'로 승계한다.
+        // 승계하지 않으면, 잠깐 나갔다 온 뒤 그 앱에 계속 머물러 있어도
+        // 나간 시각 기준 쿨다운이 만료되는 순간 팝업이 다시 뜬다.
+        if (asked) reasonAskedForPackage = pkg
 
         val decision = engine.decide(pkg, phoneUsed, appUsed, asked)
             .let(::withResolvedLabel)
@@ -198,15 +205,14 @@ class BlockerService : Service() {
         // 지금 떠 있는 게 '앱 하드 차단'인지. Dismiss(확인) 의 의미가 알림과 달라서 구분한다.
         showingAppBlock = suppressed is BlockDecision.AppBlocked
 
-        // 하드 차단(전체/앱)이 시작되는 순간을 기록. 이 시각 이후는 사용량에 안 쌓인다.
-        // 차단이 풀리면(Allow 등) 초기화해 실시간 집계로 복귀.
-        val isHardBlock = suppressed is BlockDecision.PhoneBlocked ||
-                suppressed is BlockDecision.AppBlocked
-        blockActiveSinceMs = when {
-            isHardBlock && blockActiveSinceMs == 0L -> System.currentTimeMillis()
-            !isHardBlock -> 0L
-            else -> blockActiveSinceMs
-        }
+        // 지금 무엇이 막혀 있는지 기록. 전체 폰 차단이면 모든 앱, 앱 차단이면 그 앱만 제외 대상.
+        updateBlockedInterval(
+            when (suppressed) {
+                is BlockDecision.PhoneBlocked -> BlockScope.AllApps
+                is BlockDecision.AppBlocked -> BlockScope.SinglePackage(suppressed.packageName)
+                else -> null
+            },
+        )
 
         withContext(Dispatchers.Main) {
             val withinActionGrace = System.currentTimeMillis() < overlaySuppressedUntilMs
@@ -241,6 +247,8 @@ class BlockerService : Service() {
         if (today != notifiedDayEpoch) {
             notifiedDayEpoch = today
             dismissedGoalToday.clear()
+            // 사용량이 자정 기준으로 새로 집계되므로 어제의 차단 구간은 의미가 없다.
+            blockedIntervals.clear()
         }
     }
 
@@ -293,6 +301,41 @@ class BlockerService : Service() {
                 overlay.hide()
             }
         }
+    }
+
+    /**
+     * 차단 상태 변화를 구간으로 기록한다.
+     * 같은 차단이 이어지는 동안은 하나의 구간으로 두고, 끝나거나 대상이 바뀔 때 확정한다.
+     */
+    private fun updateBlockedInterval(scope: BlockScope?) {
+        val now = System.currentTimeMillis()
+        val open = openBlockScope
+
+        if (scope == null) {
+            if (open != null) {
+                blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
+                openBlockScope = null
+                openBlockStartMs = 0L
+            }
+            return
+        }
+        when {
+            open == null -> {
+                openBlockStartMs = now
+                openBlockScope = scope
+            }
+            open != scope -> {
+                blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
+                openBlockStartMs = now
+                openBlockScope = scope
+            }
+        }
+    }
+
+    /** 확정된 구간 + 지금 진행 중인 차단 구간(현재 시각까지). */
+    private fun currentBlockedIntervals(): List<BlockedInterval> {
+        val open = openBlockScope ?: return blockedIntervals
+        return blockedIntervals + BlockedInterval(openBlockStartMs, System.currentTimeMillis(), open)
     }
 
     /**
