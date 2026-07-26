@@ -21,8 +21,8 @@ import com.phoneshim.android.ui.features.mypage.screen.MySideMenuScreen
 import com.phoneshim.android.ui.features.pref.screen.PrefRoute
 import com.phoneshim.android.ui.features.reminder.screen.ReminderRoute
 import com.phoneshim.android.ui.features.report.screen.ReportAiSuggestScreen
-import com.phoneshim.android.ui.features.report.screen.ReportSummaryScreen
-import com.phoneshim.android.ui.features.report.screen.TimetableScreen
+import com.phoneshim.android.ui.features.report.screen.ReportSummaryRoute
+import com.phoneshim.android.ui.features.report.screen.TimetableRoute
 import com.phoneshim.android.ui.features.report.screen.UsageReasonInputScreen
 import com.phoneshim.android.ui.features.setgoal.screen.AccessGoalSetScreen
 import com.phoneshim.android.ui.features.setgoal.screen.AppSelectScreen
@@ -167,7 +167,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
 
         // 리포트(타임테이블/사용이유/AI제안/요약) 화면
         composable(Routes.TIMETABLE) {
-            TimetableScreen(
+            TimetableRoute(
                 onEntryClick = { entryId -> navController.navigate(Routes.usageReasonInput(entryId)) },
                 onNavigateToAiSuggestion = { navController.navigate(Routes.REPORT_AI_SUGGEST) },
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
@@ -189,7 +189,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
             ReportAiSuggestScreen(onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) })
         }
         composable(Routes.REPORT_SUMMARY) {
-            ReportSummaryScreen(
+            ReportSummaryRoute(
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
                 onNavigateToTimetable = { navController.popBackStack(Routes.TIMETABLE, inclusive = false) },
                 onNavigateToMain = { navController.navigateToTopLevel(Routes.MAIN) },

@@ -14,12 +14,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
@@ -31,10 +33,8 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
-import com.phoneshim.android.ui.features.report.component.CategoryUsageRow
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
@@ -45,15 +45,20 @@ import com.phoneshim.android.ui.features.report.component.ReportPeriodToggle
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.UsageLegendDots
-import com.phoneshim.android.ui.features.report.component.UsageSegment
+import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
+import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEvent
+import com.phoneshim.android.ui.features.report.viewmodel.ReportUiState
 import com.phoneshim.android.ui.features.report.viewmodel.ReportViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
-/** 07. 데일리 리포트 (어플 사용 통계) 화면. */
+/**
+ * 07. 데일리 리포트 (어플 사용 통계) 진입점.
+ * ViewModel 주입과 이펙트 처리를 담당하고, UI 는 상태만 받는 [ReportSummaryScreen] 이 그립니다.
+ */
 @Composable
-fun ReportSummaryScreen(
+fun ReportSummaryRoute(
     modifier: Modifier = Modifier,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToTimetable: () -> Unit = {},
@@ -62,14 +67,36 @@ fun ReportSummaryScreen(
     onNavigateToMyPage: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
-    // TODO: viewModel.uiState 의 DailyReport/AppUsage 를 AppBubble·CategoryUsageRow 로 매핑해
-    //  아래 mock 데이터를 대체하세요. (기간 토글 변경 시 loadReport 재호출 등)
-    ReportSummaryContent(
+    val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel) {
+        viewModel.onEvent(ReportUiEvent.ScreenEntered(ReportTab.SUMMARY))
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is ReportUiEffect.NavigateToTab ->
+                    if (effect.tab == ReportTab.TIMETABLE) onNavigateToTimetable()
+                is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                // 요약 화면에서는 발생하지 않는 이펙트입니다. (타임테이블 전용)
+                is ReportUiEffect.NavigateToUsageReasonInput -> Unit
+                ReportUiEffect.NavigateToAiSuggestion -> Unit
+                ReportUiEffect.NavigateToAlarmSettings -> Unit
+            }
+        }
+    }
+
+    ReportSummaryScreen(
+        state = state,
         modifier = modifier,
-        dateLabel = "7.11",
+        snackbarHostState = snackbarHostState,
         onNavigateToSettings = onNavigateToSettings,
         onNavigateToMyPage = onNavigateToMyPage,
-        onTabSelected = { tab -> if (tab == ReportTab.TIMETABLE) onNavigateToTimetable() },
+        onPrevDate = { viewModel.onEvent(ReportUiEvent.PreviousDateClicked) },
+        onNextDate = { viewModel.onEvent(ReportUiEvent.NextDateClicked) },
+        onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
+        onPeriodSelected = { viewModel.onEvent(ReportUiEvent.PeriodSelected(it)) },
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -81,50 +108,23 @@ fun ReportSummaryScreen(
 }
 
 @Composable
-private fun ReportSummaryContent(
-    dateLabel: String,
+fun ReportSummaryScreen(
+    state: ReportUiState,
     onTabSelected: (ReportTab) -> Unit,
     onBottomNavSelected: (BottomBarTab) -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToMyPage: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
+    onPrevDate: () -> Unit = {},
+    onNextDate: () -> Unit = {},
+    onPeriodSelected: (ReportPeriod) -> Unit = {},
 ) {
-    var period by remember { mutableStateOf(ReportPeriod.DAY) }
-
-    val bubbles = remember {
-        listOf(
-            AppBubble(label = "카카오톡", color = ReportColorYellow, value = 0.35f),
-            AppBubble(label = "유튜브", color = ReportColorRed, value = 0.75f),
-            AppBubble(label = "기타", color = ReportColorGreen, value = 0.2f),
-        )
-    }
-    val categoryRows = remember {
-        listOf(
-            CategoryUsageRow(
-                label = "여가 시간",
-                segments = listOf(
-                    UsageSegment(ReportColorRed, 0.35f),
-                    UsageSegment(ReportColorGreen, 0.15f),
-                    UsageSegment(ReportColorYellow, 0.1f),
-                ),
-            ),
-            CategoryUsageRow(label = "이동 중", segments = listOf(UsageSegment(ReportColorYellow, 0.4f))),
-            CategoryUsageRow(
-                label = "습관적으로",
-                segments = listOf(UsageSegment(ReportColorGreen, 0.2f), UsageSegment(ReportColorRed, 0.3f)),
-            ),
-            CategoryUsageRow(label = "정보성", segments = listOf(UsageSegment(ReportColorYellow, 0.25f))),
-            CategoryUsageRow(
-                label = "기타",
-                segments = listOf(UsageSegment(ReportColorGreen, 0.2f), UsageSegment(ReportColorYellow, 0.15f)),
-            ),
-        )
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = PhoneShimTheme.colors.background,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -134,68 +134,74 @@ private fun ReportSummaryContent(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = BottomBarDefaults.ContentBottomPadding),
             ) {
-            TopAppBar(
-                title = "DAILY REPORT",
-                titleStyle = PhoneShimType.KorH3,
-                leadingAction = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_topbar_goal),
-                            contentDescription = "설정",
-                        )
-                    }
-                },
-                trailingAction = {
-                    IconButton(onClick = onNavigateToMyPage) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_my),
-                            contentDescription = "마이페이지",
-                        )
-                    }
-                },
-            )
-            ReportDateNavigator(dateLabel = dateLabel, onPrevDate = {}, onNextDate = {})
-            ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(PhoneShimDimens.screenHorizontalPadding),
-                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
-            ) {
-                ReportCard {
-                    Text(
-                        text = "어플 사용 분포",
-                        style = PhoneShimType.KorBodyM,
-                        color = PhoneShimTheme.colors.textSecondary,
-                    )
-                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
-                    AppUsageBubbleChart(bubbles = bubbles)
-                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-                    Text(
-                        text = "앱 아이콘 크기 = 사용량",
-                        style = PhoneShimType.KorMicro,
-                        color = PhoneShimTheme.colors.textTertiary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                Text(
-                    text = "▶ 어플 사용 요약",
-                    style = PhoneShimType.KorBodyM,
-                    color = PhoneShimTheme.colors.textPrimary,
+                TopAppBar(
+                    title = "DAILY REPORT",
+                    titleStyle = PhoneShimType.KorH3,
+                    leadingAction = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_topbar_goal),
+                                contentDescription = "설정",
+                            )
+                        }
+                    },
+                    trailingAction = {
+                        IconButton(onClick = onNavigateToMyPage) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_my),
+                                contentDescription = "마이페이지",
+                            )
+                        }
+                    },
                 )
+                ReportDateNavigator(
+                    dateLabel = state.dateLabel,
+                    onPrevDate = onPrevDate,
+                    onNextDate = onNextDate,
+                )
+                ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
 
-                ReportCard {
-                    ReportPeriodToggle(selected = period, onSelect = { period = it })
-                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
-                    UsageLegendDots(colors = listOf(ReportColorYellow, ReportColorRed, ReportColorGreen))
-                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
-                    CategoryUsageBarChart(rows = categoryRows)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(PhoneShimDimens.screenHorizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
+                ) {
+                    ReportCard {
+                        Text(
+                            text = "어플 사용 분포",
+                            style = PhoneShimType.KorBodyM,
+                            color = PhoneShimTheme.colors.textSecondary,
+                        )
+                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
+                        AppUsageBubbleChart(bubbles = state.appBubbles)
+                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+                        Text(
+                            text = "앱 아이콘 크기 = 사용량",
+                            style = PhoneShimType.KorMicro,
+                            color = PhoneShimTheme.colors.textTertiary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    Text(
+                        text = "▶ 어플 사용 요약",
+                        style = PhoneShimType.KorBodyM,
+                        color = PhoneShimTheme.colors.textPrimary,
+                    )
+
+                    ReportCard {
+                        ReportPeriodToggle(selected = state.period, onSelect = onPeriodSelected)
+                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
+                        UsageLegendDots(
+                            colors = listOf(ReportColorYellow, ReportColorRed, ReportColorGreen),
+                        )
+                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
+                        CategoryUsageBarChart(rows = state.categoryRows)
+                    }
                 }
             }
-        }
         }
         BottomBar(
             selectedTab = BottomBarTab.REPORT,
@@ -207,14 +213,24 @@ private fun ReportSummaryContent(
 
 @Preview(showBackground = true)
 @Composable
-private fun ReportSummaryContentPreview() {
+private fun ReportSummaryScreenPreview() {
     PhoneShimTheme {
-        ReportSummaryContent(
-            dateLabel = "7.11",
+        ReportSummaryScreen(
+            state = ReportUiState(selectedTab = ReportTab.SUMMARY),
             onTabSelected = {},
             onBottomNavSelected = {},
-            onNavigateToSettings = {},
-            onNavigateToMyPage = {},
+        )
+    }
+}
+
+@Preview(name = "WEEK 기간 선택", showBackground = true)
+@Composable
+private fun ReportSummaryWeekPreview() {
+    PhoneShimTheme {
+        ReportSummaryScreen(
+            state = ReportUiState(selectedTab = ReportTab.SUMMARY, period = ReportPeriod.WEEK),
+            onTabSelected = {},
+            onBottomNavSelected = {},
         )
     }
 }
