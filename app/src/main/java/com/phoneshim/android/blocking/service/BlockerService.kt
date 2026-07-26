@@ -17,6 +17,7 @@ import com.phoneshim.android.blocking.overlay.BlockOverlayManager
 import com.phoneshim.android.blocking.overlay.OverlayAction
 import com.phoneshim.android.blocking.policy.BlockDecision
 import com.phoneshim.android.blocking.policy.BlockPolicyEngine
+import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,7 @@ class BlockerService : Service() {
     @Inject lateinit var detector: ForegroundAppDetector
     @Inject lateinit var usageReader: UsageMinutesReader
     @Inject lateinit var engine: BlockPolicyEngine
+    @Inject lateinit var policyProvider: BlockingPolicyProvider
 
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -85,8 +87,9 @@ class BlockerService : Service() {
     //   1분 넘겨 돌아오면 다시 물음.
     private var reasonAskedForPackage: String? = null // 현재 세션에서 이미 물어본 앱
     private var lastForegroundPackage: String? = null // 직전 tick 의 포그라운드
-    private var lastExitedPackage: String? = null     // 마지막으로 벗어난 앱
-    private var lastExitAtMs: Long = 0L
+    // 패키지별로 '마지막으로 벗어난 시각'. 단일 슬롯으로 두면 홈 등 중간 경유지에
+    // 덮여서 재진입 쿨다운이 걸리지 않는다.
+    private val lastExitAtByPackage = HashMap<String, Long>()
 
     // #4: "알림만"(차단 OFF) 목표 도달 화면은 Dismiss 후 그날 재출현 안 함.
     // 자정 넘어가면 초기화. 앱별(패키지) + 전체 폰(KEY_PHONE) 각각.
@@ -103,6 +106,12 @@ class BlockerService : Service() {
 
     // 하드 차단이 시작된 시각(0 = 차단 아님). 이 이후의 시간은 사용량 집계에서 제외한다.
     private var blockActiveSinceMs: Long = 0L
+
+    // 목표를 처음 인식한 시각. 그날은 이 시각부터 사용량을 센다(온보딩 직후 즉시 차단 방지).
+    // 한 번 기록하면 덮어쓰지 않는다 — 매 tick 갱신하면 사용량이 항상 0이 되고,
+    // 목표를 다시 저장해 카운트를 리셋하는 우회도 막는다.
+    private val prefs by lazy { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
+    private var goalFirstSeenAtMs: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -151,8 +160,7 @@ class BlockerService : Service() {
         // 포그라운드 전환 감지 → 세션 경계 갱신
         if (pkg != lastForegroundPackage) {
             lastForegroundPackage?.let {
-                lastExitedPackage = it
-                lastExitAtMs = System.currentTimeMillis()
+                lastExitAtByPackage[it] = System.currentTimeMillis()
             }
             // 새 앱으로 바뀌면, 그 앱에 대한 "이미 물어봤음"을 초기화
             // (단, 1분 내 재진입이면 아래 asked 로 다시 안 물음)
@@ -163,12 +171,14 @@ class BlockerService : Service() {
         // 차단이 떠 있는 동안은 '차단 시작 시각'을 상한으로 줘서, 막힌 시간이 사용량에
         // 쌓이지 않게 한다(못 썼는데 목표를 깎아먹는 것 방지). 차단이 아니면 now(=실시간).
         val ceiling = if (blockActiveSinceMs != 0L) blockActiveSinceMs else System.currentTimeMillis()
-        val phoneUsed = usageReader.usedMinutesToday(null, ceiling)
-        val appUsed = usageReader.usedMinutesToday(pkg, ceiling)
+        val countFrom = resolveGoalFirstSeenAt()
+        val phoneUsed = usageReader.usedMinutesToday(null, ceiling, countFrom)
+        val appUsed = usageReader.usedMinutesToday(pkg, ceiling, countFrom)
 
         // 이미 이번 세션에 물었거나 / 방금 나갔다 1분 내 재진입이면 스킵
-        val recentlyReentered = pkg == lastExitedPackage &&
-                System.currentTimeMillis() - lastExitAtMs < REASON_COOLDOWN_MS
+        val exitedAt = lastExitAtByPackage[pkg] ?: 0L
+        val recentlyReentered = exitedAt != 0L &&
+                System.currentTimeMillis() - exitedAt < REASON_COOLDOWN_MS
         val asked = pkg == reasonAskedForPackage || recentlyReentered
 
         val decision = engine.decide(pkg, phoneUsed, appUsed, asked)
@@ -274,16 +284,37 @@ class BlockerService : Service() {
                 launchDefaultApp(Intent.ACTION_MAIN, category = Intent.CATEGORY_APP_MESSAGING)
             }
             is OverlayAction.ReasonSubmitted -> {
-                /*
-                 * 사용 이유는 UI의 Repository 저장이 성공한 뒤에만 이 액션으로 도착한다.
-                 * 서비스는 저장을 다시 수행하지 않고 질문 완료 세션과 오버레이만 정리한다.
-                 * detector를 재조회하면 화면 전환 순간 다른 패키지를 기록할 수 있으므로
-                 * 프롬프트가 확정해서 전달한 패키지 이름을 그대로 사용한다.
-                 */
+                // #4: detector 재조회 금지. 프롬프트가 들고 있던 패키지를 그대로 사용.
                 reasonAskedForPackage = action.packageName
+                // 사유 값 저장·전송은 화면(UsageReason ViewModel) 소유.
+                // 엔진은 재요청 억제만 담당한다.
                 overlay.hide()
             }
         }
+    }
+
+    /**
+     * 목표를 처음 인식한 시각을 반환한다. 목표가 아직 없으면 0(= 자정 기준).
+     * 최초 1회만 기록하고 이후에는 저장된 값을 그대로 쓴다.
+     */
+    private suspend fun resolveGoalFirstSeenAt(): Long {
+        if (goalFirstSeenAtMs != 0L) return goalFirstSeenAtMs
+
+        val stored = prefs.getLong(KEY_GOAL_FIRST_SEEN_AT, 0L)
+        if (stored != 0L) {
+            goalFirstSeenAtMs = stored
+            return stored
+        }
+
+        // 아직 기록 전. 목표가 실제로 생긴 시점에만 기록한다.
+        val hasGoal = policyProvider.phoneGoalMinutes() != null ||
+                policyProvider.watchedApps().isNotEmpty()
+        if (!hasGoal) return 0L
+
+        val now = System.currentTimeMillis()
+        prefs.edit().putLong(KEY_GOAL_FIRST_SEEN_AT, now).apply()
+        goalFirstSeenAtMs = now
+        return now
     }
 
     /** 차단 앱에서 빠져나오도록 런처로 이동. */
@@ -367,6 +398,8 @@ class BlockerService : Service() {
         const val ACTION_REEVALUATE = "com.phoneshim.android.action.REEVALUATE"
         private const val POLL_INTERVAL_MS = 1_000L
         private const val REASON_COOLDOWN_MS = 60_000L
+        private const val PREFS_NAME = "blocking_engine"
+        private const val KEY_GOAL_FIRST_SEEN_AT = "goal_first_seen_at"
         private const val KEY_PHONE = "__PHONE__"
 
         // 앱 전환 유예: 전화/문자/폰쉼 진입 후 대상 앱이 뜰 때까지 재차단 억제 시간.

@@ -56,8 +56,12 @@ class UsageMinutesReader @Inject constructor(
     fun usedMinutesToday(
         packageName: String?,
         openSessionCeilingMs: Long = System.currentTimeMillis(),
+        countFromMs: Long = 0L,
     ): Int {
-        val start = startOfToday()
+        // 자정 기준이 원칙이지만, 목표를 정한 당일에는 그 시각부터 센다.
+        // (목표 설정 전에 이미 쓴 시간까지 반영하면 온보딩 직후 바로 차단된다.)
+        // 다음날부터는 startOfToday() 가 countFromMs 를 앞질러 자동으로 자정 기준이 된다.
+        val start = maxOf(startOfToday(), countFromMs)
         val now = System.currentTimeMillis()
         val perPackageMs = aggregateByEvents(start, now, openSessionCeilingMs)
 
