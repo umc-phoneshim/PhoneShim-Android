@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
@@ -88,7 +89,8 @@ class BlockerService : Service() {
     //   같은 앱을 계속 쓰는 동안엔 다시 안 물음(세션 유지).
     //   다른 앱으로 나갔다가 1분 내 돌아오면 안 물음(쿨다운).
     //   1분 넘겨 돌아오면 다시 물음.
-    private var reasonAskedForPackage: String? = null // 현재 세션에서 이미 물어본 앱
+    // @Volatile: 사유 제출 콜백이 Main 에서 쓰고 tick 이 Default 에서 읽는다.
+    @Volatile private var reasonAskedForPackage: String? = null // 현재 세션에서 이미 물어본 앱
     private var lastForegroundPackage: String? = null // 직전 tick 의 포그라운드
     // 패키지별로 '마지막으로 벗어난 시각'. 단일 슬롯으로 두면 홈 등 중간 경유지에
     // 덮여서 재진입 쿨다운이 걸리지 않는다.
@@ -96,16 +98,19 @@ class BlockerService : Service() {
 
     // #4: "알림만"(차단 OFF) 목표 도달 화면은 Dismiss 후 그날 재출현 안 함.
     // 자정 넘어가면 초기화. 앱별(패키지) + 전체 폰(KEY_PHONE) 각각.
-    private val dismissedGoalToday = mutableSetOf<String>()
+    // 오버레이의 '좋아요' 콜백은 Main, 판정은 Default 에서 돈다.
+    // 일반 Set 으로 두면 Main 의 add 가 Default 에 보인다는 보장이 없어
+    // 확인을 눌러도 알림이 계속 뜰 수 있다(B-2 와 같은 증상, 다른 원인).
+    private val dismissedGoalToday: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private var notifiedDayEpoch: Long = -1L
-    private var showingGoalKey: String? = null // 현재 떠 있는 목표-도달 화면의 키(Dismiss 시 기록용)
+    @Volatile private var showingGoalKey: String? = null // 현재 떠 있는 목표-도달 화면의 키(Dismiss 시 기록용)
 
     // 전화/문자/폰쉼 진입으로 앱을 띄운 직후, 대상 앱이 포그라운드로 올라올 때까지
     // 이전 차단 앱 기준 재차단 오버레이가 번쩍이지 않게 잠깐 억제하는 시각.
     @Volatile private var overlaySuppressedUntilMs: Long = 0L
 
     // 지금 떠 있는 화면이 '앱 하드 차단'인가(= 확인 누르면 홈으로 보낼 대상인가).
-    private var showingAppBlock: Boolean = false
+    @Volatile private var showingAppBlock: Boolean = false
 
     // 차단이 걸려 있던 구간들. 사용량 집계에서 이 시간을 제외한다. 자정에 비운다.
     // (차단 중에는 못 쓰는데도 OS 상으로는 세션이 살아 있어, 빼주지 않으면
@@ -484,11 +489,15 @@ class BlockerService : Service() {
     }
 
     override fun onDestroy() {
+        // 폴 루프부터 멈춘다. 아래에서 blockedIntervals 를 읽는 동안 tick 이
+        // 같은 리스트에 계속 쓰면 순회 중 변경이 되어 마지막 저장이 통째로 날아간다.
+        // (취소는 협조적이라 실행 중이던 tick 이 즉시 서지는 않지만,
+        //  tick 은 매 반복마다 중단점을 지나므로 겹칠 여지가 크게 줄어든다.)
+        scope.cancel()
         // 정상 종료 경로에서는 진행 중이던 구간까지 확정해 남긴다.
         // (강제 종료 시엔 여기까지 못 오므로 위의 주기 저장이 최후 방어선이다.)
         runCatching { stateStore.persistIntervals(currentBlockedIntervals()) }
         runCatching { unregisterReceiver(screenReceiver) }
-        scope.cancel()
         if (::overlay.isInitialized) overlay.hide()
         super.onDestroy()
     }
