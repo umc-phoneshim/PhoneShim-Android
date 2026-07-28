@@ -38,8 +38,9 @@ import javax.inject.Inject
 /**
  * 포그라운드 서비스. 화면이 켜져 있을 때만 짧은 주기로 포그라운드 앱을 확인해 판정.
  * 화면 꺼짐 시 폴 루프를 멈춰 배터리 부하를 없앤다.
- *   리마인더 일정 차단은 폴링이 아니라 AlarmManager 예약이 담당하므로,
- *   화면이 꺼져 있어도 예약된 시각에 깨어나 동작한다.
+ *   리마인더 일정 차단은 폴링이 아니라 AlarmManager 예약이 담당한다. 알람은 화면이 꺼져
+ *   있어도 예약된 시각에 서비스를 깨우지만, 그때 화면이 꺼져 있으면 막을 화면이 없으므로
+ *   판정은 하지 않고 넘긴다. 화면이 켜지는 순간 SCREEN_ON 이 즉시 재판정을 돌린다.
  */
 @AndroidEntryPoint
 class BlockerService : Service() {
@@ -193,7 +194,14 @@ class BlockerService : Service() {
 
         val countFrom = resolveGoalFirstSeenAt()
         // 전체·앱 사용량을 한 번의 조회로 함께 구한다(따로 부르면 같은 구간을 두 번 파싱).
-        val usage = usageReader.usageSnapshot(pkg, currentBlockedIntervals(), countFrom)
+        val usage = usageReader.usageSnapshot(
+            packageName = pkg,
+            blockedIntervals = currentBlockedIntervals(),
+            countFromMs = countFrom,
+            // 자정(또는 목표 설정 시각) 이전부터 이어서 쓰고 있는 앱은 오늘 구간에
+            // 여는 이벤트가 없어 집계에서 빠진다. 지금 화면에 있는 앱을 알려 살린다.
+            foregroundPackage = pkg,
+        )
         val phoneUsed = usage.phoneMinutes
         val appUsed = usage.appMinutes
 
@@ -264,6 +272,10 @@ class BlockerService : Service() {
         if (today != notifiedDayEpoch) {
             notifiedDayEpoch = today
             dismissedGoalToday.clear()
+            // 사유 입력도 하루치 상태로 본다. 앱에 계속 머무는 동안은 세션이 끊기지 않아
+            // 여기서 비우지 않으면 자정을 넘겨 쓴 시간이 오늘 사유 기록에 한 건도 안 남는다
+            // (REP-03 요약 통계·REP-06 캘린더 hasReason 이 그 시간을 못 본다).
+            reasonAskedForPackage = null
             // 사용량이 자정 기준으로 새로 집계되므로 어제의 차단 구간은 의미가 없다.
             blockedIntervals.clear()
             // 자정을 넘겨 차단이 이어지는 중이면 어제 시작된 '열린' 구간이 남는다.
