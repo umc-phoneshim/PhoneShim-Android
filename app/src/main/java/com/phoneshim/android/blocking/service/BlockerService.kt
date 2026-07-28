@@ -119,6 +119,12 @@ class BlockerService : Service() {
     private val prefs by lazy { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
     private var goalFirstSeenAtMs: Long = 0L
 
+    // 하루치 상태(차단 구간 / 확인한 목표 알림)의 영속화 담당.
+    // 서비스는 START_STICKY 로 되살아나고 부팅 때도 다시 뜨는데, 그때마다 메모리가 비어
+    // 오늘 차단됐던 시간이 사용량에 다시 반영되고 확인 누른 알림이 다시 떴다.
+    private val stateStore by lazy { BlockingStateStore(this) }
+    private var lastPersistedAtMs: Long = 0L
+
     override fun onCreate() {
         super.onCreate()
         powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -132,8 +138,19 @@ class BlockerService : Service() {
                 addAction(Intent.ACTION_SCREEN_OFF)
             },
         )
+        restoreDayState()
         startAsForeground()
         loop()
+    }
+
+    /** 재시작 전에 저장해둔 오늘치 상태를 되살린다. */
+    private fun restoreDayState() {
+        val restored = stateStore.restore()
+        blockedIntervals += restored.blockedIntervals
+        dismissedGoalToday += restored.dismissedGoals
+        // 이 줄이 없으면 첫 tick 의 rolloverDayIfNeeded() 가 초기값(-1)과 비교해
+        // 방금 복원한 것을 그대로 다시 비운다.
+        notifiedDayEpoch = java.time.LocalDate.now().toEpochDay()
     }
 
     private fun loop() = scope.launch {
@@ -249,6 +266,12 @@ class BlockerService : Service() {
             dismissedGoalToday.clear()
             // 사용량이 자정 기준으로 새로 집계되므로 어제의 차단 구간은 의미가 없다.
             blockedIntervals.clear()
+            // 자정을 넘겨 차단이 이어지는 중이면 어제 시작된 '열린' 구간이 남는다.
+            // 여기서 끊어두면 같은 tick 의 updateBlockedInterval() 이 지금 시각으로 다시 연다.
+            openBlockScope = null
+            openBlockStartMs = 0L
+            stateStore.clear()
+            lastPersistedAtMs = 0L
         }
     }
 
@@ -258,7 +281,10 @@ class BlockerService : Service() {
                 when {
                     // 목표 도달 알림(37/39) 확인 → 그날 다시 안 뜨게 기록하고 닫기만.
                     showingGoalKey != null -> {
-                        showingGoalKey?.let { dismissedGoalToday.add(it) }
+                        showingGoalKey?.let {
+                            dismissedGoalToday.add(it)
+                            stateStore.persistDismissed(dismissedGoalToday)
+                        }
                         showingGoalKey = null
                         overlay.hide()
                     }
@@ -310,16 +336,16 @@ class BlockerService : Service() {
     private fun updateBlockedInterval(scope: BlockScope?) {
         val now = System.currentTimeMillis()
         val open = openBlockScope
+        var finalized = false
 
         if (scope == null) {
             if (open != null) {
                 blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
                 openBlockScope = null
                 openBlockStartMs = 0L
+                finalized = true
             }
-            return
-        }
-        when {
+        } else when {
             open == null -> {
                 openBlockStartMs = now
                 openBlockScope = scope
@@ -328,7 +354,22 @@ class BlockerService : Service() {
                 blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
                 openBlockStartMs = now
                 openBlockScope = scope
+                finalized = true
             }
+        }
+
+        // 구간이 확정된 순간은 즉시 쓰고, 차단이 이어지는 동안은 주기적으로만 쓴다.
+        // 매 tick(1초)마다 저장하면 디스크 I/O 가 초당 한 번씩 돌고,
+        // 프로세스가 죽어 잃는 것은 마지막 저장 이후의 차단 시간뿐이다.
+        // 그건 사용량이 조금 더 잡히는 쪽이라 안전한 방향의 오차다.
+        //
+        // 주기 저장은 '열린 구간이 있을 때'로 한정한다. 차단이 걸려 있지 않으면
+        // 내용이 그대로라 같은 값을 하루 종일 다시 쓰게 된다.
+        // 구간이 닫히는 순간은 finalized 가 잡아주므로 마지막 상태는 유실되지 않는다.
+        val periodicDue = openBlockScope != null && now - lastPersistedAtMs >= PERSIST_INTERVAL_MS
+        if (finalized || periodicDue) {
+            lastPersistedAtMs = now
+            stateStore.persistIntervals(currentBlockedIntervals())
         }
     }
 
@@ -431,6 +472,9 @@ class BlockerService : Service() {
     }
 
     override fun onDestroy() {
+        // 정상 종료 경로에서는 진행 중이던 구간까지 확정해 남긴다.
+        // (강제 종료 시엔 여기까지 못 오므로 위의 주기 저장이 최후 방어선이다.)
+        runCatching { stateStore.persistIntervals(currentBlockedIntervals()) }
         runCatching { unregisterReceiver(screenReceiver) }
         scope.cancel()
         if (::overlay.isInitialized) overlay.hide()
@@ -446,6 +490,9 @@ class BlockerService : Service() {
         private const val PREFS_NAME = "blocking_engine"
         private const val KEY_GOAL_FIRST_SEEN_AT = "goal_first_seen_at"
         private const val KEY_PHONE = "__PHONE__"
+
+        // 차단이 계속되는 동안 진행 중 구간을 디스크에 밀어 넣는 주기.
+        private const val PERSIST_INTERVAL_MS = 15_000L
 
         // 앱 전환 유예: 전화/문자/폰쉼 진입 후 대상 앱이 뜰 때까지 재차단 억제 시간.
         private const val ACTION_GRACE_MS = 2_000L
