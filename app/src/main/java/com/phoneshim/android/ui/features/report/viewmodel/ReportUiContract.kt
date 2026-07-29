@@ -91,7 +91,13 @@ data class ReportUiState(
 
     val isDataInsufficient: Boolean get() = insufficientDataMessage != null
 
-    /** 타임테이블 오른쪽 "사용 어플" 카드에 표시할 목록. */
+    /**
+     * 타임테이블 오른쪽 "사용 어플" 카드에 표시할 목록.
+     *
+     * packageName 을 함께 넘기면 화면에서 기기의 실제 앱 아이콘과 이름을 읽어 씁니다.
+     * 과거 날짜 조회(/api/usage-logs)는 packageName 을 주지 않아 색 원으로 표시됩니다.
+     * TODO: GET /api/monitored-apps 와 조인하면 과거 날짜에도 아이콘이 나옵니다.
+     */
     val usedApps: List<UsedApp>
         get() {
             val usages = report?.appUsages.orEmpty().filter { it.usedMinutes > 0 }
@@ -102,6 +108,7 @@ data class ReportUiState(
                     UsedApp(
                         name = usage.appName.ifBlank { "앱 ${index + 1}" },
                         color = palette[index % palette.size],
+                        packageName = usage.packageName,
                     )
                 }
         }
@@ -195,9 +202,12 @@ private fun mockUsageReasonLegend(): List<UsageReasonLegend> = listOf(
     UsageReasonLegend(ReportColorGreen, "혼자"),
 )
 
-/** 서버 데이터가 없을 때 보여주는 임시 사용 어플 목록. */
+/**
+ * 서버 데이터가 없을 때 보여주는 임시 사용 어플 목록.
+ * packageName 을 넣어 두어 기기에 해당 앱이 설치돼 있으면 실제 아이콘과 이름이 나옵니다.
+ */
 private fun mockUsedApps(): List<UsedApp> = listOf(
-    UsedApp("카카오톡", ReportColorYellow),
-    UsedApp("유튜브", ReportColorRed),
+    UsedApp("카카오톡", ReportColorYellow, packageName = "com.kakao.talk"),
+    UsedApp("유튜브", ReportColorRed, packageName = "com.google.android.youtube"),
     UsedApp("폰쉼", ReportColorGreen),
 )

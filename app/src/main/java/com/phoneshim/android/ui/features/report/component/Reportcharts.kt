@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.report.component
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,15 +22,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.common.SectionCard
@@ -69,11 +73,17 @@ data class CategoryUsageRow(val label: String, val segments: List<UsageSegment>)
 data class HourUsage(val hourLabel: String, val segments: List<UsageSegment>)
 data class UsageReasonLegend(val color: Color, val label: String)
 
-/** 타임테이블 오른쪽 "사용 어플" 카드 항목. [iconRes] 가 없으면 색 원으로 대체합니다. */
+/**
+ * 타임테이블 오른쪽 "사용 어플" 카드 항목.
+ *
+ * [packageName] 이 있으면 기기의 PackageManager 에서 실제 앱 아이콘과 이름을 읽어 씁니다.
+ * 서버가 아이콘을 내려주지 않아도 되고, 앱이 삭제됐거나 packageName 이 없으면
+ * [color] 로 칠한 원과 [name] 으로 대체합니다.
+ */
 data class UsedApp(
     val name: String,
     val color: Color,
-    @DrawableRes val iconRes: Int? = null,
+    val packageName: String = "",
 )
 
 enum class ReportPeriod(val label: String) { DAY("DAY"), WEEK("WEEK"), MONTH("MONTH") }
@@ -391,20 +401,21 @@ fun UsedAppsCard(apps: List<UsedApp>, modifier: Modifier = Modifier) {
             )
         }
         apps.forEach { app ->
+            val info = rememberInstalledAppInfo(app.packageName)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
             ) {
-                // TODO: /api/usage-logs/status 의 appIcon 이 채워지면 실제 앱 아이콘으로 교체하세요.
-                if (app.iconRes != null) {
+                if (info?.icon != null) {
                     Image(
-                        painter = painterResource(app.iconRes),
+                        bitmap = info.icon,
                         contentDescription = app.name,
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape),
                     )
                 } else {
+                    // 앱이 삭제됐거나 packageName 을 모르는 경우.
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -412,12 +423,40 @@ fun UsedAppsCard(apps: List<UsedApp>, modifier: Modifier = Modifier) {
                     )
                 }
                 Text(
-                    text = app.name,
+                    text = info?.label?.takeIf { it.isNotBlank() } ?: app.name,
                     style = PhoneShimType.KorCaption,
                     color = PhoneShimTheme.colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
+    }
+}
+
+/** PackageManager 에서 읽어온 앱 표시 정보. */
+private data class InstalledAppInfo(val label: String, val icon: ImageBitmap?)
+
+/**
+ * 설치된 앱의 아이콘과 이름을 기기에서 직접 읽습니다.
+ *
+ * 서버가 아이콘을 내려줄 필요가 없습니다. manifest 의 <queries> 에 LAUNCHER 인텐트가
+ * 선언돼 있어 API 30+ 패키지 가시성 제한에도 런처 앱은 조회할 수 있습니다.
+ * 조회 실패(미설치·가시성 없음)는 null 로 떨어뜨려 호출부에서 대체 표시합니다.
+ */
+@Composable
+private fun rememberInstalledAppInfo(packageName: String): InstalledAppInfo? {
+    if (packageName.isBlank()) return null
+    val context = LocalContext.current
+    return remember(packageName) {
+        runCatching {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            InstalledAppInfo(
+                label = pm.getApplicationLabel(appInfo).toString(),
+                icon = pm.getApplicationIcon(appInfo).toBitmap().asImageBitmap(),
+            )
+        }.getOrNull()
     }
 }
 
