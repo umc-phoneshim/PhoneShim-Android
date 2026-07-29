@@ -1,10 +1,12 @@
 package com.phoneshim.android.ui.features.main.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -213,27 +216,43 @@ fun SectionTitle(title: String) {
  * ============================================================ */
 @Composable
 private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(PhoneShimTheme.colors.brandSubtle)
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "${userName}님, 오늘 하루 힘차게 시작 해봐요!",
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.brandStrong
-        )
-        Text(
-            text = if (isSetupCompleted) {
-                "오늘도 좋은 습관 만들어\n봐요!"
-            } else {
-                "아직 초기 설정이 완료되\n지 않았어요!"
-            },
-            style = PhoneShimType.KorH2,
-            color = PhoneShimTheme.colors.textPrimary
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${userName}님, 오늘 하루 힘차게 시작 해봐요!",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.brandStrong
+            )
+            Text(
+                text = if (isSetupCompleted) {
+                    "오늘도 좋은 습관 만들어\n봐요!"
+                } else {
+                    "아직 초기 설정이 완료되\n지 않았어요!"
+                },
+                style = PhoneShimType.KorH2,
+                color = PhoneShimTheme.colors.textPrimary
+            )
+        }
+
+        // phoneshim_mascot.png 원본 156x164px 비율(약 0.95:1) 유지
+        Image(
+            painter = painterResource(id = R.drawable.phoneshim_mascot),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .height(72.dp)
+                .aspectRatio(156f / 164f)
         )
     }
 }

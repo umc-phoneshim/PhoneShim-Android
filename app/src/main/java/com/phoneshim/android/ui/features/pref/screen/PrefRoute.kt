@@ -64,11 +64,11 @@ fun PrefRoute(
         onTotalGoalClick = { viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened) },
         onHoursChanged = { viewModel.onEvent(PrefUiEvent.HoursInputChanged(it)) },
         onMinutesChanged = { viewModel.onEvent(PrefUiEvent.MinutesInputChanged(it)) },
+        onTimeEditorLimitToggled = { viewModel.onEvent(PrefUiEvent.TimeEditorLimitToggled) },
         onTimeEditorDismissed = { viewModel.onEvent(PrefUiEvent.TimeEditorDismissed) },
         onTimeEditorConfirmed = { viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed) },
         onEditAppTime = { viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened(it)) },
         onToggleLimit = { viewModel.onEvent(PrefUiEvent.AppLimitToggled(it)) },
-        onEditAppGoal = { viewModel.onEvent(PrefUiEvent.AppGoalEditorOpened(it)) },
         onAppDescriptionChanged = {
             viewModel.onEvent(PrefUiEvent.AppDescriptionChanged(it))
         },

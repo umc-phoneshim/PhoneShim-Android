@@ -1,156 +1,169 @@
 package com.phoneshim.android.ui.features.pref.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.phoneshim.android.R
-import com.phoneshim.android.ui.common.PhoneShimButtonSize
-import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.TextInputDialog
 import com.phoneshim.android.ui.common.PhoneShimDialog
+import com.phoneshim.android.ui.common.Toggle
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditorState
-import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditTarget
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeInputError
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
+import com.phoneshim.android.ui.theme.PhoneShimType
 
 private object PrefDialogDefaults {
     val dialogWidth = 328.dp
     val contentPadding = 24.dp
-    val descriptionInputHeight = 56.dp
-    val saveButtonWidth = 120.dp
+    val totalTimeRowHeight = 56.dp
+    val timeNumberWidth = 56.dp
+    val confirmButtonWidth = 72.dp
+    val confirmButtonHeight = 30.dp
 }
 
 @Composable
 fun GoalTimeDialog(
+    title: String,
     state: TimeEditorState,
     onHoursChanged: (String) -> Unit,
     onMinutesChanged: (String) -> Unit,
+    onLimitToggled: () -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     PhoneShimDialog(
         onDismissRequest = onDismiss,
         width = PrefDialogDefaults.dialogWidth,
-        shape = MaterialTheme.shapes.large,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(PrefDialogDefaults.contentPadding),
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = PaddingValues(PrefDialogDefaults.contentPadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
     ) {
-            Text(
-                text = when (state.target) {
-                    TimeEditTarget.TotalGoal -> "전체 폰 목표 시간 설정"
-                    is TimeEditTarget.AppGoal -> "앱별 목표 시간 설정"
-                },
-                style = MaterialTheme.typography.titleLarge,
-                color = PhoneShimTheme.colors.textPrimary,
+        Text(
+            text = title,
+            style = PhoneShimType.KorBodyM,
+            color = PhoneShimTheme.colors.textPrimary,
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(PrefDialogDefaults.totalTimeRowHeight),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TimeValueInput(
+                value = state.hoursInput,
+                unit = "시간",
+                onValueChange = onHoursChanged,
             )
-            Spacer(Modifier.height(PhoneShimDimens.spacing20))
-            Row(
+            Spacer(Modifier.width(PhoneShimDimens.spacing4))
+            TimeValueInput(
+                value = state.minutesInput,
+                unit = "분",
+                onValueChange = onMinutesChanged,
+            )
+        }
+
+        state.error?.let { error ->
+            Text(
+                text = when (error) {
+                    TimeInputError.INVALID_MINUTE_RANGE -> "분은 0부터 59까지 입력해 주세요."
+                    TimeInputError.BELOW_MINIMUM -> "목표 사용 시간은 10분 이상 입력해 주세요."
+                },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.error,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "목표 시간 이후 폰 금지",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.error,
+            )
+            Spacer(Modifier.width(PhoneShimDimens.spacing12))
+            Toggle(
+                checked = state.isLimitEnabled,
+                onCheckedChange = { onLimitToggled() },
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = PhoneShimDimens.spacing12),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier
+                    .width(PrefDialogDefaults.confirmButtonWidth)
+                    .height(PrefDialogDefaults.confirmButtonHeight),
+                shape = MaterialTheme.shapes.extraSmall,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PhoneShimTheme.colors.brand,
+                    contentColor = PhoneShimTheme.colors.onBrand,
+                ),
+                contentPadding = PaddingValues(0.dp),
             ) {
-                TimeInput(
-                    value = state.hoursInput,
-                    label = "시간",
-                    onValueChange = onHoursChanged,
-                    modifier = Modifier.weight(1f),
-                )
-                TimeInput(
-                    value = state.minutesInput,
-                    label = "분",
-                    onValueChange = onMinutesChanged,
-                    modifier = Modifier.weight(1f),
-                )
+                Text(text = "확인", style = PhoneShimType.KorCaption)
             }
-            state.error?.let { error ->
-                Spacer(Modifier.height(PhoneShimDimens.spacing8))
-                Text(
-                    text = when (error) {
-                        TimeInputError.INVALID_MINUTE_RANGE ->
-                            "분은 0부터 59까지 입력해 주세요."
-                        TimeInputError.BELOW_MINIMUM ->
-                            "목표 사용 시간은 10분 이상 입력해 주세요."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PhoneShimTheme.colors.error,
-                )
-            }
-            Spacer(Modifier.height(PhoneShimDimens.spacing16))
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = "취소",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PhoneShimTheme.colors.textSecondary,
-                    )
-                }
-                PrimaryButton(
-                    text = "확인",
-                    onClick = onConfirm,
-                    size = PhoneShimButtonSize.Small,
-                    fullWidth = false,
-                    shape = MaterialTheme.shapes.small,
-                    labelStyle = MaterialTheme.typography.bodyMedium,
-                )
-            }
+        }
     }
 }
 
 @Composable
-private fun TimeInput(
+private fun TimeValueInput(
     value: String,
-    label: String,
+    unit: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = MaterialTheme.typography.bodyLarge,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = PhoneShimTheme.colors.brand,
-            unfocusedBorderColor = PhoneShimTheme.colors.border,
-            focusedTextColor = PhoneShimTheme.colors.textPrimary,
-            unfocusedTextColor = PhoneShimTheme.colors.textPrimary,
-            focusedLabelColor = PhoneShimTheme.colors.brand,
-            unfocusedLabelColor = PhoneShimTheme.colors.textTertiary,
-        ),
-        shape = MaterialTheme.shapes.small,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.width(PrefDialogDefaults.timeNumberWidth),
+            textStyle = PhoneShimType.EngDisplay.copy(
+                color = PhoneShimTheme.colors.brand,
+                textAlign = TextAlign.Center,
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        Text(
+            text = unit,
+            style = PhoneShimType.KorH2,
+            color = PhoneShimTheme.colors.brand,
+        )
+    }
 }
 
 @Composable

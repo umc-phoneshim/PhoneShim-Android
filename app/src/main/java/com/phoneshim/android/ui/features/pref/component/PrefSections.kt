@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,17 +18,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.common.SelectableChip
 import com.phoneshim.android.ui.common.SelectableChipVariant
@@ -40,6 +39,7 @@ import com.phoneshim.android.ui.features.pref.viewmodel.Gender
 import com.phoneshim.android.ui.features.pref.viewmodel.PrefValidationResult
 import com.phoneshim.android.ui.features.pref.viewmodel.SelectionPopup
 import com.phoneshim.android.ui.theme.PhoneShimDimens
+import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
@@ -51,10 +51,8 @@ private object PrefSectionDefaults {
     val selectorChipHeight = 28.dp
     val selectorSpacing = 12.dp
     val totalCardHeight = 90.dp
-    val appRowHeight = 52.dp
-    val appErrorRowHeight = 62.dp
+    val appRowHeight = 28.dp
     val appIconSize = 24.dp
-    val actionTouchSize = 40.dp
     val actionIconSize = 20.dp
     val listDividerThickness = 1.dp
 }
@@ -185,7 +183,6 @@ fun PrefGoalSection(
     onTotalGoalClick: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
-    onEditAppGoal: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -207,24 +204,27 @@ fun PrefGoalSection(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(containerColor = PhoneShimTheme.colors.surface),
-            border = BorderStroke(1.dp, PhoneShimTheme.colors.divider),
+            border = BorderStroke(1.dp, PhoneShimPalette.Primary300),
         ) {
-            appGoals.forEachIndexed { index, goal ->
-                AppGoalItem(
-                    appGoal = goal,
-                    isError = goal.id in validation.invalidAppGoalIds,
-                    onTimeClick = { onEditAppTime(goal.id) },
-                    onToggleLimit = { onToggleLimit(goal.id) },
-                    onEdit = { onEditAppGoal(goal.id) },
-                )
-                if (index != appGoals.lastIndex) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = PhoneShimDimens.spacing12)
-                            .height(PrefSectionDefaults.listDividerThickness)
-                            .background(PhoneShimTheme.colors.divider),
+            Column(
+                modifier = Modifier.padding(PhoneShimDimens.spacing12),
+                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+            ) {
+                appGoals.forEachIndexed { index, goal ->
+                    AppGoalItem(
+                        appGoal = goal,
+                        isError = goal.id in validation.invalidAppGoalIds,
+                        onTimeClick = { onEditAppTime(goal.id) },
+                        onToggleLimit = { onToggleLimit(goal.id) },
                     )
+                    if (index != appGoals.lastIndex) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(PrefSectionDefaults.listDividerThickness)
+                                .background(PhoneShimTheme.colors.divider),
+                        )
+                    }
                 }
             }
         }
@@ -264,55 +264,34 @@ private fun AppGoalItem(
     isError: Boolean,
     onTimeClick: () -> Unit,
     onToggleLimit: () -> Unit,
-    onEdit: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(
-                if (isError) PrefSectionDefaults.appErrorRowHeight
-                else PrefSectionDefaults.appRowHeight
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppInfoRow(
-            appName = appGoal.appName,
-            appNameStyle = MaterialTheme.typography.bodySmall,
-            appNameColor = PhoneShimTheme.colors.textSecondary,
+    Column {
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .clickable(onClick = onTimeClick)
-                .padding(start = PhoneShimDimens.spacing12),
-            supportingContent = {
-                if (isError) {
-                    Text(
-                        text = "목표 시간이 10분 미만입니다.",
-                        style = PhoneShimType.KorLabel,
-                        color = PhoneShimTheme.colors.error,
-                    )
-                }
-            },
-            trailingContent = {
-                Text(
-                    text = "%02d 시간  %02d 분".format(
-                        appGoal.goalMinutes / 60,
-                        appGoal.goalMinutes % 60,
-                    ),
-                    style = PhoneShimType.EngLabel,
-                    color = if (appGoal.isLimitEnabled) {
-                        PhoneShimTheme.colors.textPrimary
-                    } else {
-                        PhoneShimTheme.colors.textTertiary
-                    },
-                )
-            },
-        )
-        IconButton(
-            onClick = onToggleLimit,
-            modifier = Modifier.size(PrefSectionDefaults.actionTouchSize),
+                .fillMaxWidth()
+                .height(PrefSectionDefaults.appRowHeight)
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = "${appGoal.appName} 목표 시간 수정",
+                    onClick = onTimeClick,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
+            AppGoalIcon(appGoal = appGoal)
+            Spacer(Modifier.width(PhoneShimDimens.spacing12))
+            Text(
+                text = appGoal.appName,
+                modifier = Modifier.weight(1f),
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textPrimary,
+                maxLines = 1,
+            )
+            GoalTimeText(
+                totalMinutes = appGoal.goalMinutes,
+                enabled = appGoal.isLimitEnabled,
+            )
+            Spacer(Modifier.width(PhoneShimDimens.spacing12))
+            Image(
                 painter = painterResource(
                     if (appGoal.isLimitEnabled) {
                         R.drawable.ic_access_restriction
@@ -325,22 +304,92 @@ private fun AppGoalItem(
                 } else {
                     "${appGoal.appName} 사용 제한 활성화"
                 },
-                modifier = Modifier.size(PrefSectionDefaults.actionIconSize),
-                tint = if (appGoal.isLimitEnabled) {
-                    PhoneShimTheme.colors.error
-                } else {
-                    PhoneShimTheme.colors.textTertiary
-                },
+                modifier = Modifier
+                    .size(PrefSectionDefaults.actionIconSize)
+                    .clickable(
+                        role = Role.Switch,
+                        onClick = onToggleLimit,
+                    ),
             )
         }
-        IconButton(
-            onClick = onEdit,
-            modifier = Modifier.size(PrefSectionDefaults.actionTouchSize),
+        if (isError) {
+            Text(
+                text = "목표 시간이 10분 미만입니다.",
+                modifier = Modifier.padding(top = PhoneShimDimens.spacing4),
+                style = PhoneShimType.KorLabel,
+                color = PhoneShimTheme.colors.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoalTimeText(
+    totalMinutes: Int,
+    enabled: Boolean,
+) {
+    val numberColor = if (enabled) {
+        PhoneShimTheme.colors.textPrimary
+    } else {
+        PhoneShimTheme.colors.textTertiary
+    }
+    val unitColor = if (enabled) {
+        PhoneShimTheme.colors.textSecondary
+    } else {
+        PhoneShimTheme.colors.textTertiary
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4)) {
+            Text(
+                text = "%02d".format(totalMinutes / 60),
+                style = PhoneShimType.EngLabel,
+                color = numberColor,
+            )
+            Text(text = "시간", style = PhoneShimType.KorLabel, color = unitColor)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4)) {
+            Text(
+                text = "%02d".format(totalMinutes % 60),
+                style = PhoneShimType.EngLabel,
+                color = numberColor,
+            )
+            Text(text = "분", style = PhoneShimType.KorLabel, color = unitColor)
+        }
+    }
+}
+
+@Composable
+private fun AppGoalIcon(appGoal: AppGoal) {
+    val iconRes = when (appGoal.id) {
+        "kakao", "com.kakao.talk" -> R.drawable.pref_app_kakao
+        "facebook", "com.facebook.katana" -> R.drawable.pref_app_facebook
+        "tiktok", "com.zhiliaoapp.musically" -> R.drawable.pref_app_tiktok
+        else -> null
+    }
+    if (iconRes != null) {
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(PrefSectionDefaults.appIconSize)
+                .clip(MaterialTheme.shapes.extraSmall),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(PrefSectionDefaults.appIconSize)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(PhoneShimTheme.colors.divider),
+            contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter = painterResource(R.drawable.ic_modify),
-                contentDescription = "${appGoal.appName} 목표 문구 편집",
-                modifier = Modifier.size(PrefSectionDefaults.actionIconSize),
+            Text(
+                text = appGoal.appName.take(1),
+                style = PhoneShimType.KorLabel,
+                color = PhoneShimTheme.colors.textSecondary,
             )
         }
     }

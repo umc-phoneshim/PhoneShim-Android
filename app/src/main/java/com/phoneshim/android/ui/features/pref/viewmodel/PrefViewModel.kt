@@ -21,6 +21,7 @@ class PrefViewModel @Inject constructor() :
             is PrefUiEvent.AppTimeEditorOpened -> showAppTimeEditor(event)
             is PrefUiEvent.HoursInputChanged -> updateHoursInput(event)
             is PrefUiEvent.MinutesInputChanged -> updateMinutesInput(event)
+            PrefUiEvent.TimeEditorLimitToggled -> toggleTimeEditorLimit()
             PrefUiEvent.TimeEditorDismissed -> dismissTimeEditor()
             PrefUiEvent.GoalTimeConfirmed -> confirmGoalTime()
             is PrefUiEvent.AppLimitToggled -> toggleAppLimit(event)
@@ -58,8 +59,9 @@ class PrefViewModel @Inject constructor() :
         copy(
             timeEditor = TimeEditorState(
                 target = TimeEditTarget.TotalGoal,
-                hoursInput = (totalMinutes / 60).toString(),
-                minutesInput = (totalMinutes % 60).toString(),
+                hoursInput = (totalMinutes / 60).toString().padStart(2, '0'),
+                minutesInput = (totalMinutes % 60).toString().padStart(2, '0'),
+                isLimitEnabled = draftSettings.isTotalLimitEnabled,
             ),
         )
     }
@@ -70,8 +72,9 @@ class PrefViewModel @Inject constructor() :
         copy(
             timeEditor = TimeEditorState(
                 target = TimeEditTarget.AppGoal(event.appId),
-                hoursInput = (appGoal.goalMinutes / 60).toString(),
-                minutesInput = (appGoal.goalMinutes % 60).toString(),
+                hoursInput = (appGoal.goalMinutes / 60).toString().padStart(2, '0'),
+                minutesInput = (appGoal.goalMinutes % 60).toString().padStart(2, '0'),
+                isLimitEnabled = appGoal.isLimitEnabled,
             ),
         )
     }
@@ -82,6 +85,10 @@ class PrefViewModel @Inject constructor() :
 
     private fun updateMinutesInput(event: PrefUiEvent.MinutesInputChanged) = updateTimeEditor { editor ->
         editor.copy(minutesInput = event.value.filter(Char::isDigit), error = null)
+    }
+
+    private fun toggleTimeEditorLimit() = updateTimeEditor { editor ->
+        editor.copy(isLimitEnabled = !editor.isLimitEnabled)
     }
 
     private fun dismissTimeEditor() = setState { copy(timeEditor = null) }
@@ -104,10 +111,20 @@ class PrefViewModel @Inject constructor() :
 
         setState {
             val updatedDraft = when (val target = editor.target) {
-                TimeEditTarget.TotalGoal -> draftSettings.copy(totalGoalMinutes = totalMinutes)
+                TimeEditTarget.TotalGoal -> draftSettings.copy(
+                    totalGoalMinutes = totalMinutes,
+                    isTotalLimitEnabled = editor.isLimitEnabled,
+                )
                 is TimeEditTarget.AppGoal -> draftSettings.copy(
                     appGoals = draftSettings.appGoals.map { goal ->
-                        if (goal.id == target.appId) goal.copy(goalMinutes = totalMinutes) else goal
+                        if (goal.id == target.appId) {
+                            goal.copy(
+                                goalMinutes = totalMinutes,
+                                isLimitEnabled = editor.isLimitEnabled,
+                            )
+                        } else {
+                            goal
+                        }
                     },
                 )
             }
