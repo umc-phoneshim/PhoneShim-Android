@@ -50,10 +50,11 @@ class UsageMinutesReader @Inject constructor(
      * 이 계산은 매 tick(1초)마다 돌고 하루가 갈수록 이벤트가 쌓여
      * 시간이 지날수록 비용이 커진다(발열·배터리 소모).
      *
+     * 집계 기준은 항상 자정이다. 판정에 쓰는 숫자와 화면·서버에 올라가는 숫자가
+     * 같은 기준을 갖도록, 이 클래스 밖의 어떤 상태도 시작 시각을 바꾸지 못하게 한다.
+     *
      * [blockedIntervals] 차단이 걸려 있던 구간. 세션과 겹치는 만큼 사용량에서 제외한다.
-     * [countFromMs] 집계 시작 하한. 목표를 정한 당일에는 그 시각부터 센다.
-     *   다음날부터는 startOfToday() 가 이 값을 앞질러 자동으로 자정 기준이 된다.
-     * [foregroundPackage] 지금 화면에 떠 있는 앱. 집계 시작(start) 이전부터 이어지고 있는
+     * [foregroundPackage] 지금 화면에 떠 있는 앱. 자정 이전부터 이어지고 있는
      *   세션을 살리는 데만 쓴다. 자세한 건 aggregateByEvents 참고. null 이면 보정하지 않는다.
      *   [packageName] 과 같은 값이 들어오는 것이 보통이지만 의미가 다르므로 따로 받는다
      *   ("사용량을 알고 싶은 앱" vs "지금 화면에 있는 앱").
@@ -61,10 +62,9 @@ class UsageMinutesReader @Inject constructor(
     fun usageSnapshot(
         packageName: String,
         blockedIntervals: List<BlockedInterval> = emptyList(),
-        countFromMs: Long = 0L,
         foregroundPackage: String? = null,
     ): UsageSnapshot {
-        val start = maxOf(startOfToday(), countFromMs)
+        val start = startOfToday()
         val now = System.currentTimeMillis()
         val perPackageMs = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
 

@@ -119,12 +119,6 @@ class BlockerService : Service() {
     private var openBlockStartMs: Long = 0L
     private var openBlockScope: BlockScope? = null
 
-    // 목표를 처음 인식한 시각. 그날은 이 시각부터 사용량을 센다(온보딩 직후 즉시 차단 방지).
-    // 한 번 기록하면 덮어쓰지 않는다 — 매 tick 갱신하면 사용량이 항상 0이 되고,
-    // 목표를 다시 저장해 카운트를 리셋하는 우회도 막는다.
-    private val prefs by lazy { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
-    private var goalFirstSeenAtMs: Long = 0L
-
     // 하루치 상태(차단 구간 / 확인한 목표 알림)의 영속화 담당.
     // 서비스는 START_STICKY 로 되살아나고 부팅 때도 다시 뜨는데, 그때마다 메모리가 비어
     // 오늘 차단됐던 시간이 사용량에 다시 반영되고 확인 누른 알림이 다시 떴다.
@@ -197,14 +191,12 @@ class BlockerService : Service() {
             lastForegroundPackage = pkg
         }
 
-        val countFrom = resolveGoalFirstSeenAt()
         // 전체·앱 사용량을 한 번의 조회로 함께 구한다(따로 부르면 같은 구간을 두 번 파싱).
         val usage = usageReader.usageSnapshot(
             packageName = pkg,
             blockedIntervals = currentBlockedIntervals(),
-            countFromMs = countFrom,
-            // 자정(또는 목표 설정 시각) 이전부터 이어서 쓰고 있는 앱은 오늘 구간에
-            // 여는 이벤트가 없어 집계에서 빠진다. 지금 화면에 있는 앱을 알려 살린다.
+            // 자정 이전부터 이어서 쓰고 있는 앱은 오늘 구간에 여는 이벤트가 없어
+            // 집계에서 빠진다. 지금 화면에 있는 앱을 알려 살린다.
             foregroundPackage = pkg,
         )
         val phoneUsed = usage.phoneMinutes
@@ -396,30 +388,6 @@ class BlockerService : Service() {
         return blockedIntervals + BlockedInterval(openBlockStartMs, System.currentTimeMillis(), open)
     }
 
-    /**
-     * 목표를 처음 인식한 시각을 반환한다. 목표가 아직 없으면 0(= 자정 기준).
-     * 최초 1회만 기록하고 이후에는 저장된 값을 그대로 쓴다.
-     */
-    private suspend fun resolveGoalFirstSeenAt(): Long {
-        if (goalFirstSeenAtMs != 0L) return goalFirstSeenAtMs
-
-        val stored = prefs.getLong(KEY_GOAL_FIRST_SEEN_AT, 0L)
-        if (stored != 0L) {
-            goalFirstSeenAtMs = stored
-            return stored
-        }
-
-        // 아직 기록 전. 목표가 실제로 생긴 시점에만 기록한다.
-        val hasGoal = policyProvider.phoneGoal() != null ||
-                policyProvider.watchedApps().isNotEmpty()
-        if (!hasGoal) return 0L
-
-        val now = System.currentTimeMillis()
-        prefs.edit().putLong(KEY_GOAL_FIRST_SEEN_AT, now).apply()
-        goalFirstSeenAtMs = now
-        return now
-    }
-
     /** 차단 앱에서 빠져나오도록 런처로 이동. */
     private fun goHome() {
         val home = Intent(Intent.ACTION_MAIN).apply {
@@ -508,8 +476,6 @@ class BlockerService : Service() {
         const val ACTION_REEVALUATE = "com.phoneshim.android.action.REEVALUATE"
         private const val POLL_INTERVAL_MS = 1_000L
         private const val REASON_COOLDOWN_MS = 60_000L
-        private const val PREFS_NAME = "blocking_engine"
-        private const val KEY_GOAL_FIRST_SEEN_AT = "goal_first_seen_at"
         private const val KEY_PHONE = "__PHONE__"
 
         // 차단이 계속되는 동안 진행 중 구간을 디스크에 밀어 넣는 주기.
