@@ -1,28 +1,7 @@
-package com.phoneshim.android.data.local
-
-import java.util.concurrent.atomic.AtomicReference
-import javax.inject.Inject
-import javax.inject.Singleton
-
-/**
- * 인증 토큰 보관소.
+/*
+ * 이 파일은 삭제 대상입니다. (샌드박스에서 파일 삭제 권한이 없어 내용만 비워 둡니다)
  *
- * 인증이 필요한 API가 대부분이라 OkHttp 인터셉터가 참조할 토큰 저장소가 필요합니다.
- * TODO: 현재는 프로세스 메모리에만 보관하므로 앱을 종료하면 사라집니다.
- *  Auth 도메인에서 DataStore 기반 영속 저장으로 교체하세요. (androidx.datastore 의존성은 이미 추가돼 있습니다)
+ * 토큰 저장소는 Auth 도메인 담당 영역이라 이 PR 범위에서 제외했습니다.
+ * data/api/AuthInterceptor.kt 도 함께 삭제해 주세요.
  */
-@Singleton
-class TokenProvider @Inject constructor() {
-
-    private val token = AtomicReference<String?>(null)
-
-    val accessToken: String? get() = token.get()
-
-    fun update(accessToken: String?) {
-        token.set(accessToken)
-    }
-
-    fun clear() {
-        token.set(null)
-    }
-}
+package com.phoneshim.android.data.local

@@ -12,13 +12,11 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
     override suspend fun login(email: String, password: String): Result<User> = runCatching {
         val response = authApi.login(LoginRequest(email, password))
-        // 명세상 사용자 이름 필드는 name 입니다. Auth 도메인 DTO 정리 시 함께 맞춰 주세요.
-        User(id = response.id, email = response.email, name = response.nickname)
+        User(id = response.id, email = response.email, nickname = response.nickname)
     }
 
     override suspend fun signUp(email: String, password: String, nickname: String): Result<User> = runCatching {
         val response = authApi.signUp(SignUpRequest(email, password, nickname))
-        // 명세상 사용자 이름 필드는 name 입니다. Auth 도메인 DTO 정리 시 함께 맞춰 주세요.
-        User(id = response.id, email = response.email, name = response.nickname)
+        User(id = response.id, email = response.email, nickname = response.nickname)
     }
 }

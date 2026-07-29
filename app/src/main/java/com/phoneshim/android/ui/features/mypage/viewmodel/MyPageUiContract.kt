@@ -29,7 +29,7 @@ data class MyPageUiState(
     /** 탈퇴 요청이 접수돼 14일 유예 상태가 된 경우의 결과. */
     val withdrawal: WithdrawalResult? = null,
 ) : UiState {
-    val name: String get() = user?.name.orEmpty()
+    val name: String get() = user?.nickname.orEmpty()
     val email: String get() = user?.email.orEmpty()
     val motivation: String get() = user?.motivation.orEmpty()
 

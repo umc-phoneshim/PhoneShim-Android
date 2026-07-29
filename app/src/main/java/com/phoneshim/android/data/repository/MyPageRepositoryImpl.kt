@@ -36,10 +36,11 @@ class MyPageRepositoryImpl @Inject constructor(
     }
 }
 
+/** 명세의 name 필드를 도메인 모델의 nickname 으로 매핑합니다. */
 private fun UserResponse.toDomain(): User = User(
     id = id.orEmpty(),
     email = email,
-    name = name,
+    nickname = name,
     profileImage = profileImage,
     motivation = motivation,
     status = UserStatus.from(status).takeIf { it != UserStatus.UNKNOWN } ?: UserStatus.ACTIVE,

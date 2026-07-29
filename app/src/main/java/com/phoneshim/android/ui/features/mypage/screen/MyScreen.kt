@@ -320,7 +320,7 @@ private fun MyGoalField(modifier: Modifier = Modifier) {
 private fun previewUser(status: UserStatus = UserStatus.ACTIVE) = User(
     id = "1",
     email = "abcde123@gmail.com",
-    name = "유리",
+    nickname = "유리",
     motivation = "오늘은 필요한 앱만 보기",
     status = status,
 )

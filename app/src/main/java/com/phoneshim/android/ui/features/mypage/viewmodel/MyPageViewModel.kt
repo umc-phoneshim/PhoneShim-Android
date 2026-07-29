@@ -98,8 +98,8 @@ class MyPageViewModel @Inject constructor(
     }
 
     private fun logout() {
-        // TODO: POST /api/auth/logout 이 서버에 구현되면(현재 "예정")
-        //  LogoutUseCase 를 만들어 호출하고 TokenProvider 도 함께 비우세요.
+        // TODO(Auth 담당): POST /api/auth/logout 이 서버에 구현되면(현재 "예정")
+        //  LogoutUseCase 를 만들어 호출하고 저장된 토큰도 함께 비워 주세요.
         sendEffect(MyPageUiEffect.NavigateToLogin)
     }
 
