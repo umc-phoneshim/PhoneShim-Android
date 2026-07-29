@@ -11,3 +11,6 @@ local.properties
 build/
 .claude/
 .kotlin/
+
+~$*
+.DS_Store
