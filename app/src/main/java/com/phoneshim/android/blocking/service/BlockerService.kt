@@ -410,7 +410,7 @@ class BlockerService : Service() {
         }
 
         // 아직 기록 전. 목표가 실제로 생긴 시점에만 기록한다.
-        val hasGoal = policyProvider.phoneGoalMinutes() != null ||
+        val hasGoal = policyProvider.phoneGoal() != null ||
                 policyProvider.watchedApps().isNotEmpty()
         if (!hasGoal) return 0L
 

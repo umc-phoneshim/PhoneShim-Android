@@ -46,9 +46,9 @@ class BlockPolicyEngine @Inject constructor(
         }
 
         // ── 2) 전체 폰 쿼터 ──
-        val phoneGoal = goalProvider.phoneGoalMinutes()
-        if (phoneGoal != null && phoneUsedMinutes >= phoneGoal) {
-            return if (goalProvider.phoneLimitEnabled()) {
+        val phoneGoal = goalProvider.phoneGoal()
+        if (phoneGoal != null && phoneUsedMinutes >= phoneGoal.goalMinutes) {
+            return if (phoneGoal.limitEnabled) {
                 BlockDecision.PhoneBlocked
             } else {
                 BlockDecision.PhoneGoalReached

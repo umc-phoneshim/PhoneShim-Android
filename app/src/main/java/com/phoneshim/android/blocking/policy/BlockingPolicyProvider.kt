@@ -6,11 +6,8 @@ package com.phoneshim.android.blocking.policy
  */
 interface BlockingPolicyProvider {
 
-    /** 전체 폰 하루 목표(분). 없으면 null. */
-    suspend fun phoneGoalMinutes(): Int?
-
-    /** 전체 폰 목표 도달 시 실제로 차단할지 여부. */
-    suspend fun phoneLimitEnabled(): Boolean
+    /** 전체 폰 하루 목표. 설정된 값이 없으면 null. */
+    suspend fun phoneGoal(): PhoneGoalPolicy?
 
     /** 주의앱 정책 목록. */
     suspend fun watchedApps(): List<AppBlockingPolicy>
