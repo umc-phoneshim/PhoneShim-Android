@@ -37,11 +37,8 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 import kotlin.math.sqrt
 
-/**
- * "07. 데일리 리포트" 화면군에서 쓰이는 차트/카드 컴포넌트와 UI 전용 모델.
- *
- * 여기 모델들은 화면 전용 표현 모델입니다. 실제 데이터 연결 시 ReportViewModel.uiState 의
- * DailyReport / AppUsage / TimetableEntry 를 이 모델로 매핑해서 사용하세요.
+/*
+  "07. 데일리 리포트" 화면군에서 쓰이는 차트/카드 컴포넌트와 UI 전용 모델.
  */
 
 // 앱 사용 카테고리 색상. Figma 팔레트(PhoneShimPalette)엔 아직 없는 토큰이라 리포트 화면 로컬로 정의합니다.

@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +48,7 @@ fun MySideMenuRoute(
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
@@ -52,9 +56,9 @@ fun MySideMenuRoute(
                 MyPageUiEffect.NavigateToWithdraw -> onNavigateToWithdraw()
                 MyPageUiEffect.NavigateToLogin -> onNavigateToLogin()
                 MyPageUiEffect.OpenContactSupport -> onContactSupport()
+                is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 사이드 메뉴에서는 발생하지 않는 이펙트입니다. (마이페이지 본체 전용)
                 MyPageUiEffect.NavigateToSideMenu -> Unit
-                is MyPageUiEffect.ShowMessage -> Unit
             }
         }
     }
@@ -62,6 +66,7 @@ fun MySideMenuRoute(
     MySideMenuScreen(
         state = state,
         modifier = modifier,
+        snackbarHostState = snackbarHostState,
         onDismiss = onDismiss,
         onLogoutClick = { viewModel.onEvent(MyPageUiEvent.LogoutClicked) },
         onWithdrawClick = { viewModel.onEvent(MyPageUiEvent.WithdrawMenuClicked) },
@@ -76,6 +81,7 @@ fun MySideMenuScreen(
     state: MyPageUiState,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onLogoutClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
     onContactSupportClick: () -> Unit = {},
@@ -111,6 +117,11 @@ fun MySideMenuScreen(
             MenuDivider()
             MenuRow(text = "문의", onClick = onContactSupportClick)
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     if (state.isWithdrawPopupVisible) {

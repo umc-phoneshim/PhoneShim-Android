@@ -20,10 +20,11 @@ import com.phoneshim.android.ui.features.mypage.screen.MyRoute
 import com.phoneshim.android.ui.features.mypage.screen.MySideMenuRoute
 import com.phoneshim.android.ui.features.pref.screen.PrefRoute
 import com.phoneshim.android.ui.features.reminder.screen.ReminderRoute
-import com.phoneshim.android.ui.features.report.screen.ReportAiSuggestScreen
 import com.phoneshim.android.ui.features.report.screen.ReportSummaryRoute
+import com.phoneshim.android.ui.features.report.screen.RestSuggestionRoute
 import com.phoneshim.android.ui.features.report.screen.TimetableRoute
-import com.phoneshim.android.ui.features.report.screen.UsageReasonInputScreen
+import com.phoneshim.android.ui.features.report.screen.UsageReasonInputRoute
+import java.time.LocalDate
 import com.phoneshim.android.ui.features.setgoal.screen.AccessGoalSetScreen
 import com.phoneshim.android.ui.features.setgoal.screen.AppSelectScreen
 import com.phoneshim.android.ui.features.setgoal.screen.GenderAgeSelectScreen
@@ -183,10 +184,18 @@ fun PhoneShimNavHost(navController: NavHostController) {
         ) { backStackEntry ->
             // 경로 인자로 전달된 사용 기록 id를 꺼내 다음 화면에 전달
             val entryId = backStackEntry.arguments?.getString("entryId").orEmpty()
-            UsageReasonInputScreen(entryId = entryId, onSubmitted = { navController.popBackStack() })
+            // TODO: 타임테이블 시간대별 조회 API가 생기면 선택 구간의 date/timeRange 를 함께 넘기세요.
+            //  지금은 화면이 오늘 날짜와 빈 구간으로 시작합니다.
+            UsageReasonInputRoute(
+                entryId = entryId,
+                date = LocalDate.now().toString(),
+                timeRangeStart = "",
+                timeRangeEnd = "",
+                onSubmitted = { navController.popBackStack() },
+            )
         }
         composable(Routes.REPORT_AI_SUGGEST) {
-            ReportAiSuggestScreen(onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) })
+            RestSuggestionRoute(onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) })
         }
         composable(Routes.REPORT_SUMMARY) {
             ReportSummaryRoute(

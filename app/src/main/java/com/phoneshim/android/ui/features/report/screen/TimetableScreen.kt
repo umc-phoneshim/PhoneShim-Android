@@ -76,7 +76,7 @@ fun TimetableRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ReportUiEffect.NavigateToUsageReasonInput -> onEntryClick(effect.entryId)
-                ReportUiEffect.NavigateToAiSuggestion -> onNavigateToAiSuggestion()
+                ReportUiEffect.NavigateToRestSuggestion -> onNavigateToAiSuggestion()
                 is ReportUiEffect.NavigateToTab ->
                     if (effect.tab == ReportTab.SUMMARY) onNavigateToSummary()
                 is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
@@ -96,7 +96,7 @@ fun TimetableRoute(
         onNextDate = { viewModel.onEvent(ReportUiEvent.NextDateClicked) },
         onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
         onEntryClick = { viewModel.onEvent(ReportUiEvent.TimetableEntryClicked(it)) },
-        onEditView = { viewModel.onEvent(ReportUiEvent.EditViewClicked) },
+        onEditView = { viewModel.onEvent(ReportUiEvent.RestSuggestionClicked) },
         onAlarmSettings = { viewModel.onEvent(ReportUiEvent.AlarmSettingsClicked) },
         onBottomNavSelected = { tab ->
             when (tab) {

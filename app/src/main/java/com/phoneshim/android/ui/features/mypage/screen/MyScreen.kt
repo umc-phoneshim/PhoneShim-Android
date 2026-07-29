@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -29,9 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.User
+import com.phoneshim.android.domain.model.UserStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
@@ -71,10 +75,10 @@ fun MyRoute(
             when (effect) {
                 MyPageUiEffect.NavigateToSideMenu -> onNavigateToSideMenu()
                 MyPageUiEffect.NavigateToLogin -> onNavigateToLogin()
+                is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 마이페이지 본체에서는 발생하지 않는 이펙트입니다. (사이드 메뉴 전용)
                 MyPageUiEffect.NavigateToWithdraw -> Unit
                 MyPageUiEffect.OpenContactSupport -> Unit
-                is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
@@ -85,6 +89,11 @@ fun MyRoute(
         snackbarHostState = snackbarHostState,
         selectedBottomTab = selectedBottomTab,
         onMenuClick = { viewModel.onEvent(MyPageUiEvent.SideMenuClicked) },
+        onEditClick = { viewModel.onEvent(MyPageUiEvent.EditClicked) },
+        onEditCancel = { viewModel.onEvent(MyPageUiEvent.EditCancelled) },
+        onNameChange = { viewModel.onEvent(MyPageUiEvent.NameChanged(it)) },
+        onMotivationChange = { viewModel.onEvent(MyPageUiEvent.MotivationChanged(it)) },
+        onSaveClick = { viewModel.onEvent(MyPageUiEvent.SaveClicked) },
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -103,6 +112,11 @@ fun MyScreen(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
+    onEditClick: () -> Unit = {},
+    onEditCancel: () -> Unit = {},
+    onNameChange: (String) -> Unit = {},
+    onMotivationChange: (String) -> Unit = {},
+    onSaveClick: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -121,7 +135,10 @@ fun MyScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = PhoneShimDimens.screenHorizontalPadding, vertical = PhoneShimDimens.spacing12),
+                        .padding(
+                            horizontal = PhoneShimDimens.screenHorizontalPadding,
+                            vertical = PhoneShimDimens.spacing12,
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -130,11 +147,23 @@ fun MyScreen(
                         color = PhoneShimTheme.colors.textPrimary,
                         modifier = Modifier.weight(1f),
                     )
+                    Text(
+                        text = if (state.isEditing) "취소" else "수정",
+                        style = PhoneShimType.KorBodyM,
+                        color = PhoneShimTheme.colors.brandStrong,
+                        modifier = Modifier
+                            .clickable(onClick = if (state.isEditing) onEditCancel else onEditClick)
+                            .padding(horizontal = PhoneShimDimens.spacing8),
+                    )
                     PhoneShimIcon(
                         type = PhoneShimIconType.ChevronRight,
                         contentDescription = "사이드 메뉴",
                         modifier = Modifier.clickable(onClick = onMenuClick),
                     )
+                }
+
+                state.withdrawalNoticeText?.let { notice ->
+                    WithdrawalNotice(text = notice)
                 }
 
                 Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
@@ -155,10 +184,28 @@ fun MyScreen(
                         .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
                     verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
                 ) {
-                    // TODO: state.isLoading 구간엔 LoadingIndicator 를 노출하세요.
-                    MyInfoField(label = "이름", value = state.nickname)
+                    // TODO: state.isLoading 구간엔 공통 LoadingIndicator 를 노출하세요.
+                    MyInfoField(
+                        label = "이름",
+                        value = if (state.isEditing) state.nameDraft else state.name,
+                        editable = state.isEditing,
+                        onValueChange = onNameChange,
+                        errorText = state.nameError,
+                    )
                     MyInfoField(label = "이메일", value = state.email)
+                    MyInfoField(
+                        label = "다짐 문구",
+                        value = if (state.isEditing) state.motivationDraft else state.motivation,
+                        editable = state.isEditing,
+                        onValueChange = onMotivationChange,
+                        errorText = state.motivationError,
+                        minHeight = 88.dp,
+                    )
                     MyGoalField()
+
+                    if (state.isEditing) {
+                        SaveButton(enabled = state.canSave, isSaving = state.isSaving, onClick = onSaveClick)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
@@ -173,20 +220,84 @@ fun MyScreen(
 }
 
 @Composable
-private fun MyInfoField(label: String, value: String, modifier: Modifier = Modifier) {
+private fun WithdrawalNotice(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = PhoneShimDimens.screenHorizontalPadding)
+            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(12.dp))
+            .padding(PhoneShimDimens.spacing12),
+    ) {
+        Text(text = text, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.error)
+    }
+}
+
+@Composable
+private fun MyInfoField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    editable: Boolean = false,
+    onValueChange: (String) -> Unit = {},
+    errorText: String? = null,
+    minHeight: Dp = PhoneShimDimens.textFieldHeight,
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = label, style = PhoneShimType.KorBodyM, color = PhoneShimTheme.colors.textSecondary)
         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(PhoneShimDimens.textFieldHeight)
+                .heightIn(min = minHeight)
                 .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp))
-                .padding(horizontal = PhoneShimDimens.spacing16),
+                .padding(horizontal = PhoneShimDimens.spacing16, vertical = PhoneShimDimens.spacing12),
             contentAlignment = Alignment.CenterStart,
         ) {
-            Text(text = value, style = PhoneShimType.KorBodyM, color = PhoneShimTheme.colors.textPrimary)
+            if (editable) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    textStyle = PhoneShimType.KorBodyM.copy(color = PhoneShimTheme.colors.textPrimary),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    text = value,
+                    style = PhoneShimType.KorBodyM,
+                    color = PhoneShimTheme.colors.textPrimary,
+                )
+            }
         }
+        if (errorText != null) {
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
+            Text(text = errorText, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.error)
+        }
+    }
+}
+
+@Composable
+private fun SaveButton(
+    enabled: Boolean,
+    isSaving: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(PhoneShimDimens.textFieldHeight)
+            .background(
+                color = if (enabled) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.divider,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = if (isSaving) "저장 중..." else "저장",
+            style = PhoneShimType.KorBodyM,
+            color = PhoneShimTheme.colors.onBrand,
+        )
     }
 }
 
@@ -195,7 +306,8 @@ private fun MyGoalField(modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = "목표", style = PhoneShimType.KorBodyM, color = PhoneShimTheme.colors.textSecondary)
         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-        // TODO: SetGoal 도메인의 GetGoal 유스케이스가 추가되면 MyPageUiState 에 목표 요약을 담아 교체하세요.
+        // TODO: GetGoalUseCase 를 MyPageViewModel 에 주입해 실제 목표 요약으로 교체하세요.
+        //  전체 목표 API(GET /api/total-goals)가 아직 서버 "예정" 상태입니다.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -205,21 +317,47 @@ private fun MyGoalField(modifier: Modifier = Modifier) {
     }
 }
 
-private fun previewState(user: User? = User(id = "1", email = "abcde123@gmail.com", nickname = "유리")) =
-    MyPageUiState(user = user)
+private fun previewUser(status: UserStatus = UserStatus.ACTIVE) = User(
+    id = "1",
+    email = "abcde123@gmail.com",
+    name = "유리",
+    motivation = "오늘은 필요한 앱만 보기",
+    status = status,
+)
 
 @Preview(showBackground = true)
 @Composable
 private fun MyScreenPreview() {
     PhoneShimTheme {
-        MyScreen(state = previewState(), onMenuClick = {}, onBottomNavSelected = {})
+        MyScreen(state = MyPageUiState(user = previewUser()), onMenuClick = {}, onBottomNavSelected = {})
     }
 }
 
-@Preview(name = "프로필 로딩 전", showBackground = true)
+@Preview(name = "편집 모드", showBackground = true)
 @Composable
-private fun MyScreenEmptyPreview() {
+private fun MyScreenEditingPreview() {
     PhoneShimTheme {
-        MyScreen(state = previewState(user = null), onMenuClick = {}, onBottomNavSelected = {})
+        MyScreen(
+            state = MyPageUiState(
+                user = previewUser(),
+                isEditing = true,
+                nameDraft = "유리",
+                motivationDraft = "오늘은 필요한 앱만 보기",
+            ),
+            onMenuClick = {},
+            onBottomNavSelected = {},
+        )
+    }
+}
+
+@Preview(name = "탈퇴 유예 상태", showBackground = true)
+@Composable
+private fun MyScreenWithdrawalPendingPreview() {
+    PhoneShimTheme {
+        MyScreen(
+            state = MyPageUiState(user = previewUser(UserStatus.WITHDRAWAL_PENDING)),
+            onMenuClick = {},
+            onBottomNavSelected = {},
+        )
     }
 }

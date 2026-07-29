@@ -81,7 +81,7 @@ fun ReportSummaryRoute(
                 is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 요약 화면에서는 발생하지 않는 이펙트입니다. (타임테이블 전용)
                 is ReportUiEffect.NavigateToUsageReasonInput -> Unit
-                ReportUiEffect.NavigateToAiSuggestion -> Unit
+                ReportUiEffect.NavigateToRestSuggestion -> Unit
                 ReportUiEffect.NavigateToAlarmSettings -> Unit
             }
         }
@@ -174,15 +174,28 @@ fun ReportSummaryScreen(
                             color = PhoneShimTheme.colors.textSecondary,
                         )
                         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
-                        AppUsageBubbleChart(bubbles = state.appBubbles)
-                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-                        Text(
-                            text = "앱 아이콘 크기 = 사용량",
-                            style = PhoneShimType.KorMicro,
-                            color = PhoneShimTheme.colors.textTertiary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        val bubbles = state.appBubbles
+                        if (bubbles.isEmpty()) {
+                            // 422 INSUFFICIENT_* 응답도 오류가 아니라 이 안내로 표시합니다.
+                            Text(
+                                text = state.insufficientDataMessage
+                                    ?: "이 날짜에는 기록된 사용량이 없어요.",
+                                style = PhoneShimType.KorCaption,
+                                color = PhoneShimTheme.colors.textTertiary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        } else {
+                            AppUsageBubbleChart(bubbles = bubbles)
+                            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+                            Text(
+                                text = "앱 아이콘 크기 = 사용량",
+                                style = PhoneShimType.KorMicro,
+                                color = PhoneShimTheme.colors.textTertiary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
 
                     Text(

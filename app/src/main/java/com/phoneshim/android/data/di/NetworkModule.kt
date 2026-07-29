@@ -1,11 +1,13 @@
 package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.api.AuthApi
+import com.phoneshim.android.data.api.AuthInterceptor
 import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.MainApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,7 +18,12 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val BASE_URL = "https://api.phoneshim.com/"
+/**
+ * API 명세서 0_공통정보 기준.
+ * TODO: 배포용 서버 주소가 정해지면 BuildConfig 로 분리하세요.
+ *  에뮬레이터에서 로컬 서버에 붙을 때는 10.0.2.2 가 호스트의 localhost 입니다.
+ */
+private const val BASE_URL = "http://10.0.2.2:3000/"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -24,8 +31,9 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient =
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient =
         OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
             .build()
 
@@ -61,4 +69,9 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMyPageApi(retrofit: Retrofit): MyPageApi = retrofit.create(MyPageApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUsageReasonApi(retrofit: Retrofit): UsageReasonApi =
+        retrofit.create(UsageReasonApi::class.java)
 }
