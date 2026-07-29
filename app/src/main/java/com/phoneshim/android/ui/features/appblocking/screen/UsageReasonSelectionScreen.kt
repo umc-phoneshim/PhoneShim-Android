@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.phoneshim.android.ui.common.Checkbox
 import com.phoneshim.android.ui.common.PrimaryButton
@@ -37,6 +36,8 @@ fun UsageReasonSelectionScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
     reasons: List<String> = DefaultUsageReasons,
+    isSaving: Boolean = false,
+    errorMessage: String? = null,
 ) {
     BlockingOverlay(contentAlignment = Alignment.BottomCenter) {
         Column(
@@ -56,15 +57,26 @@ fun UsageReasonSelectionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(PhoneShimPalette.Primary100, MaterialTheme.shapes.small)
-                            .clickable { onReasonSelected(reason) }
+                            .clickable(enabled = !isSaving) { onReasonSelected(reason) }
                             .padding(PhoneShimDimens.spacing12),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
                     ) {
                         Text(reason, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Checkbox(checked = reason == selectedReason, onCheckedChange = { onReasonSelected(reason) })
+                        Checkbox(
+                            checked = reason == selectedReason,
+                            onCheckedChange = { onReasonSelected(reason) },
+                            enabled = !isSaving,
+                        )
                     }
                 }
+            }
+            errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 PrimaryButton(
@@ -73,7 +85,7 @@ fun UsageReasonSelectionScreen(
                     modifier = Modifier
                         .fillMaxWidth(.43f)
                         .padding(top = PhoneShimDimens.spacing12),
-                    enabled = selectedReason != null,
+                    enabled = selectedReason != null && !isSaving,
                     size = PhoneShimButtonSize.Small,
                 )
             }

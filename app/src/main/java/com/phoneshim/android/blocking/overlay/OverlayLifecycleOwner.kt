@@ -42,6 +42,11 @@ class OverlayLifecycleOwner :
 
     fun onDestroy() {
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        /*
+         * WindowManager 오버레이는 Activity의 onDestroy를 거치지 않으므로 owner가 직접
+         * ViewModelStore를 비워야 한다. 이 호출로 UsageReasonViewModel.onCleared()와
+         * viewModelScope 취소가 보장되어 닫힌 오버레이의 저장 작업이 남지 않는다.
+         */
         viewModelStore.clear()
     }
 }

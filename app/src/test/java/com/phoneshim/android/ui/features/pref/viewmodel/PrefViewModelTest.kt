@@ -64,11 +64,26 @@ class PrefViewModelTest {
         assertEquals(
             TimeEditorState(
                 target = TimeEditTarget.TotalGoal,
-                hoursInput = "3",
+                hoursInput = "03",
                 minutesInput = "30",
+                isLimitEnabled = true,
             ),
             viewModel.uiState.value.timeEditor,
         )
+    }
+
+    @Test
+    fun `total limit toggle is applied when goal time is confirmed`() {
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.TimeEditorLimitToggled)
+
+        assertFalse(viewModel.uiState.value.timeEditor?.isLimitEnabled ?: true)
+        assertTrue(viewModel.uiState.value.draftSettings.isTotalLimitEnabled)
+
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
+
+        assertFalse(viewModel.uiState.value.draftSettings.isTotalLimitEnabled)
+        assertNull(viewModel.uiState.value.timeEditor)
     }
 
     @Test
@@ -140,6 +155,42 @@ class PrefViewModelTest {
             goalsBeforeEdit.filterNot { it.id == "facebook" },
             goals.filterNot { it.id == "facebook" },
         )
+    }
+
+    @Test
+    fun `app time popup applies limit toggle only after confirmation`() {
+        viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened("facebook"))
+        viewModel.onEvent(PrefUiEvent.TimeEditorLimitToggled)
+
+        assertFalse(viewModel.uiState.value.timeEditor?.isLimitEnabled ?: true)
+        assertTrue(
+            viewModel.uiState.value.draftSettings.appGoals
+                .single { it.id == "facebook" }
+                .isLimitEnabled,
+        )
+
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
+
+        assertFalse(
+            viewModel.uiState.value.draftSettings.appGoals
+                .single { it.id == "facebook" }
+                .isLimitEnabled,
+        )
+    }
+
+    @Test
+    fun `dismissing app time popup discards limit toggle`() {
+        viewModel.onEvent(PrefUiEvent.AppTimeEditorOpened("facebook"))
+        viewModel.onEvent(PrefUiEvent.TimeEditorLimitToggled)
+
+        viewModel.onEvent(PrefUiEvent.TimeEditorDismissed)
+
+        assertTrue(
+            viewModel.uiState.value.draftSettings.appGoals
+                .single { it.id == "facebook" }
+                .isLimitEnabled,
+        )
+        assertNull(viewModel.uiState.value.timeEditor)
     }
 
     @Test

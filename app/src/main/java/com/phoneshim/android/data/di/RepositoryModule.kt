@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.repository.AuthRepositoryImpl
+import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
 import com.phoneshim.android.data.repository.MainRepositoryImpl
@@ -15,6 +16,7 @@ import com.phoneshim.android.domain.repository.MainRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
 import com.phoneshim.android.domain.repository.ReminderRepository
 import com.phoneshim.android.domain.repository.ReportRepository
+import com.phoneshim.android.domain.repository.UsageReasonRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -54,4 +56,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMyPageRepository(impl: MyPageRepositoryImpl): MyPageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUsageReasonRepository(
+        impl: FakeUsageReasonRepositoryImpl,
+    ): UsageReasonRepository
 }

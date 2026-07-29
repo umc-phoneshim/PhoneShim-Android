@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +30,9 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.features.pref.component.AppGoalDescriptionDialog
 import com.phoneshim.android.ui.features.pref.component.GoalTimeDialog
 import com.phoneshim.android.ui.features.pref.component.PrefGoalSection
@@ -42,6 +47,7 @@ import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditorState
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditTarget
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
+import com.phoneshim.android.ui.theme.PhoneShimType
 
 private object PrefScreenDefaults {
     val topBarHeight = 56.dp
@@ -67,11 +73,11 @@ fun PrefScreen(
     onTotalGoalClick: () -> Unit,
     onHoursChanged: (String) -> Unit,
     onMinutesChanged: (String) -> Unit,
+    onTimeEditorLimitToggled: () -> Unit,
     onTimeEditorDismissed: () -> Unit,
     onTimeEditorConfirmed: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
-    onEditAppGoal: (String) -> Unit,
     onAppDescriptionChanged: (String) -> Unit,
     onAppGoalEditorDismissed: () -> Unit,
     onAppGoalSaved: () -> Unit,
@@ -94,7 +100,8 @@ fun PrefScreen(
                 onTotalGoalClick = onTotalGoalClick,
                 onEditAppTime = onEditAppTime,
                 onToggleLimit = onToggleLimit,
-                onEditAppGoal = onEditAppGoal,
+                onCancel = onCancel,
+                onSave = onSave,
             )
         }
         BottomBar(
@@ -106,9 +113,20 @@ fun PrefScreen(
 
     uiState.timeEditor?.let { editor ->
         GoalTimeDialog(
+            title = when (val target = editor.target) {
+                TimeEditTarget.TotalGoal -> "하루 폰 목표 사용 시간"
+                is TimeEditTarget.AppGoal -> {
+                    val appName = uiState.draftSettings.appGoals
+                        .firstOrNull { it.id == target.appId }
+                        ?.appName
+                        ?: "앱"
+                    "$appName 목표 사용 시간"
+                }
+            },
             state = editor,
             onHoursChanged = onHoursChanged,
             onMinutesChanged = onMinutesChanged,
+            onLimitToggled = onTimeEditorLimitToggled,
             onDismiss = onTimeEditorDismissed,
             onConfirm = onTimeEditorConfirmed,
         )
@@ -166,7 +184,8 @@ private fun PrefContent(
     onTotalGoalClick: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
-    onEditAppGoal: (String) -> Unit,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -199,8 +218,29 @@ private fun PrefContent(
             onTotalGoalClick = onTotalGoalClick,
             onEditAppTime = onEditAppTime,
             onToggleLimit = onToggleLimit,
-            onEditAppGoal = onEditAppGoal,
         )
+        Spacer(Modifier.height(PhoneShimDimens.spacing24))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+        ) {
+            SecondaryButton(
+                text = "취소",
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+                size = PhoneShimButtonSize.Medium,
+                fullWidth = false,
+                labelStyle = PhoneShimType.KorCaption,
+            )
+            PrimaryButton(
+                text = "저장",
+                onClick = onSave,
+                modifier = Modifier.weight(1f),
+                size = PhoneShimButtonSize.Medium,
+                fullWidth = false,
+                labelStyle = PhoneShimType.KorCaption,
+            )
+        }
     }
 }
 
@@ -227,11 +267,11 @@ private fun PreviewPrefScreen(uiState: PrefUiState) {
             onTotalGoalClick = noOp,
             onHoursChanged = noOpString,
             onMinutesChanged = noOpString,
+            onTimeEditorLimitToggled = noOp,
             onTimeEditorDismissed = noOp,
             onTimeEditorConfirmed = noOp,
             onEditAppTime = noOpString,
             onToggleLimit = noOpString,
-            onEditAppGoal = noOpString,
             onAppDescriptionChanged = noOpString,
             onAppGoalEditorDismissed = noOp,
             onAppGoalSaved = noOp,
