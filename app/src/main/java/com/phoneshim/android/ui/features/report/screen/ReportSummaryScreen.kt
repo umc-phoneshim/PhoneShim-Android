@@ -36,6 +36,7 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
+import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -95,6 +96,11 @@ fun ReportSummaryRoute(
         onNavigateToMyPage = onNavigateToMyPage,
         onPrevDate = { viewModel.onEvent(ReportUiEvent.PreviousDateClicked) },
         onNextDate = { viewModel.onEvent(ReportUiEvent.NextDateClicked) },
+        onCalendarClick = { viewModel.onEvent(ReportUiEvent.DatePickerOpened) },
+        onDatePickerDismiss = { viewModel.onEvent(ReportUiEvent.DatePickerDismissed) },
+        onDatePicked = { viewModel.onEvent(ReportUiEvent.DatePicked(it)) },
+        onPickerPreviousMonth = { viewModel.onEvent(ReportUiEvent.PickerMonthMoved(-1)) },
+        onPickerNextMonth = { viewModel.onEvent(ReportUiEvent.PickerMonthMoved(1)) },
         onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
         onPeriodSelected = { viewModel.onEvent(ReportUiEvent.PeriodSelected(it)) },
         onBottomNavSelected = { tab ->
@@ -119,6 +125,11 @@ fun ReportSummaryScreen(
     onPrevDate: () -> Unit = {},
     onNextDate: () -> Unit = {},
     onPeriodSelected: (ReportPeriod) -> Unit = {},
+    onCalendarClick: () -> Unit = {},
+    onDatePickerDismiss: () -> Unit = {},
+    onDatePicked: (java.time.LocalDate) -> Unit = {},
+    onPickerPreviousMonth: () -> Unit = {},
+    onPickerNextMonth: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -158,6 +169,8 @@ fun ReportSummaryScreen(
                     dateLabel = state.dateLabel,
                     onPrevDate = onPrevDate,
                     onNextDate = onNextDate,
+                    nextEnabled = state.canGoNextDate,
+                    onCalendarClick = onCalendarClick,
                 )
                 ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
 
@@ -220,6 +233,18 @@ fun ReportSummaryScreen(
             selectedTab = BottomBarTab.REPORT,
             onTabSelected = onBottomNavSelected,
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+
+    if (state.isDatePickerVisible) {
+        ReportDatePickerDialog(
+            visibleMonth = state.pickerMonth,
+            selectedDate = state.date,
+            todayDate = state.today,
+            onDateSelected = onDatePicked,
+            onPreviousMonth = onPickerPreviousMonth,
+            onNextMonth = onPickerNextMonth,
+            onDismiss = onDatePickerDismiss,
         )
     }
 }

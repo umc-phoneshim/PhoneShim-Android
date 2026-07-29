@@ -9,6 +9,7 @@ import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.features.report.component.ReportPeriod
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +24,14 @@ class ReportViewModel @Inject constructor(
             is ReportUiEvent.ScreenEntered -> enterScreen(event)
             ReportUiEvent.PreviousDateClicked -> moveDate(-1)
             ReportUiEvent.NextDateClicked -> moveDate(1)
+            ReportUiEvent.DatePickerOpened -> setState {
+                copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date))
+            }
+            ReportUiEvent.DatePickerDismissed -> setState { copy(isDatePickerVisible = false) }
+            is ReportUiEvent.DatePicked -> pickDate(event)
+            is ReportUiEvent.PickerMonthMoved -> setState {
+                copy(pickerMonth = pickerMonth.plusMonths(event.offset))
+            }
             is ReportUiEvent.TabSelected -> selectTab(event)
             is ReportUiEvent.PeriodSelected -> selectPeriod(event)
             is ReportUiEvent.TimetableEntryClicked ->
@@ -43,6 +52,19 @@ class ReportViewModel @Inject constructor(
         val state = currentState
         if (offsetDays > 0 && !state.canGoNextDate) return
         setState { copy(date = date.plusDays(offsetDays), insufficientDataMessage = null) }
+        loadReport()
+    }
+
+    /** 달력에서 고른 날짜로 이동합니다. 오늘 이후는 선택할 수 없습니다. */
+    private fun pickDate(event: ReportUiEvent.DatePicked) {
+        val state = currentState
+        if (event.date.isAfter(state.today) || event.date == state.date) {
+            setState { copy(isDatePickerVisible = false) }
+            return
+        }
+        setState {
+            copy(date = event.date, isDatePickerVisible = false, insufficientDataMessage = null)
+        }
         loadReport()
     }
 

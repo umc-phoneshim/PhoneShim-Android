@@ -17,7 +17,9 @@ import com.phoneshim.android.ui.features.report.component.ReportPeriod
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.UsageReasonLegend
 import com.phoneshim.android.ui.features.report.component.UsageSegment
+import com.phoneshim.android.ui.features.report.component.UsedApp
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * 07. 데일리 리포트 화면군의 MVI 계약.
@@ -38,6 +40,10 @@ data class ReportUiState(
     val restSuggestion: RestSuggestion? = null,
 
     val isLoading: Boolean = false,
+
+    /** 날짜 선택 달력 팝업 노출 여부와 달력에 보이는 월. */
+    val isDatePickerVisible: Boolean = false,
+    val pickerMonth: YearMonth = YearMonth.from(LocalDate.now()),
 
     /**
      * 422 INSUFFICIENT_*_DATA 응답을 받은 상태.
@@ -84,6 +90,21 @@ data class ReportUiState(
     val hasReportData: Boolean get() = report?.isEmpty == false
 
     val isDataInsufficient: Boolean get() = insufficientDataMessage != null
+
+    /** 타임테이블 오른쪽 "사용 어플" 카드에 표시할 목록. */
+    val usedApps: List<UsedApp>
+        get() {
+            val usages = report?.appUsages.orEmpty().filter { it.usedMinutes > 0 }
+            if (usages.isEmpty()) return mockUsedApps()
+            val palette = listOf(ReportColorYellow, ReportColorRed, ReportColorGreen)
+            return usages.sortedByDescending { it.usedMinutes }
+                .mapIndexed { index, usage ->
+                    UsedApp(
+                        name = usage.appName.ifBlank { "앱 ${index + 1}" },
+                        color = palette[index % palette.size],
+                    )
+                }
+        }
 }
 
 sealed interface ReportUiEvent : UiEvent {
@@ -91,6 +112,13 @@ sealed interface ReportUiEvent : UiEvent {
     data class ScreenEntered(val tab: ReportTab) : ReportUiEvent
     data object PreviousDateClicked : ReportUiEvent
     data object NextDateClicked : ReportUiEvent
+
+    /** 상단 달력 버튼으로 여는 날짜 선택 팝업. */
+    data object DatePickerOpened : ReportUiEvent
+    data object DatePickerDismissed : ReportUiEvent
+    data class DatePicked(val date: LocalDate) : ReportUiEvent
+    data class PickerMonthMoved(val offset: Long) : ReportUiEvent
+
     data class TabSelected(val tab: ReportTab) : ReportUiEvent
     data class PeriodSelected(val period: ReportPeriod) : ReportUiEvent
     data class TimetableEntryClicked(val entryId: String) : ReportUiEvent
@@ -151,9 +179,9 @@ private fun mockCategoryRows(): List<CategoryUsageRow> = listOf(
 /** 타임테이블은 당일 22:00 부터 다음날 21:00 까지 24개 버킷으로 표시합니다. */
 private fun mockHourUsages(): List<HourUsage> {
     val filled = mapOf(
-        "22" to listOf(UsageSegment(ReportColorYellow, 0.32f, entryId = "e1")),
-        "04" to listOf(UsageSegment(ReportColorRed, 0.4f, entryId = "e2")),
-        "10" to listOf(UsageSegment(ReportColorGreen, 0.55f, entryId = "e3")),
+        "23" to listOf(UsageSegment(ReportColorYellow, ratio = 0.33f, entryId = "e1", startRatio = 0f)),
+        "04" to listOf(UsageSegment(ReportColorRed, ratio = 0.33f, entryId = "e2", startRatio = 0.33f)),
+        "10" to listOf(UsageSegment(ReportColorGreen, ratio = 0.83f, entryId = "e3", startRatio = 0.17f)),
     )
     return (0 until 24).map { offset ->
         val label = "%02d".format((22 + offset) % 24)
@@ -165,4 +193,11 @@ private fun mockUsageReasonLegend(): List<UsageReasonLegend> = listOf(
     UsageReasonLegend(ReportColorYellow, "카카오톡"),
     UsageReasonLegend(ReportColorRed, "유튜브"),
     UsageReasonLegend(ReportColorGreen, "혼자"),
+)
+
+/** 서버 데이터가 없을 때 보여주는 임시 사용 어플 목록. */
+private fun mockUsedApps(): List<UsedApp> = listOf(
+    UsedApp("카카오톡", ReportColorYellow),
+    UsedApp("유튜브", ReportColorRed),
+    UsedApp("폰쉼", ReportColorGreen),
 )

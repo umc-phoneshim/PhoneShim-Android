@@ -35,13 +35,13 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
-import com.phoneshim.android.ui.features.report.component.ReportSideActionButton
+import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
+import com.phoneshim.android.ui.features.report.component.ReportSideActionCard
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.TimetableChart
-import com.phoneshim.android.ui.features.report.component.UsageReasonLegendCard
+import com.phoneshim.android.ui.features.report.component.UsedAppsCard
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEvent
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiState
@@ -94,6 +94,11 @@ fun TimetableRoute(
         onNavigateToMyPage = onNavigateToMyPage,
         onPrevDate = { viewModel.onEvent(ReportUiEvent.PreviousDateClicked) },
         onNextDate = { viewModel.onEvent(ReportUiEvent.NextDateClicked) },
+        onCalendarClick = { viewModel.onEvent(ReportUiEvent.DatePickerOpened) },
+        onDatePickerDismiss = { viewModel.onEvent(ReportUiEvent.DatePickerDismissed) },
+        onDatePicked = { viewModel.onEvent(ReportUiEvent.DatePicked(it)) },
+        onPickerPreviousMonth = { viewModel.onEvent(ReportUiEvent.PickerMonthMoved(-1)) },
+        onPickerNextMonth = { viewModel.onEvent(ReportUiEvent.PickerMonthMoved(1)) },
         onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
         onEntryClick = { viewModel.onEvent(ReportUiEvent.TimetableEntryClicked(it)) },
         onEditView = { viewModel.onEvent(ReportUiEvent.RestSuggestionClicked) },
@@ -122,6 +127,11 @@ fun TimetableScreen(
     onNavigateToMyPage: () -> Unit = {},
     onPrevDate: () -> Unit = {},
     onNextDate: () -> Unit = {},
+    onCalendarClick: () -> Unit = {},
+    onDatePickerDismiss: () -> Unit = {},
+    onDatePicked: (java.time.LocalDate) -> Unit = {},
+    onPickerPreviousMonth: () -> Unit = {},
+    onPickerNextMonth: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -161,6 +171,8 @@ fun TimetableScreen(
                     dateLabel = state.dateLabel,
                     onPrevDate = onPrevDate,
                     onNextDate = onNextDate,
+                    nextEnabled = state.canGoNextDate,
+                    onCalendarClick = onCalendarClick,
                 )
                 ReportTabRow(selected = ReportTab.TIMETABLE, onTabSelected = onTabSelected)
 
@@ -184,20 +196,14 @@ fun TimetableScreen(
                         )
                         Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
                         Column(
-                            modifier = Modifier.width(84.dp),
-                            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                            modifier = Modifier.width(104.dp),
+                            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
                         ) {
-                            ReportSideActionButton(
-                                text = "재편 보기",
-                                icon = PhoneShimIconType.Info,
-                                onClick = onEditView,
+                            ReportSideActionCard(
+                                onSuggestionClick = onEditView,
+                                onAlarmSettingsClick = onAlarmSettings,
                             )
-                            ReportSideActionButton(
-                                text = "알림 설정",
-                                icon = PhoneShimIconType.Bell,
-                                onClick = onAlarmSettings,
-                            )
-                            UsageReasonLegendCard(items = state.usageReasonLegend)
+                            UsedAppsCard(apps = state.usedApps)
                         }
                     }
                 }
@@ -207,6 +213,18 @@ fun TimetableScreen(
             selectedTab = BottomBarTab.REPORT,
             onTabSelected = onBottomNavSelected,
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+
+    if (state.isDatePickerVisible) {
+        ReportDatePickerDialog(
+            visibleMonth = state.pickerMonth,
+            selectedDate = state.date,
+            todayDate = state.today,
+            onDateSelected = onDatePicked,
+            onPreviousMonth = onPickerPreviousMonth,
+            onNextMonth = onPickerNextMonth,
+            onDismiss = onDatePickerDismiss,
         )
     }
 }
