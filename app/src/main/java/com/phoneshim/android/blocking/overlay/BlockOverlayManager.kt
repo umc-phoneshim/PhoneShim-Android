@@ -82,8 +82,12 @@ class BlockOverlayManager(
             // 차단 화면은 뒤 앱 입력을 완전히 가로채야 한다.
             //  - FLAG_NOT_TOUCH_MODAL 없음 + 전체화면 → 바깥 터치가 뒤로 새지 않음
             //  - focusable(=NOT_FOCUSABLE 안 줌) → 키 이벤트 수신. back 은 Compose BackHandler 가 소비
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            //
+            // FLAG_KEEP_SCREEN_ON 은 쓰지 않는다. 쿼터 차단은 자정까지 안 풀리므로,
+            // 사용자가 확인을 누르지 않고 폰을 내려놓으면 화면이 계속 켜진 채로 남는다.
+            // BlockerService 는 SCREEN_OFF 에서 이 오버레이를 내리고 폴링을 멈추도록
+            // 짜여 있는데, 화면이 안 꺼지면 그 경로가 돌지 않는다.
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.OPAQUE,
         ).apply {
@@ -91,4 +95,3 @@ class BlockOverlayManager(
         }
     }
 }
-

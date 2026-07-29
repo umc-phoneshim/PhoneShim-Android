@@ -77,7 +77,13 @@ class BlockPolicyEngine @Inject constructor(
     }
 
     private companion object {
-        //   런처 차단 유지. 따라서 런처를 ALWAYS_ALLOWED 에 넣지 않는다.
+        /**
+         * 긴급 연락 보장. decide() 의 첫 분기라 일정 차단·주의앱 쿼터·사유 프롬프트를
+         * 전부 건너뛴다. 즉 전화/문자 앱은 주의앱으로 등록하거나 일정 제한 대상에 넣어도
+         * 차단되지 않는다 — 의도된 동작이다.
+         *
+         * 런처는 넣지 않는다. 전체 폰 차단 중에는 홈도 막혀야 한다.
+         */
         val ALWAYS_ALLOWED = setOf(
             "com.phoneshim.android",
             "com.android.dialer",
