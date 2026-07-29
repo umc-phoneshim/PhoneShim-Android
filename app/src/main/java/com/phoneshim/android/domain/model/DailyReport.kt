@@ -9,7 +9,7 @@ package com.phoneshim.android.domain.model
  */
 data class DailyReport(
     val date: String,
-    val appUsages: List<AppUsage>,
+    val appUsages: List<ReportAppUsage>,
 ) {
     val totalUsedMinutes: Int get() = appUsages.sumOf { it.usedMinutes }
     val totalEntryCount: Int get() = appUsages.sumOf { it.entryCount }
@@ -19,10 +19,11 @@ data class DailyReport(
 /**
  * 주의 앱 하나의 하루 사용량.
  *
+ * 메인 대시보드용 [AppUsage] 와 이름이 겹치지 않도록 Report 접두어를 붙였습니다.
  * [appName] 과 [packageName] 은 /api/usage-logs/status 에서만 내려옵니다.
  * 과거 날짜 조회(/api/usage-logs)에서는 비어 있을 수 있습니다.
  */
-data class AppUsage(
+data class ReportAppUsage(
     val monitoredAppId: String,
     val appName: String = "",
     val packageName: String = "",
