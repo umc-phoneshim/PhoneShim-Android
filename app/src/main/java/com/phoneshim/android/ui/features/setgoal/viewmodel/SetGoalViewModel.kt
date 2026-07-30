@@ -39,7 +39,7 @@ data class SetGoalUiState(
     val gender: String? = null,
     val ageGroup: String? = null,
     val goalTime: AppTimeInput = AppTimeInput(),
-    val blockAfterGoal: Boolean = false,
+    val blockAfterGoal: Boolean = true,
     val installedApps: List<InstalledApp> = emptyList(),
     val selectedApps: List<InstalledApp> = emptyList(),
     val appSettings: Map<String, AppGoalSetting> = emptyMap(), // key = packageName
@@ -57,12 +57,16 @@ sealed interface SetGoalEvent : UiEvent {
     data class SetGoalTime(val timeInput: AppTimeInput) : SetGoalEvent
     data class SetBlockAfterGoal(val enabled: Boolean) : SetGoalEvent
     data class ToggleApp(val app: InstalledApp) : SetGoalEvent
-    data class ToggleAccessLimit(val packageName: String) : SetGoalEvent
+    data class ToggleAccessLimit(
+        val packageName: String,
+        val showNotice: Boolean = true,
+    ) : SetGoalEvent
     data class SetAppTime(val packageName: String, val timeInput: AppTimeInput) : SetGoalEvent
     // 각 단계 '다음' 시 검증 후 통과하면 NavigateNext, 실패하면 ShowMessage
     data object SubmitGenderAge : SetGoalEvent
     data object SubmitTimeSet : SetGoalEvent
     data object SubmitAppSelection : SetGoalEvent
+    data object SubmitAppGoals : SetGoalEvent
     data object SubmitGoal : SetGoalEvent
 }
 
@@ -89,16 +93,26 @@ class SetGoalViewModel @Inject constructor(
             is SetGoalEvent.SelectGender -> setState { copy(gender = event.gender) }
             is SetGoalEvent.SelectAgeGroup -> setState { copy(ageGroup = event.ageGroup) }
             is SetGoalEvent.SetGoalTime -> setState { copy(goalTime = event.timeInput) }
-            is SetGoalEvent.SetBlockAfterGoal -> setState { copy(blockAfterGoal = event.enabled) }
+            is SetGoalEvent.SetBlockAfterGoal -> setBlockAfterGoal(event.enabled)
             is SetGoalEvent.ToggleApp -> toggleApp(event.app)
             is SetGoalEvent.ToggleAccessLimit ->
-                updateSetting(event.packageName) { it.copy(accessLimited = !it.accessLimited) }
+                toggleAccessLimit(event.packageName, event.showNotice)
             is SetGoalEvent.SetAppTime ->
                 updateSetting(event.packageName) { it.copy(timeInput = event.timeInput) }
             SetGoalEvent.SubmitGenderAge -> submitGenderAge()
             SetGoalEvent.SubmitTimeSet -> submitTimeSet()
             SetGoalEvent.SubmitAppSelection -> submitAppSelection()
+            SetGoalEvent.SubmitAppGoals -> submitAppGoals()
             SetGoalEvent.SubmitGoal -> submitGoal()
+        }
+    }
+
+    private fun setBlockAfterGoal(enabled: Boolean) {
+        setState { copy(blockAfterGoal = enabled) }
+        if (enabled) {
+            sendEffect(
+                SetGoalEffect.ShowMessage("폰 제한 시 전화 어플, 문자 어플만 사용 가능합니다."),
+            )
         }
     }
 
@@ -135,19 +149,17 @@ class SetGoalViewModel @Inject constructor(
     // 04-1. 성별/나이 필수 검증
     private fun submitGenderAge() {
         val state = currentState
-        when {
-            state.gender == null -> sendEffect(SetGoalEffect.ShowMessage("성별을 선택해주세요"))
-            state.ageGroup == null -> sendEffect(SetGoalEffect.ShowMessage("나이를 선택해주세요"))
-            else -> sendEffect(SetGoalEffect.NavigateNext)
+        if (state.gender == null || state.ageGroup == null) {
+            sendEffect(SetGoalEffect.ShowMessage("성별과 나이 모두 입력해주세요"))
+        } else {
+            sendEffect(SetGoalEffect.NavigateNext)
         }
     }
 
-    // 04-2. 목표 시간 최소 10분 검증
+    // 04-2. 전체 폰 목표 시간 입력 여부 검증
     private fun submitTimeSet() {
-        if (currentState.totalMinutes < MIN_GOAL_MINUTES) {
-            sendEffect(
-                SetGoalEffect.ShowMessage("목표 시간은 최소 ${MIN_GOAL_MINUTES}분 이상으로 설정해주세요"),
-            )
+        if (currentState.totalMinutes <= 0) {
+            sendEffect(SetGoalEffect.ShowMessage("목표 시간을 입력해주세요."))
         } else {
             sendEffect(SetGoalEffect.NavigateNext)
         }
@@ -156,7 +168,28 @@ class SetGoalViewModel @Inject constructor(
     // 04-3. 앱 최소 1개 선택 검증
     private fun submitAppSelection() {
         if (currentState.selectedApps.isEmpty()) {
-            sendEffect(SetGoalEffect.ShowMessage("관리할 주의 앱을 최소 1개 선택해주세요"))
+            sendEffect(SetGoalEffect.ShowMessage("어플을 한 개 이상 선택해주세요."))
+        } else {
+            sendEffect(SetGoalEffect.NavigateNext)
+        }
+    }
+
+    private fun toggleAccessLimit(packageName: String, showNotice: Boolean) {
+        val nextEnabled = !(currentState.appSettings[packageName]?.accessLimited ?: false)
+        updateSetting(packageName) { it.copy(accessLimited = nextEnabled) }
+        if (nextEnabled && showNotice) {
+            sendEffect(SetGoalEffect.ShowMessage("목표 시간 이후 어플 사용이 제한됩니다."))
+        }
+    }
+
+    // 04-4. 선택한 모든 앱의 목표 시간은 최소 10분이어야 한다.
+    private fun submitAppGoals() {
+        val hasInvalidGoal = currentState.selectedApps.any { app ->
+            val setting = currentState.appSettings[app.packageName] ?: AppGoalSetting()
+            setting.timeInput.totalMinutes < MIN_GOAL_MINUTES
+        }
+        if (hasInvalidGoal) {
+            sendEffect(SetGoalEffect.ShowMessage("목표 사용 시간을 10분 이상 입력하세요."))
         } else {
             sendEffect(SetGoalEffect.NavigateNext)
         }
@@ -171,6 +204,7 @@ class SetGoalViewModel @Inject constructor(
     private fun submitGoal() {
         viewModelScope.launch {
             setGoalUseCase(currentState.toGoal())
+                .onSuccess { sendEffect(SetGoalEffect.NavigateNext) }
                 .onFailure { sendEffect(SetGoalEffect.ShowMessage("목표 저장에 실패했어요")) }
         }
     }
