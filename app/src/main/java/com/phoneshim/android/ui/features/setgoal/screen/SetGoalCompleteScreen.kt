@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,26 +16,36 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.R
+import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
+
+// 완료 화면 어플별 목표 시간 한 줄. 아이콘을 PackageManager에서 읽으려면 packageName이 필요합니다.
+private data class CompleteAppRow(
+    val packageName: String,
+    val label: String,
+    val hour: String,
+    val minute: String,
+)
 
 // 목표 설정 완료를 안내하는 화면 (Figma 04-6. 목표 설정 완료)
 @Composable
@@ -49,7 +60,7 @@ fun SetGoalCompleteScreen(
     SetGoalCompleteContent(
         apps = uiState.selectedApps.map { app ->
             val time = uiState.appSettings[app.packageName]?.timeInput ?: AppTimeInput()
-            Triple(app.label, time.hour, time.minute)
+            CompleteAppRow(app.packageName, app.label, time.hour, time.minute)
         },
         totalMinutes = uiState.totalMinutes,
         onFinish = onFinish,
@@ -59,129 +70,132 @@ fun SetGoalCompleteScreen(
 
 @Composable
 private fun SetGoalCompleteContent(
-    apps: List<Triple<String, String, String>>,
+    apps: List<CompleteAppRow>,
     totalMinutes: Int,
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Figma 04-6: Maincontainer p16, 세로 gap 24, 위 정렬 (버튼도 흐름 안에 배치)
+    // Figma 04-6: Maincontainer p16, 세로 gap 24.
+    // 버튼은 하단 고정(Figma 기준 버튼이 y=644~700, 컨테이너 724 → 하단 여백 24)이고
+    // 마스코트·타이틀·요약 카드만 위쪽에 쌓입니다. 화면이 짧으면 위 묶음이 스크롤됩니다.
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PhoneShimTheme.colors.brandSubtle)
-            .verticalScroll(rememberScrollState())
-            .padding(PhoneShimDimens.spacing16),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
+            .background(PhoneShimTheme.colors.brandSubtle),
     ) {
-        // 캐릭터 영역 (에셋 확정 전 placeholder)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "캐릭터의 목표 설정 페이지로 넘어가는 문구",
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
-
-        // 타이틀 묶음 (py 12, gap 12)
         Column(
-            modifier = Modifier.padding(vertical = PhoneShimDimens.spacing12),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = PhoneShimDimens.spacing16,
+                    end = PhoneShimDimens.spacing16,
+                    top = PhoneShimDimens.spacing16,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
         ) {
-            Text(
-                text = "목표 설정이\n완료되었어요!",
-                style = PhoneShimType.KorH1,
-                color = PhoneShimTheme.colors.brandStrong,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = "이제 더 건강한 디지털 습관을 만들어봐요!",
-                style = PhoneShimType.KorBodyM,
-                color = PhoneShimTheme.colors.textPrimary,
-            )
-        }
-
-        // 요약 카드 (Figma 04-6: 흰 카드 p16, 내부 gap 12)
-        SetGoalCard(
-            contentPadding = PhoneShimDimens.spacing16,
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-        ) {
-            // 총 목표 시간
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+            // 캐릭터 '쉼이' (Figma 04-6 — Frame 3 328×180 안에 176dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "총 목표 시간",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textPrimary,
+                Image(
+                    painter = painterResource(R.drawable.setgoal_mascot),
+                    contentDescription = null,
+                    modifier = Modifier.size(176.dp),
                 )
-                DurationDisplay(totalMinutes = totalMinutes)
             }
 
-            HorizontalDivider(thickness = 1.dp, color = PhoneShimTheme.colors.divider)
-
-            // 어플 별 목표 시간
+            // 타이틀 묶음 (py 12, gap 12)
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.padding(vertical = PhoneShimDimens.spacing12),
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
             ) {
                 Text(
-                    text = "어플 별 목표 시간",
-                    style = PhoneShimType.KorCaption,
+                    text = "목표 설정이\n완료되었어요!",
+                    style = PhoneShimType.KorH1,
+                    color = PhoneShimTheme.colors.brandStrong,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "이제 더 건강한 디지털 습관을 만들어봐요!",
+                    style = PhoneShimType.KorBodyM,
                     color = PhoneShimTheme.colors.textPrimary,
                 )
+            }
+
+            // 요약 카드 (Figma 04-6: 흰 카드 p16, 내부 gap 12)
+            SetGoalCard(
+                contentPadding = PhoneShimDimens.spacing16,
+                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+            ) {
+                // 총 목표 시간
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
                 ) {
-                    apps.forEach { (app, hour, minute) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(28.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(MaterialTheme.shapes.extraSmall)
-                                        .background(PhoneShimTheme.colors.divider),
-                                )
-                                Text(
-                                    text = app,
-                                    style = PhoneShimType.KorCaption,
-                                    color = PhoneShimTheme.colors.textPrimary,
-                                )
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-                            ) {
-                                CompleteTimeUnit(value = hour, unit = "시간")
-                                CompleteTimeUnit(value = minute, unit = "분")
-                            }
+                    Text(
+                        text = "총 목표 시간",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textPrimary,
+                    )
+                    DurationDisplay(totalMinutes = totalMinutes)
+                }
+
+                HorizontalDivider(thickness = 1.dp, color = PhoneShimTheme.colors.divider)
+
+                // 어플 별 목표 시간
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+                ) {
+                    Text(
+                        text = "어플 별 목표 시간",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textPrimary,
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+                    ) {
+                        apps.forEach { row ->
+                            AppInfoRow(
+                                appName = row.label,
+                                appNameStyle = PhoneShimType.KorCaption,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp),
+                                iconContent = { AppIcon(packageName = row.packageName) },
+                                trailingContent = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                                    ) {
+                                        CompleteTimeUnit(value = row.hour, unit = "시간")
+                                        CompleteTimeUnit(value = row.minute, unit = "분")
+                                    }
+                                },
+                            )
                         }
                     }
                 }
             }
         }
 
-        // 메인으로 이동 (Figma 04-6: Large 버튼, 카드 아래 gap 24)
+        // 메인으로 이동 — 하단 고정 (Figma 04-6: 카드 아래 gap 24, 하단 여백 24)
         PrimaryButton(
             text = "메인으로 이동",
             onClick = onFinish,
+            modifier = Modifier.padding(
+                start = PhoneShimDimens.spacing16,
+                end = PhoneShimDimens.spacing16,
+                top = PhoneShimDimens.spacing24,
+                bottom = PhoneShimDimens.spacing24,
+            ),
         )
     }
 }
@@ -212,9 +226,9 @@ private fun SetGoalCompleteScreenPreview() {
     PhoneShimTheme {
         SetGoalCompleteContent(
             apps = listOf(
-                Triple("카카오톡", "01", "00"),
-                Triple("페이스북", "01", "30"),
-                Triple("틱톡", "01", "00"),
+                CompleteAppRow("com.kakao.talk", "카카오톡", "01", "00"),
+                CompleteAppRow("com.facebook.katana", "페이스북", "01", "30"),
+                CompleteAppRow("com.zhiliaoapp.musically", "틱톡", "01", "00"),
             ),
             totalMinutes = 210,
             onFinish = {},

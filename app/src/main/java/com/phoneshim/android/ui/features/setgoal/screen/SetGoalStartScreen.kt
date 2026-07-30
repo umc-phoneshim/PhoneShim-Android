@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,9 +19,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.phoneshim.android.R
+import com.phoneshim.android.blocking.detection.BlockingPermissions
 import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.features.setgoal.component.PermissionConsentPopup
@@ -36,12 +42,19 @@ fun SetGoalStartScreen(
     onSkip: () -> Unit = {},
     showPermissionConsent: Boolean = true,
 ) {
-    var permissionConsentVisible by remember { mutableStateOf(showPermissionConsent) }
+    val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+    var permissionConsentVisible by remember(context, showPermissionConsent, isPreview) {
+        mutableStateOf(
+            showPermissionConsent &&
+                (isPreview || !BlockingPermissions.hasAll(context)),
+        )
+    }
 
     // 차단 엔진용 특수 권한(사용정보 접근·오버레이) 요청 왕복 헬퍼.
     // 설정 화면을 순서대로 띄우고 돌아와 다시 확인하며, 둘 다 허용되면 엔진을 시작한다.
     // 프리뷰에선 ActivityResult 런처를 만들 수 없어 생성하지 않는다.
-    val permissionRequest = if (LocalInspectionMode.current) {
+    val permissionRequest = if (isPreview) {
         null
     } else {
         rememberBlockingPermissionRequest { _ ->
@@ -58,16 +71,17 @@ fun SetGoalStartScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
     ) {
+        // 캐릭터 '쉼이' (Figma 04. 목표 설정 시작 — Frame 3 328×320 안에 225dp)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "캐릭터의 목표 설정 페이지로 넘어가는 문구",
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.textPrimary,
+            Image(
+                painter = painterResource(R.drawable.setgoal_mascot),
+                contentDescription = null,
+                modifier = Modifier.size(225.dp),
             )
         }
 

@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.setgoal.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +10,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -20,11 +26,13 @@ import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
+import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
+import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -40,19 +48,42 @@ fun SetGoalConfirmScreen(
 ) {
     // 04-1~04-4에서 설정한 값을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
-    SetGoalConfirmContent(
-        apps = uiState.selectedApps,
-        settings = uiState.appSettings,
-        totalMinutes = uiState.totalMinutes,
-        onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
-        onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
-        onConfirm = {
-            viewModel.onEvent(SetGoalEvent.SubmitGoal)
-            onConfirm()
-        },
-        onBack = onBack,
-        modifier = modifier,
-    )
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is SetGoalEffect.ShowMessage -> snackbarHostState.showSnackbar(
+                    message = effect.message,
+                    duration = SnackbarDuration.Short,
+                )
+                SetGoalEffect.NavigateNext -> onConfirm()
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        SetGoalConfirmContent(
+            apps = uiState.selectedApps,
+            settings = uiState.appSettings,
+            totalMinutes = uiState.totalMinutes,
+            onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
+            onToggleAccessLimit = {
+                viewModel.onEvent(
+                    SetGoalEvent.ToggleAccessLimit(
+                        packageName = it,
+                        showNotice = false,
+                    ),
+                )
+            },
+            onConfirm = { viewModel.onEvent(SetGoalEvent.SubmitGoal) },
+            onBack = onBack,
+        )
+        SetGoalSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }
 
 @Composable
@@ -94,7 +125,7 @@ private fun SetGoalConfirmContent(
                 apps.forEachIndexed { index, app ->
                     val setting = settings[app.packageName] ?: AppGoalSetting()
                     AppGoalRow(
-                        app = app.label,
+                        app = app,
                         setting = setting,
                         onTimeChange = { onTimeChange(app.packageName, it) },
                         onToggleAccessLimit = { onToggleAccessLimit(app.packageName) },

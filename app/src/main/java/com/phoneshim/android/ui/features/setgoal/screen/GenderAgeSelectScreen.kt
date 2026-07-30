@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,17 +12,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -33,6 +34,7 @@ import com.phoneshim.android.ui.common.SelectionField
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
+import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -55,27 +57,34 @@ fun GenderAgeSelectScreen(
     viewModel: SetGoalViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is SetGoalEffect.ShowMessage ->
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                is SetGoalEffect.ShowMessage -> snackbarHostState.showSnackbar(
+                    message = effect.message,
+                    duration = SnackbarDuration.Short,
+                )
                 SetGoalEffect.NavigateNext -> onNext()
             }
         }
     }
 
-    GenderAgeSelectContent(
-        gender = uiState.gender,
-        age = uiState.ageGroup,
-        onGenderSelected = { viewModel.onEvent(SetGoalEvent.SelectGender(it)) },
-        onAgeSelected = { viewModel.onEvent(SetGoalEvent.SelectAgeGroup(it)) },
-        onNext = { viewModel.onEvent(SetGoalEvent.SubmitGenderAge) },
-        onBack = onBack,
-        modifier = modifier,
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        GenderAgeSelectContent(
+            gender = uiState.gender,
+            age = uiState.ageGroup,
+            onGenderSelected = { viewModel.onEvent(SetGoalEvent.SelectGender(it)) },
+            onAgeSelected = { viewModel.onEvent(SetGoalEvent.SelectAgeGroup(it)) },
+            onNext = { viewModel.onEvent(SetGoalEvent.SubmitGenderAge) },
+            onBack = onBack,
+        )
+        SetGoalSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }
 
 @Composable
