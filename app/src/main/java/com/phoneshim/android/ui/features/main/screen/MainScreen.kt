@@ -59,16 +59,13 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
 /* ============================================================
  * 1. DESIGN TOKENS - COLORS
  * ============================================================ */
-// 카카오 브랜드 컬러, 디자인 시스템 토큰 아님
-private val KakaoYellow = Color(0xFFF7E600)
-
 // TODO: 클론 디자인 시스템(PhoneShimColors)에 #FAF7F0(로컬 프로젝트의 BackgroundCream)에
 // 대응하는 시맨틱 토큰이 없습니다(가장 가까운 PhoneShimTheme.colors.background는 #FFFDF7).
 // 디자인 시스템 담당자 확인 후 Color.kt/Theme.kt에 정식 토큰으로 추가되면 이 로컬 상수는 제거하세요.
 private val BackgroundCream = Color(0xFFFAF7F0)
 
-// 섹션 타이틀: 피그마 시안 기준 KorBodyL 크기 + SemiBold 웨이트
-private val SectionTitleStyle = PhoneShimType.KorBodyL.copy(fontWeight = FontWeight.SemiBold)
+// 섹션 타이틀: 피그마 시안 기준 KorBodyM 크기 + SemiBold 웨이트
+private val SectionTitleStyle = PhoneShimType.KorBodyM.copy(fontWeight = FontWeight.SemiBold)
 
 /* ============================================================
  * 2. DATA MODEL
@@ -85,10 +82,13 @@ data class MainUiState(
     val remainingTime: String = "01h 30m",
     val totalTimeProgress: Float = 0.5f,
     val isSetupCompleted: Boolean = true,
-    // 가로 슬라이드 확인용 더미 6개 (임시 테스트 데이터, 추후 실제 API 데이터로 교체)
-    val cautionApps: List<MainCautionAppItem> = List(6) {
-        MainCautionAppItem("카카오톡", "1h 30m", 0.5f, "3회")
-    },
+    // 가로 슬라이드 확인용 더미 4개 (임시 테스트 데이터, 추후 실제 API 데이터로 교체)
+    val cautionApps: List<MainCautionAppItem> = listOf(
+        MainCautionAppItem(R.drawable.app_facebook, "30m", 0.33f, "3회"),
+        MainCautionAppItem(R.drawable.app_kakaotalk, "1h 20m", 0.90f, "2회"),
+        MainCautionAppItem(R.drawable.app_tiktok, "50m", 0.90f, "3회"),
+        MainCautionAppItem(R.drawable.app_youtube, "1h 30m", 0.50f, "3회")
+    ),
     // 세로 슬라이드 확인용 더미 4개
     val todayTodos: List<MainTodoItem> = List(4) {
         MainTodoItem("과제하기", "10:00 ~ 11:00")
@@ -96,7 +96,7 @@ data class MainUiState(
 )
 
 data class MainCautionAppItem(
-    val name: String,
+    val iconRes: Int,
     val usedTime: String,
     val progress: Float,
     val entryCount: String
@@ -231,19 +231,21 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = "${userName}님, 오늘 하루 힘차게 시작 해봐요!",
-                style = PhoneShimType.KorCaption,
+                style = PhoneShimType.KorBodyM,
                 color = PhoneShimTheme.colors.brandStrong
             )
             Text(
                 text = if (isSetupCompleted) {
-                    "오늘도 좋은 습관 만들어\n봐요!"
+                    "오늘도 좋은 습관 만들어봐요!"
                 } else {
-                    "아직 초기 설정이 완료되\n지 않았어요!"
+                    "아직 초기 설정이 완료되지 않았어요!"
                 },
                 style = PhoneShimType.KorH2,
                 color = PhoneShimTheme.colors.textPrimary
@@ -332,26 +334,22 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 .clip(RoundedCornerShape(12.dp))
                 .background(PhoneShimTheme.colors.surface)
                 .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
-                .padding(horizontal = 20.dp, vertical = 20.dp)
+                .padding(12.dp)
         ) {
-            // TODO: DurationDisplay 기본 스타일은 EngH1(24sp)이나 피그마 기존 메인 화면은
-            // EngDisplay(32sp)라 textStyle로 덮어씀. 32sp가 최신 피그마 스펙이 맞는지,
-            // 그리고 숫자 zero-padding("01") 유지 여부를 디자이너 확인 후 정리 필요.
             val totalMinutes = (uiState.usedHour.toIntOrNull() ?: 0) * 60 +
                 (uiState.usedMinute.toIntOrNull() ?: 0)
             DurationDisplay(
                 totalMinutes = totalMinutes,
-                textStyle = PhoneShimType.EngDisplay,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "남은 시간", style = PhoneShimType.KorLabel, color = PhoneShimTheme.colors.textTertiary)
-                Text(text = uiState.remainingTime, style = PhoneShimType.EngLabel, color = PhoneShimTheme.colors.textSecondary)
+                Text(text = "남은 시간", style = PhoneShimType.KorCaption.copy(fontWeight = FontWeight.Medium), color = PhoneShimTheme.colors.textTertiary)
+                Text(text = uiState.remainingTime, style = PhoneShimType.EngCaption.copy(fontWeight = FontWeight.Medium), color = PhoneShimTheme.colors.textSecondary)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -374,7 +372,7 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 ) {
                     Text(
                         text = "${(uiState.totalTimeProgress * 100).toInt()}%",
-                        style = PhoneShimType.EngMicro,
+                        style = PhoneShimType.EngLabel,
                         color = PhoneShimTheme.colors.surface
                     )
                 }
@@ -435,33 +433,23 @@ private fun CautionAppSection(apps: List<MainCautionAppItem>) {
 private fun CautionAppItem(app: MainCautionAppItem) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Icon Box : 40x40 / radius 100 / surfaceCream
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(100.dp))
-                .background(PhoneShimTheme.colors.surfaceCream),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.kakao_logo),
-                contentDescription = null,
-                tint = KakaoYellow,
-                modifier = Modifier.size(width = 16.dp, height = 15.dp),
-            )
-        }
+        Image(
+            painter = painterResource(app.iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
+        )
 
         Text(
             text = app.usedTime,
-            style = PhoneShimType.EngLabel,
+            style = PhoneShimType.EngCaption.copy(fontWeight = FontWeight.Medium),
             color = PhoneShimTheme.colors.textSecondary
         )
 
         Row(
             modifier = Modifier.padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Badge(
