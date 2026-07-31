@@ -1,7 +1,10 @@
 package com.phoneshim.android.ui.features.reminder.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +21,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -32,13 +42,14 @@ import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
+import com.phoneshim.android.ui.features.reminder.viewmodel.DUPLICATE_SCHEDULE_MESSAGE
+import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 import java.time.LocalDate
 
 private val PopupWidth = 328.dp
-private val PopupBeforeHeight = 260.dp
-private val PopupAfterHeight = 285.dp
+private val PopupHeight = 285.dp
 private val PopupPadding = 16.dp
 private val PopupCornerRadius = 12.dp
 private val PopupItemSpacing = 16.dp
@@ -48,6 +59,7 @@ private val PopupIconSize = 24.dp
 @Composable
 fun ReminderSetPopup(
     selectedDate: LocalDate,
+    todayDate: LocalDate,
     draft: ReminderDraft,
     onDismiss: () -> Unit,
     onTitleChange: (String) -> Unit,
@@ -58,57 +70,48 @@ fun ReminderSetPopup(
     onSave: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val isConfigured = draft.startTimeText.isNotBlank() && draft.endTimeText.isNotBlank()
+    var isNameInputVisible by remember { mutableStateOf(false) }
+    var nameInput by remember { mutableStateOf(draft.title) }
+    var isRestrictionPopupVisible by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            modifier = Modifier
-                .width(PopupWidth)
-                .height(if (isConfigured) PopupAfterHeight else PopupBeforeHeight)
-                .background(PhoneShimTheme.colors.surface, RoundedCornerShape(PopupCornerRadius))
-                .padding(PopupPadding),
-            verticalArrangement = Arrangement.spacedBy(PopupItemSpacing),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            PopupHeader(
-                title = if (isConfigured) "해야 할 일" else "오늘 할 일",
-                onDismiss = onDismiss,
-            )
+        Box(modifier = Modifier.width(PopupWidth).height(PopupHeight)) {
+            Column(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(PhoneShimTheme.colors.surface, RoundedCornerShape(PopupCornerRadius))
+                    .padding(PopupPadding),
+                verticalArrangement = Arrangement.spacedBy(PopupItemSpacing),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+            PopupHeader(onDismiss = onDismiss)
             PopupTimeSection(
                 selectedDate = selectedDate,
-                isConfigured = isConfigured,
+                todayDate = todayDate,
                 startTime = draft.startTimeText,
                 endTime = draft.endTimeText,
-                onClick = {
-                    if (isConfigured) {
-                        onStartTimeChange("")
-                        onEndTimeChange("")
-                    } else {
-                        onStartTimeChange("10:00")
-                        onEndTimeChange("11:00")
-                    }
-                },
+                onStartTimeChange = onStartTimeChange,
+                onEndTimeChange = onEndTimeChange,
             )
             PopupSelectionRow(
                 label = "이름",
                 labelColor = PhoneShimTheme.colors.textSecondary,
-                onClick = { onTitleChange(if (draft.title == "과제") "과제하기" else "과제") },
+                onClick = {
+                    nameInput = draft.title
+                    isNameInputVisible = true
+                },
             ) {
-                Text(draft.title.ifBlank { "과제" }, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
-                Spacer(Modifier.width(4.dp))
+                if (draft.title.isNotBlank()) {
+                    Text(draft.title, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
+                    Spacer(Modifier.width(4.dp))
+                }
                 Icon(painterResource(R.drawable.ic_chevron_right_small), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
             }
             PopupSelectionRow(
                 label = "제한 선택",
                 labelColor = PhoneShimTheme.colors.error,
-                onClick = {
-                    val next = if (draft.restrictionMode == RestrictionMode.SPECIFIC_APPS) RestrictionMode.FULL_PHONE else RestrictionMode.SPECIFIC_APPS
-                    onRestrictionModeChange(next)
-                    if (next == RestrictionMode.SPECIFIC_APPS && "kakao" !in draft.restrictedAppIds) onToggleApp("kakao")
-                },
+                onClick = { isRestrictionPopupVisible = true },
             ) {
-                Icon(painterResource(R.drawable.ic_target_app), null, tint = Color.Unspecified, modifier = Modifier.size(PopupIconSize))
-                Spacer(Modifier.width(8.dp))
-                Icon(painterResource(R.drawable.ic_reminder_app_kakao), null, tint = Color.Unspecified, modifier = Modifier.size(PopupIconSize))
+                RestrictionSelection(draft)
             }
             PopupActions(
                 isEditing = draft.editingTaskId != null,
@@ -116,14 +119,37 @@ fun ReminderSetPopup(
                 onDelete = onDelete,
                 onSave = onSave,
             )
+            }
+            if (draft.timeError == DUPLICATE_SCHEDULE_MESSAGE) {
+                DuplicateScheduleErrorBanner(modifier = Modifier.align(Alignment.Center))
+            }
+            if (isRestrictionPopupVisible) {
+                ReminderRestrictionPopup(
+                    draft = draft,
+                    onModeChange = onRestrictionModeChange,
+                    onToggleApp = onToggleApp,
+                    onDismiss = { isRestrictionPopupVisible = false },
+                )
+            }
         }
+    }
+    if (isNameInputVisible) {
+        ReminderNameInputDialog(
+            value = nameInput,
+            onValueChange = { nameInput = it },
+            onConfirm = {
+                onTitleChange(nameInput)
+                isNameInputVisible = false
+            },
+            onDismiss = { isNameInputVisible = false },
+        )
     }
 }
 
 @Composable
-private fun PopupHeader(title: String, onDismiss: () -> Unit) {
+private fun PopupHeader(onDismiss: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(title, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
+        Text("해야 할 일", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
         Box(Modifier.size(16.dp).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
             Icon(painterResource(R.drawable.ic_reminder_close), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
         }
@@ -133,38 +159,123 @@ private fun PopupHeader(title: String, onDismiss: () -> Unit) {
 @Composable
 private fun PopupTimeSection(
     selectedDate: LocalDate,
-    isConfigured: Boolean,
+    todayDate: LocalDate,
     startTime: String,
     endTime: String,
-    onClick: () -> Unit,
+    onStartTimeChange: (String) -> Unit,
+    onEndTimeChange: (String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (isConfigured) {
-            Box(Modifier.width(50.dp).height(21.dp).background(PhoneShimTheme.colors.brandStrong, CircleShape), contentAlignment = Alignment.Center) {
-                Text("${selectedDate.monthValue}.${selectedDate.dayOfMonth}", style = PhoneShimType.EngLabel, color = PhoneShimTheme.colors.onBrand)
-            }
+        Box(
+            Modifier.width(50.dp).height(21.dp).background(PhoneShimTheme.colors.brandStrong, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                if (selectedDate == todayDate) "Today" else "${selectedDate.monthValue}.${selectedDate.dayOfMonth}",
+                style = PhoneShimType.EngLabel,
+                color = PhoneShimTheme.colors.onBrand,
+            )
         }
         Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            PopupClock(if (isConfigured) startTime else "00:00", isConfigured)
+            EditablePopupClock(startTime.ifBlank { "00:00" }, onStartTimeChange)
             Text("-", modifier = Modifier.padding(horizontal = 8.dp), style = PhoneShimType.EngH2, color = PhoneShimTheme.colors.textPrimary)
-            PopupClock(if (isConfigured) endTime else "00:00", isConfigured)
+            EditablePopupClock(endTime.ifBlank { "00:00" }, onEndTimeChange)
         }
     }
 }
 
 @Composable
-private fun PopupClock(value: String, isConfigured: Boolean) {
-    val color = if (isConfigured) PhoneShimTheme.colors.textPrimary else Color(0xFFB2C69D)
+private fun RestrictionSelection(draft: ReminderDraft) {
+    when (draft.restrictionMode) {
+        RestrictionMode.NONE -> {
+            Box(
+                modifier = Modifier
+                    .width(56.dp)
+                    .height(24.dp)
+                    .background(PhoneShimPalette.Gray500, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "제한 없음",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PhoneShimType.EngLabel,
+                    color = PhoneShimPalette.White,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+
+        RestrictionMode.FULL_PHONE -> {
+            Icon(
+                painterResource(R.drawable.ic_target_app),
+                contentDescription = "전체 폰 제한",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(PopupIconSize),
+            )
+        }
+
+        RestrictionMode.SPECIFIC_APPS -> {
+            Icon(
+                painterResource(R.drawable.ic_target_app),
+                contentDescription = "앱 제한",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(PopupIconSize),
+            )
+            draft.restrictedAppIds.forEach { appId ->
+                Spacer(Modifier.width(8.dp))
+                ReminderAppIcon(appId, Modifier.size(PopupIconSize))
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditablePopupClock(value: String, onValueChange: (String) -> Unit) {
     val parts = value.split(':').let { if (it.size == 2) it else listOf("00", "00") }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(parts[0], modifier = Modifier.width(27.dp), style = PhoneShimType.EngH2, color = color, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Text(":", modifier = Modifier.height(32.dp), style = PhoneShimType.EngH2, color = color)
-        Text(parts[1], modifier = Modifier.width(27.dp), style = PhoneShimType.EngH2, color = color, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        EditableTimeCell(parts[0], 23) { hour -> onValueChange("$hour:${parts[1]}") }
+        Text(":", modifier = Modifier.height(32.dp), style = PhoneShimType.EngH2, color = PhoneShimPalette.Primary400)
+        EditableTimeCell(parts[1], 59) { minute -> onValueChange("${parts[0]}:$minute") }
     }
+}
+
+@Composable
+private fun EditableTimeCell(value: String, maxValue: Int, onValueChange: (String) -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    BasicTextField(
+        value = value,
+        onValueChange = { changed ->
+            val digits = changed.filter(Char::isDigit).takeLast(2)
+            val parsed = digits.toIntOrNull()
+            if (digits.isEmpty() || parsed == null || parsed <= maxValue) {
+                onValueChange(digits.padStart(2, '0'))
+            }
+        },
+        modifier = Modifier
+            .width(40.dp)
+            .height(36.dp)
+            .onFocusChanged { focused = it.isFocused }
+            .then(
+                if (focused) Modifier
+                    .background(PhoneShimPalette.Primary100, RoundedCornerShape(6.dp))
+                    .border(1.dp, PhoneShimTheme.colors.brand, RoundedCornerShape(6.dp))
+                else Modifier,
+            ),
+        textStyle = PhoneShimType.EngH2.copy(
+            color = if (focused) PhoneShimTheme.colors.brandStrong else PhoneShimPalette.Primary400,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        ),
+        singleLine = true,
+        cursorBrush = SolidColor(Color.Transparent),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        decorationBox = { innerTextField ->
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { innerTextField() }
+        },
+    )
 }
 
 @Composable
@@ -207,13 +318,13 @@ private fun PopupActions(isEditing: Boolean, onCancel: () -> Unit, onDelete: () 
 }
 
 @Preview(name = "할 일 팝업 세팅 전", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun BeforePopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), ReminderDraft(title = "과제"), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun BeforePopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(), {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "할 일 팝업 세팅 후", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun AfterPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), ReminderDraft(title = "과제", startTimeText = "10:00", endTimeText = "11:00", restrictionMode = RestrictionMode.SPECIFIC_APPS, restrictedAppIds = setOf("kakao")), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun AfterPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:00", endTimeText = "11:00", restrictionMode = RestrictionMode.SPECIFIC_APPS, restrictedAppIds = setOf("kakao")), {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "기존 일정 수정 팝업", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun EditPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), ReminderDraft("1", "과제하기", "10:00", "11:00"), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun EditPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft("1", "과제하기", "10:00", "11:00"), {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "시간 중복 오류 상태", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun OverlapPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), ReminderDraft(title = "과제", startTimeText = "10:30", endTimeText = "11:30", timeError = "이미 해당 시간에 등록된 할 일이 있습니다"), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun OverlapPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:30", endTimeText = "11:30", timeError = "이미 해당 시간에 등록된 할 일이 있습니다"), {}, {}, {}, {}, {}, {}, {}, {}) }

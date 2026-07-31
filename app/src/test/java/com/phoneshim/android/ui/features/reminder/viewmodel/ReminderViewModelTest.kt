@@ -140,7 +140,7 @@ class ReminderViewModelTest {
         viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         val state = viewModel.uiState.value
-        assertEquals("이미 해당 시간에 등록된 할 일이 있습니다", state.draft.timeError)
+        assertEquals("중복된 일정은 등록할 수 없어요!", state.draft.timeError)
         assertEquals(tasksBeforeSave, state.selectedTasks)
         assertTrue(state.isTaskPopupVisible)
     }
@@ -168,21 +168,38 @@ class ReminderViewModelTest {
         assertEquals(RestrictionMode.SPECIFIC_APPS, task.restrictionMode)
         assertEquals(setOf("youtube"), task.restrictedAppIds)
         assertFalse(state.isTaskPopupVisible)
-        assertNull(state.editingTask)
         assertEquals(ReminderDraft(), state.draft)
     }
 
     @Test
-    fun `saveTask sorts added tasks by start time`() {
+    fun `saveTask keeps the order tasks were added`() {
         prepareNewTask(title = "두 번째", start = "11:00", end = "12:00")
         viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
         prepareNewTask(title = "첫 번째", start = "09:00", end = "10:00")
         viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
 
         assertEquals(
-            listOf("첫 번째", "두 번째"),
+            listOf("두 번째", "첫 번째"),
             viewModel.uiState.value.selectedTasks.map(ReminderTaskUiModel::title),
         )
+    }
+
+    @Test
+    fun `moveTask reorders tasks for the selected date`() {
+        val original = viewModel.uiState.value.selectedTasks
+
+        viewModel.onEvent(ReminderUiEvent.TaskMoved(fromIndex = 0, toIndex = 1))
+
+        assertEquals(listOf(original[1], original[0]), viewModel.uiState.value.selectedTasks)
+    }
+
+    @Test
+    fun `moveTask ignores an index outside the task list`() {
+        val original = viewModel.uiState.value.selectedTasks
+
+        viewModel.onEvent(ReminderUiEvent.TaskMoved(fromIndex = 0, toIndex = 99))
+
+        assertEquals(original, viewModel.uiState.value.selectedTasks)
     }
 
     @Test
@@ -229,7 +246,6 @@ class ReminderViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(listOf(untouchedTask), state.selectedTasks)
         assertFalse(state.isTaskPopupVisible)
-        assertNull(state.editingTask)
         assertEquals(ReminderDraft(), state.draft)
     }
 

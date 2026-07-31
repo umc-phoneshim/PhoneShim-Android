@@ -16,6 +16,7 @@ class ReminderViewModel @Inject constructor() :
             is ReminderUiEvent.MonthMoved -> moveMonth(event)
             ReminderUiEvent.AddTaskClicked -> openAddPopup()
             is ReminderUiEvent.EditTaskClicked -> openEditPopup(event)
+            is ReminderUiEvent.TaskMoved -> moveTask(event)
             ReminderUiEvent.PopupDismissed -> dismissPopup()
             is ReminderUiEvent.TitleChanged -> updateTitle(event)
             is ReminderUiEvent.StartTimeChanged -> updateStartTime(event)
@@ -36,12 +37,11 @@ class ReminderViewModel @Inject constructor() :
     }
 
     private fun openAddPopup() = setState {
-        copy(editingTask = null, draft = ReminderDraft(title = "과제"), isTaskPopupVisible = true)
+        copy(draft = ReminderDraft(), isTaskPopupVisible = true)
     }
 
     private fun openEditPopup(event: ReminderUiEvent.EditTaskClicked) = setState {
         copy(
-            editingTask = event.task,
             draft = ReminderDraft(
                 editingTaskId = event.task.id,
                 title = event.task.title,
@@ -55,7 +55,18 @@ class ReminderViewModel @Inject constructor() :
     }
 
     private fun dismissPopup() = setState {
-        copy(editingTask = null, draft = ReminderDraft(), isTaskPopupVisible = false)
+        copy(draft = ReminderDraft(), isTaskPopupVisible = false)
+    }
+
+    private fun moveTask(event: ReminderUiEvent.TaskMoved) = setState {
+        val tasks = tasksByDate[selectedDate].orEmpty()
+        if (event.fromIndex !in tasks.indices || event.toIndex !in tasks.indices || event.fromIndex == event.toIndex) {
+            return@setState this
+        }
+        val reordered = tasks.toMutableList().apply {
+            add(event.toIndex, removeAt(event.fromIndex))
+        }
+        copy(tasksByDate = tasksByDate + (selectedDate to reordered))
     }
 
     private fun updateTitle(event: ReminderUiEvent.TitleChanged) = updateDraft {
@@ -107,14 +118,16 @@ class ReminderViewModel @Inject constructor() :
         val timeError = when {
             start == null || end == null -> "시간을 HH:mm 형식으로 입력해 주세요"
             end <= start -> "종료 시간은 시작 시간보다 이후여야 합니다"
-            overlaps(state, start, end, draft.editingTaskId) -> "이미 해당 시간에 등록된 할 일이 있습니다"
+            overlaps(state, start, end, draft.editingTaskId) -> DUPLICATE_SCHEDULE_MESSAGE
             else -> null
         }
         if (titleError != null || timeError != null) {
             setState {
                 copy(draft = draft.copy(titleError = titleError, timeError = timeError))
             }
-            sendEffect(ReminderUiEffect.ShowMessage(requireNotNull(timeError ?: titleError)))
+            if (timeError != DUPLICATE_SCHEDULE_MESSAGE) {
+                sendEffect(ReminderUiEffect.ShowMessage(requireNotNull(timeError ?: titleError)))
+            }
             return
         }
         val task = ReminderTaskUiModel(
@@ -126,11 +139,16 @@ class ReminderViewModel @Inject constructor() :
             restrictionMode = draft.restrictionMode,
             restrictedAppIds = draft.restrictedAppIds,
         )
-        val updated = state.tasksByDate[state.selectedDate].orEmpty().filterNot { it.id == task.id } + task
+        val currentTasks = state.tasksByDate[state.selectedDate].orEmpty()
+        val existingIndex = currentTasks.indexOfFirst { it.id == task.id }
+        val updated = if (existingIndex >= 0) {
+            currentTasks.toMutableList().apply { this[existingIndex] = task }
+        } else {
+            currentTasks + task
+        }
         setState {
             copy(
-                tasksByDate = tasksByDate + (state.selectedDate to updated.sortedBy(ReminderTaskUiModel::startMinutes)),
-                editingTask = null,
+                tasksByDate = tasksByDate + (state.selectedDate to updated),
                 draft = ReminderDraft(),
                 isTaskPopupVisible = false,
             )
@@ -144,7 +162,6 @@ class ReminderViewModel @Inject constructor() :
             val updated = tasksByDate[selectedDate].orEmpty().filterNot { it.id == id }
             copy(
                 tasksByDate = tasksByDate + (selectedDate to updated),
-                editingTask = null,
                 draft = ReminderDraft(),
                 isTaskPopupVisible = false,
             )

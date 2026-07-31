@@ -161,7 +161,6 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
                 onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
                 onNavigateToMain = { navController.navigateToTopLevel(Routes.MAIN) },
-                onNavigateToReminder = { },
                 onNavigateToReport = { navController.navigateToTopLevel(Routes.TIMETABLE) },
             )
         }
