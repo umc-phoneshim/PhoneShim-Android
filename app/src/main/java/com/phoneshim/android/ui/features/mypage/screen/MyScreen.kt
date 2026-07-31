@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -178,13 +179,24 @@ fun MyScreen(
 
                 Spacer(modifier = Modifier.height(PhoneShimDimens.spacing32))
 
+                // 프로필을 아직 못 받아온 첫 로딩 구간에만 표시합니다.
+                if (state.isLoading && !state.isProfileReady) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = PhoneShimDimens.spacing24),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = PhoneShimTheme.colors.brand)
+                    }
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
                     verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
                 ) {
-                    // TODO: state.isLoading 구간엔 공통 LoadingIndicator 를 노출하세요.
                     MyInfoField(
                         label = "이름",
                         value = if (state.isEditing) state.nameDraft else state.name,

@@ -1,12 +1,12 @@
 package com.phoneshim.android.ui.features.report.component
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.phoneshim.android.ui.common.PhoneShimIcon
@@ -54,7 +56,18 @@ val ReportColorYellow = Color(0xFFD9B84A)
 val ReportColorRed = Color(0xFFB5402E)
 val ReportColorGreen = PhoneShimPalette.Primary500
 
-data class AppBubble(val label: String, val color: Color, val value: Float)
+/**
+ * 어플 사용 분포 버블 한 개.
+ *
+ * [packageName] 이 있으면 기기에서 실제 앱 아이콘을 읽어 그리고, 없거나 조회에 실패하면
+ * [color] 로 칠한 원으로 대체합니다.
+ */
+data class AppBubble(
+    val label: String,
+    val color: Color,
+    val value: Float,
+    val packageName: String = "",
+)
 
 /**
  * 막대 한 구간.
@@ -101,7 +114,15 @@ fun ReportCard(
     )
 }
 
-/** 어플 사용 분포 버블 차트. 원 크기(반지름)는 sqrt(value) 에 비례합니다 = 아이콘 크기 == 사용량. */
+private val BubbleChartHeight = 150.dp
+private val BubbleMaxDiameter = 72.dp
+
+/**
+ * 어플 사용 분포 버블 차트. 원 지름은 sqrt(value) 에 비례합니다 = 아이콘 크기 == 사용량.
+ *
+ * 앱 아이콘을 그려야 해서 Canvas 대신 실제 컴포저블을 배치합니다.
+ * 아이콘을 못 읽으면 기존처럼 색 원으로 대체합니다.
+ */
 @Composable
 fun AppUsageBubbleChart(
     bubbles: List<AppBubble>,
@@ -113,25 +134,51 @@ fun AppUsageBubbleChart(
         Offset(0.62f, 0.5f),
         Offset(0.32f, 0.72f),
     )
-    val maxValue = bubbles.maxOfOrNull { it.value } ?: 1f
-    Box(
+    val maxValue = bubbles.maxOfOrNull { it.value }?.takeIf { it > 0f } ?: 1f
+
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(150.dp)
+            .height(BubbleChartHeight)
             .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp)),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val maxRadius = size.minDimension * 0.28f
-            bubbles.forEachIndexed { index, bubble ->
-                val pos = positions.getOrElse(index) { Offset(0.5f, 0.5f) }
-                val radius = maxRadius * sqrt(bubble.value / maxValue).coerceIn(0.35f, 1f)
-                drawCircle(
-                    color = bubble.color,
-                    radius = radius,
-                    center = Offset(size.width * pos.x, size.height * pos.y),
-                )
+        val chartWidth = maxWidth
+        val chartHeight = maxHeight
+        bubbles.forEachIndexed { index, bubble ->
+            val pos = positions.getOrElse(index) { Offset(0.5f, 0.5f) }
+            val scale = sqrt(bubble.value / maxValue).coerceIn(0.35f, 1f)
+            val diameter = BubbleMaxDiameter * scale
+            Box(
+                modifier = Modifier
+                    .offset(
+                        x = chartWidth * pos.x - diameter / 2,
+                        y = chartHeight * pos.y - diameter / 2,
+                    )
+                    .size(diameter),
+            ) {
+                AppBubbleContent(bubble = bubble, diameter = diameter)
             }
         }
+    }
+}
+
+@Composable
+private fun AppBubbleContent(bubble: AppBubble, diameter: Dp) {
+    val info = rememberInstalledAppInfo(bubble.packageName)
+    if (info?.icon != null) {
+        Image(
+            bitmap = info.icon,
+            contentDescription = bubble.label,
+            modifier = Modifier
+                .size(diameter)
+                .clip(CircleShape),
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(diameter)
+                .background(bubble.color, CircleShape),
+        )
     }
 }
 
@@ -320,6 +367,116 @@ private fun TimetableSegment(segment: UsageSegment, onSegmentClick: (String) -> 
                 },
         )
         Spacer(modifier = Modifier.weight(tail + epsilon))
+    }
+}
+
+/** 주간/월간 요약의 사용 사유 키워드 한 개. */
+data class ReasonKeywordChip(val text: String, val count: Int)
+
+/**
+ * 주간/월간 사용 사유 요약. GET /api/reports/summary 결과를 그립니다.
+ *
+ * 집계할 기록이 부족하면 서버가 422 INSUFFICIENT_REPORT_DATA 를 주는데,
+ * 이때는 오류가 아니라 [emptyMessage] 안내로 표시합니다.
+ */
+@Composable
+fun ReasonKeywordSummary(
+    periodLabel: String,
+    keywords: List<ReasonKeywordChip>,
+    summaryText: String,
+    emptyMessage: String,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+    ) {
+        if (periodLabel.isNotBlank()) {
+            Text(
+                text = periodLabel,
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+            )
+        }
+
+        when {
+            isLoading -> Text(
+                text = "불러오는 중...",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            keywords.isEmpty() && summaryText.isBlank() -> Text(
+                text = emptyMessage,
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            else -> {
+                if (keywords.isNotEmpty()) {
+                    Text(
+                        text = "자주 적은 이유",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textSecondary,
+                    )
+                    // FlowRow 는 아직 실험 API라 3개씩 끊어서 배치합니다.
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                    ) {
+                        keywords.chunked(3).forEach { rowKeywords ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                            ) {
+                                rowKeywords.forEach { keyword -> ReasonKeywordItem(keyword) }
+                            }
+                        }
+                    }
+                }
+                if (summaryText.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp))
+                            .padding(PhoneShimDimens.spacing12),
+                    ) {
+                        Text(
+                            text = summaryText,
+                            style = PhoneShimType.KorBodyM,
+                            color = PhoneShimTheme.colors.textPrimary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReasonKeywordItem(keyword: ReasonKeywordChip) {
+    Row(
+        modifier = Modifier
+            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(50))
+            .padding(horizontal = PhoneShimDimens.spacing12, vertical = PhoneShimDimens.spacing4),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+    ) {
+        Text(
+            text = keyword.text,
+            style = PhoneShimType.KorCaption,
+            color = PhoneShimTheme.colors.brandStrong,
+        )
+        Text(
+            text = "${keyword.count}",
+            style = PhoneShimType.KorMicro,
+            color = PhoneShimTheme.colors.brandStrong,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

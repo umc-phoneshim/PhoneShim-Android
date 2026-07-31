@@ -9,6 +9,7 @@ import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
 import com.phoneshim.android.ui.features.report.component.AppBubble
 import com.phoneshim.android.ui.features.report.component.CategoryUsageRow
+import com.phoneshim.android.ui.features.report.component.ReasonKeywordChip
 import com.phoneshim.android.ui.features.report.component.HourUsage
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.component.ReportColorRed
@@ -83,6 +84,7 @@ data class ReportUiState(
                         label = usage.appName.ifBlank { "앱 ${index + 1}" },
                         color = palette[index % palette.size],
                         value = usage.usedMinutes / max,
+                        packageName = usage.packageName,
                     )
                 }
         }
@@ -90,6 +92,17 @@ data class ReportUiState(
     val hasReportData: Boolean get() = report?.isEmpty == false
 
     val isDataInsufficient: Boolean get() = insufficientDataMessage != null
+
+    /** 주간/월간 요약 기간 라벨. 예) "2026.07.01 ~ 2026.07.07" */
+    val summaryPeriodLabel: String
+        get() = summary?.let { "${it.from} ~ ${it.to}" }.orEmpty()
+
+    val summaryKeywords: List<ReasonKeywordChip>
+        get() = summary?.keywords.orEmpty()
+            .sortedByDescending { it.count }
+            .map { ReasonKeywordChip(text = it.text, count = it.count) }
+
+    val summaryText: String get() = summary?.summary.orEmpty()
 
     /**
      * 타임테이블 오른쪽 "사용 어플" 카드에 표시할 목록.
