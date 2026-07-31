@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.ui.theme.PhoneShimTheme
@@ -15,6 +16,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 fun DurationDisplay(
     totalMinutes: Int,
     modifier: Modifier = Modifier,
+    textStyle: TextStyle = PhoneShimType.EngH1,
 ) {
     val safeMinutes = totalMinutes.coerceAtLeast(0)
     val hours = safeMinutes / 60
@@ -31,7 +33,7 @@ fun DurationDisplay(
         ) {
             Text(
                 text = hours.toString(),
-                style = PhoneShimType.EngH1,
+                style = textStyle,
                 color = PhoneShimTheme.colors.textPrimary,
             )
             Text(
@@ -46,7 +48,7 @@ fun DurationDisplay(
         ) {
             Text(
                 text = minutes.toString(),
-                style = PhoneShimType.EngH1,
+                style = textStyle,
                 color = PhoneShimTheme.colors.textPrimary,
             )
             Text(

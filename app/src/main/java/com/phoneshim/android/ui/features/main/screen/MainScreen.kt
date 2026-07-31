@@ -22,11 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -47,6 +46,7 @@ import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
@@ -158,34 +158,39 @@ fun MainScreen(
                 }
             )
 
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .navigationBarsPadding(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = BottomBarDefaults.ContentBottomPadding,
+                ),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 if (!uiState.isSetupCompleted) {
-                    GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted)
+                    item { GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted) }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SectionTitle(title = "하루 사용 시간")
-                        EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SectionTitle(title = "하루 사용 시간")
+                            EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                        }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SectionTitle(title = "오늘 할 일")
-                        EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SectionTitle(title = "오늘 할 일")
+                            EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                        }
                     }
                 } else {
-                    GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted)
-                    DailyUsageSection(uiState = uiState)
-                    CautionAppSection(apps = uiState.cautionApps)
-                    TodoSection(todos = uiState.todayTodos)
+                    item { GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted) }
+                    item { DailyUsageSection(uiState = uiState) }
+                    item { CautionAppSection(apps = uiState.cautionApps) }
+                    item { TodoSection(todos = uiState.todayTodos) }
                 }
-
-                Spacer(modifier = Modifier.height(BottomBarDefaults.ContentBottomPadding))
             }
         }
 
@@ -329,23 +334,15 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            // "01 시간 30 분" : 숫자 Display / 단위 BodyM, 베이스라인 정렬
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = uiState.usedHour, style = PhoneShimType.EngDisplay, color = PhoneShimTheme.colors.textPrimary)
-                Text(
-                    text = " 시간 ",
-                    style = PhoneShimType.KorBodyM,
-                    color = PhoneShimTheme.colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 3.dp)
-                )
-                Text(text = uiState.usedMinute, style = PhoneShimType.EngDisplay, color = PhoneShimTheme.colors.textPrimary)
-                Text(
-                    text = " 분",
-                    style = PhoneShimType.KorBodyM,
-                    color = PhoneShimTheme.colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 3.dp)
-                )
-            }
+            // TODO: DurationDisplay 기본 스타일은 EngH1(24sp)이나 피그마 기존 메인 화면은
+            // EngDisplay(32sp)라 textStyle로 덮어씀. 32sp가 최신 피그마 스펙이 맞는지,
+            // 그리고 숫자 zero-padding("01") 유지 여부를 디자이너 확인 후 정리 필요.
+            val totalMinutes = (uiState.usedHour.toIntOrNull() ?: 0) * 60 +
+                (uiState.usedMinute.toIntOrNull() ?: 0)
+            DurationDisplay(
+                totalMinutes = totalMinutes,
+                textStyle = PhoneShimType.EngDisplay,
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -498,24 +495,13 @@ private fun Badge(text: String, backgroundColor: Color, textColor: Color) {
  * 9. 오늘 할 일
  *  - 피그마 기준: [≡ 핸들] + [제목 / 시간 세로 스택]
  * ============================================================ */
-// 할 일 카드 1개 높이 = 12(padding) + 22.4(title) + 2(gap) + 18(time) + 12(padding) ≈ 67dp
-// 3개 + 여백까지 노출하고 그 이상은 목록 자체가 세로 슬라이드
-private val TodoListMaxHeight = 226.dp
-
 @Composable
 private fun TodoSection(todos: List<MainTodoItem>) {
-    val todoScrollState = rememberScrollState()
-
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle(title = "오늘 할 일")
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // 부모(화면)가 verticalScroll 이라 높이 제약이 Infinity 로 내려옴.
-                // heightIn(max) 로 상한을 줘야 내부 verticalScroll 이 정상 동작함.
-                .heightIn(max = TodoListMaxHeight)
-                .verticalScroll(todoScrollState),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             todos.forEach { todo ->
@@ -525,6 +511,9 @@ private fun TodoSection(todos: List<MainTodoItem>) {
     }
 }
 
+// TODO: Main은 TodoRowVariant.Card(카드형, 배경+테두리)를 쓰고 Reminder는
+// TodoRowVariant.Plain + 수정 아이콘 trailingContent를 쓴다. 두 화면이 서로 다른
+// 스타일인데 어느 쪽이 최신 피그마 스펙에 맞는지 디자이너 확인 필요.
 @Composable
 private fun TodoCard(todo: MainTodoItem) {
     TodoRow(
