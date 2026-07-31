@@ -1,11 +1,12 @@
 package com.phoneshim.android.ui.features.report.component
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,13 +23,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.common.SectionCard
@@ -37,11 +47,8 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 import kotlin.math.sqrt
 
-/**
- * "07. 데일리 리포트" 화면군에서 쓰이는 차트/카드 컴포넌트와 UI 전용 모델.
- *
- * 여기 모델들은 화면 전용 표현 모델입니다. 실제 데이터 연결 시 ReportViewModel.uiState 의
- * DailyReport / AppUsage / TimetableEntry 를 이 모델로 매핑해서 사용하세요.
+/*
+  "07. 데일리 리포트" 화면군에서 쓰이는 차트/카드 컴포넌트와 UI 전용 모델.
  */
 
 // 앱 사용 카테고리 색상. Figma 팔레트(PhoneShimPalette)엔 아직 없는 토큰이라 리포트 화면 로컬로 정의합니다.
@@ -49,11 +56,48 @@ val ReportColorYellow = Color(0xFFD9B84A)
 val ReportColorRed = Color(0xFFB5402E)
 val ReportColorGreen = PhoneShimPalette.Primary500
 
-data class AppBubble(val label: String, val color: Color, val value: Float)
-data class UsageSegment(val color: Color, val ratio: Float, val entryId: String? = null)
+/**
+ * 어플 사용 분포 버블 한 개.
+ *
+ * [packageName] 이 있으면 기기에서 실제 앱 아이콘을 읽어 그리고, 없거나 조회에 실패하면
+ * [color] 로 칠한 원으로 대체합니다.
+ */
+data class AppBubble(
+    val label: String,
+    val color: Color,
+    val value: Float,
+    val packageName: String = "",
+)
+
+/**
+ * 막대 한 구간.
+ *
+ * @param startRatio 막대가 시작하는 위치(0~1). 타임테이블처럼 구간의 시작 시각이
+ *  의미를 갖는 차트에서 사용합니다. 카테고리 막대는 기본값 0 을 그대로 씁니다.
+ */
+data class UsageSegment(
+    val color: Color,
+    val ratio: Float,
+    val entryId: String? = null,
+    val startRatio: Float = 0f,
+)
+
 data class CategoryUsageRow(val label: String, val segments: List<UsageSegment>)
 data class HourUsage(val hourLabel: String, val segments: List<UsageSegment>)
 data class UsageReasonLegend(val color: Color, val label: String)
+
+/**
+ * 타임테이블 오른쪽 "사용 어플" 카드 항목.
+ *
+ * [packageName] 이 있으면 기기의 PackageManager 에서 실제 앱 아이콘과 이름을 읽어 씁니다.
+ * 서버가 아이콘을 내려주지 않아도 되고, 앱이 삭제됐거나 packageName 이 없으면
+ * [color] 로 칠한 원과 [name] 으로 대체합니다.
+ */
+data class UsedApp(
+    val name: String,
+    val color: Color,
+    val packageName: String = "",
+)
 
 enum class ReportPeriod(val label: String) { DAY("DAY"), WEEK("WEEK"), MONTH("MONTH") }
 
@@ -70,7 +114,15 @@ fun ReportCard(
     )
 }
 
-/** 어플 사용 분포 버블 차트. 원 크기(반지름)는 sqrt(value) 에 비례합니다 = 아이콘 크기 == 사용량. */
+private val BubbleChartHeight = 150.dp
+private val BubbleMaxDiameter = 72.dp
+
+/**
+ * 어플 사용 분포 버블 차트. 원 지름은 sqrt(value) 에 비례합니다 = 아이콘 크기 == 사용량.
+ *
+ * 앱 아이콘을 그려야 해서 Canvas 대신 실제 컴포저블을 배치합니다.
+ * 아이콘을 못 읽으면 기존처럼 색 원으로 대체합니다.
+ */
 @Composable
 fun AppUsageBubbleChart(
     bubbles: List<AppBubble>,
@@ -82,28 +134,55 @@ fun AppUsageBubbleChart(
         Offset(0.62f, 0.5f),
         Offset(0.32f, 0.72f),
     )
-    val maxValue = bubbles.maxOfOrNull { it.value } ?: 1f
-    Box(
+    val maxValue = bubbles.maxOfOrNull { it.value }?.takeIf { it > 0f } ?: 1f
+
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(150.dp)
+            .height(BubbleChartHeight)
             .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp)),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val maxRadius = size.minDimension * 0.28f
-            bubbles.forEachIndexed { index, bubble ->
-                val pos = positions.getOrElse(index) { Offset(0.5f, 0.5f) }
-                val radius = maxRadius * sqrt(bubble.value / maxValue).coerceIn(0.35f, 1f)
-                drawCircle(
-                    color = bubble.color,
-                    radius = radius,
-                    center = Offset(size.width * pos.x, size.height * pos.y),
-                )
+        val chartWidth = maxWidth
+        val chartHeight = maxHeight
+        bubbles.forEachIndexed { index, bubble ->
+            val pos = positions.getOrElse(index) { Offset(0.5f, 0.5f) }
+            val scale = sqrt(bubble.value / maxValue).coerceIn(0.35f, 1f)
+            val diameter = BubbleMaxDiameter * scale
+            Box(
+                modifier = Modifier
+                    .offset(
+                        x = chartWidth * pos.x - diameter / 2,
+                        y = chartHeight * pos.y - diameter / 2,
+                    )
+                    .size(diameter),
+            ) {
+                AppBubbleContent(bubble = bubble, diameter = diameter)
             }
         }
     }
 }
 
+@Composable
+private fun AppBubbleContent(bubble: AppBubble, diameter: Dp) {
+    val info = rememberInstalledAppInfo(bubble.packageName)
+    if (info?.icon != null) {
+        Image(
+            bitmap = info.icon,
+            contentDescription = bubble.label,
+            modifier = Modifier
+                .size(diameter)
+                .clip(CircleShape),
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(diameter)
+                .background(bubble.color, CircleShape),
+        )
+    }
+}
+
+/** DAY / WEEK / MONTH 토글. 선택된 항목은 브랜드 색으로 채워 확실히 구분합니다. */
 @Composable
 fun ReportPeriodToggle(
     selected: ReportPeriod,
@@ -114,23 +193,28 @@ fun ReportPeriodToggle(
         modifier = modifier
             .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(8.dp))
             .padding(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        ReportPeriod.values().forEach { period ->
+        ReportPeriod.entries.forEach { period ->
             val isSelected = period == selected
             Box(
                 modifier = Modifier
-                    .clickable { onSelect(period) }
+                    .clip(RoundedCornerShape(6.dp))
                     .background(
-                        color = if (isSelected) PhoneShimTheme.colors.surface else Color.Transparent,
-                        shape = RoundedCornerShape(6.dp),
+                        color = if (isSelected) PhoneShimTheme.colors.brand else Color.Transparent,
                     )
+                    .clickable { onSelect(period) }
                     .padding(horizontal = PhoneShimDimens.spacing12, vertical = PhoneShimDimens.spacing8),
             ) {
                 Text(
                     text = period.label,
                     style = PhoneShimType.EngCaption,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) PhoneShimTheme.colors.textPrimary else PhoneShimTheme.colors.textTertiary,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) {
+                        PhoneShimTheme.colors.onBrand
+                    } else {
+                        PhoneShimTheme.colors.textTertiary
+                    },
                 )
             }
         }
@@ -188,7 +272,18 @@ fun CategoryUsageBarChart(rows: List<CategoryUsageRow>, modifier: Modifier = Mod
     }
 }
 
-/** 시간대별(0~60분) 타임테이블 막대 차트. 상단 눈금은 분 단위 스케일(10~60)입니다. */
+// 타임테이블 치수. 막대는 얇게, 시간 행 사이는 살짝만 띄웁니다.
+private val TimetableHourLabelWidth = 30.dp
+private val TimetableBarHeight = 8.dp
+private val TimetableRowHeight = 16.dp
+private val TimetableRowGap = 3.dp
+
+/**
+ * 시간대별 타임테이블. 상단 눈금은 분 단위 스케일(10~60)입니다.
+ *
+ * 각 행은 연한 트랙 위에 얇은 막대를 얹는 형태이고,
+ * 막대의 가로 위치는 [UsageSegment.startRatio], 길이는 [UsageSegment.ratio] 로 정합니다.
+ */
 @Composable
 fun TimetableChart(
     hours: List<HourUsage>,
@@ -196,50 +291,49 @@ fun TimetableChart(
     onSegmentClick: (String) -> Unit = {},
     scaleLabels: List<String> = listOf("10", "20", "30", "40", "50", "60"),
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(TimetableRowGap),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 30.dp),
+                .padding(start = TimetableHourLabelWidth),
         ) {
             scaleLabels.forEach { label ->
                 Text(
                     text = label,
                     style = PhoneShimType.KorMicro,
                     color = PhoneShimTheme.colors.textTertiary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
             }
         }
         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
+
         hours.forEach { hour ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(20.dp),
+                    .height(TimetableRowHeight),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = hour.hourLabel,
                     style = PhoneShimType.KorMicro,
                     color = PhoneShimTheme.colors.textTertiary,
-                    modifier = Modifier.width(30.dp),
+                    modifier = Modifier.width(TimetableHourLabelWidth),
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight()
-                        .border(width = 0.5.dp, color = PhoneShimTheme.colors.divider),
+                        .height(TimetableBarHeight)
+                        .clip(RoundedCornerShape(50))
+                        .background(PhoneShimTheme.colors.surfaceCream),
                 ) {
                     hour.segments.forEach { segment ->
-                        var segmentModifier: Modifier = Modifier
-                            .fillMaxWidth(segment.ratio.coerceIn(0f, 1f))
-                            .fillMaxHeight()
-                            .background(segment.color)
-                        if (segment.entryId != null) {
-                            segmentModifier = segmentModifier.clickable { onSegmentClick(segment.entryId) }
-                        }
-                        Box(modifier = segmentModifier)
+                        TimetableSegment(segment = segment, onSegmentClick = onSegmentClick)
                     }
                 }
             }
@@ -248,30 +342,282 @@ fun TimetableChart(
 }
 
 @Composable
-fun ReportSideActionButton(
-    text: String,
-    icon: PhoneShimIconType,
-    onClick: () -> Unit,
+private fun TimetableSegment(segment: UsageSegment, onSegmentClick: (String) -> Unit) {
+    val start = segment.startRatio.coerceIn(0f, 1f)
+    val length = segment.ratio.coerceIn(0f, 1f - start)
+    if (length <= 0f) return
+    val tail = (1f - start - length).coerceAtLeast(0f)
+
+    // Row 의 weight 는 0보다 커야 해서 양 끝 여백에 아주 작은 값을 더해 둡니다.
+    val epsilon = 0.0001f
+    Row(modifier = Modifier.fillMaxSize()) {
+        Spacer(modifier = Modifier.weight(start + epsilon))
+        Box(
+            modifier = Modifier
+                .weight(length)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(50))
+                .background(segment.color)
+                .let { base ->
+                    if (segment.entryId != null) {
+                        base.clickable { onSegmentClick(segment.entryId) }
+                    } else {
+                        base
+                    }
+                },
+        )
+        Spacer(modifier = Modifier.weight(tail + epsilon))
+    }
+}
+
+/** 주간/월간 요약의 사용 사유 키워드 한 개. */
+data class ReasonKeywordChip(val text: String, val count: Int)
+
+/**
+ * 주간/월간 사용 사유 요약. GET /api/reports/summary 결과를 그립니다.
+ *
+ * 집계할 기록이 부족하면 서버가 422 INSUFFICIENT_REPORT_DATA 를 주는데,
+ * 이때는 오류가 아니라 [emptyMessage] 안내로 표시합니다.
+ */
+@Composable
+fun ReasonKeywordSummary(
+    periodLabel: String,
+    keywords: List<ReasonKeywordChip>,
+    summaryText: String,
+    emptyMessage: String,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+    ) {
+        if (periodLabel.isNotBlank()) {
+            Text(
+                text = periodLabel,
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+            )
+        }
+
+        when {
+            isLoading -> Text(
+                text = "불러오는 중...",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            keywords.isEmpty() && summaryText.isBlank() -> Text(
+                text = emptyMessage,
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            else -> {
+                if (keywords.isNotEmpty()) {
+                    Text(
+                        text = "자주 적은 이유",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textSecondary,
+                    )
+                    // FlowRow 는 아직 실험 API라 3개씩 끊어서 배치합니다.
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                    ) {
+                        keywords.chunked(3).forEach { rowKeywords ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+                            ) {
+                                rowKeywords.forEach { keyword -> ReasonKeywordItem(keyword) }
+                            }
+                        }
+                    }
+                }
+                if (summaryText.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp))
+                            .padding(PhoneShimDimens.spacing12),
+                    ) {
+                        Text(
+                            text = summaryText,
+                            style = PhoneShimType.KorBodyM,
+                            color = PhoneShimTheme.colors.textPrimary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReasonKeywordItem(keyword: ReasonKeywordChip) {
+    Row(
+        modifier = Modifier
+            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(50))
+            .padding(horizontal = PhoneShimDimens.spacing12, vertical = PhoneShimDimens.spacing4),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+    ) {
+        Text(
+            text = keyword.text,
+            style = PhoneShimType.KorCaption,
+            color = PhoneShimTheme.colors.brandStrong,
+        )
+        Text(
+            text = "${keyword.count}",
+            style = PhoneShimType.KorMicro,
+            color = PhoneShimTheme.colors.brandStrong,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** 타임테이블 오른쪽 액션 묶음. "제안 보기"와 "알림 설정"을 한 카드에 담습니다. */
+@Composable
+fun ReportSideActionCard(
+    onSuggestionClick: () -> Unit,
+    onAlarmSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(12.dp))
-            .padding(PhoneShimDimens.spacing12),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(16.dp))
+            .padding(vertical = PhoneShimDimens.spacing8),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
     ) {
-        PhoneShimIcon(
-            type = icon,
-            contentDescription = text,
-            tint = PhoneShimTheme.colors.brandStrong,
-        )
-        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
-        Text(text = text, style = PhoneShimType.KorLabel, color = PhoneShimTheme.colors.brandStrong)
+        SideActionRow(text = "제안 보기", icon = PhoneShimIconType.Info, onClick = onSuggestionClick)
+        SideActionRow(text = "알림 설정", icon = PhoneShimIconType.Bell, onClick = onAlarmSettingsClick)
     }
 }
 
+@Composable
+private fun SideActionRow(
+    text: String,
+    icon: PhoneShimIconType,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = PhoneShimDimens.spacing8, vertical = PhoneShimDimens.spacing8),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(PhoneShimTheme.colors.surface, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            PhoneShimIcon(
+                type = icon,
+                contentDescription = text,
+                tint = PhoneShimTheme.colors.brandStrong,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+        Text(
+            text = text,
+            style = PhoneShimType.KorCaption,
+            color = PhoneShimTheme.colors.brandStrong,
+        )
+    }
+}
+
+/** 타임테이블 오른쪽 "사용 어플" 카드. */
+@Composable
+fun UsedAppsCard(apps: List<UsedApp>, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(PhoneShimTheme.colors.surface, RoundedCornerShape(16.dp))
+            .border(1.dp, PhoneShimTheme.colors.divider, RoundedCornerShape(16.dp))
+            .padding(PhoneShimDimens.spacing12),
+        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+    ) {
+        Text(
+            text = "사용 어플",
+            style = PhoneShimType.KorCaption,
+            color = PhoneShimTheme.colors.textTertiary,
+        )
+        if (apps.isEmpty()) {
+            Text(
+                text = "기록 없음",
+                style = PhoneShimType.KorMicro,
+                color = PhoneShimTheme.colors.textTertiary,
+            )
+        }
+        apps.forEach { app ->
+            val info = rememberInstalledAppInfo(app.packageName)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+            ) {
+                if (info?.icon != null) {
+                    Image(
+                        bitmap = info.icon,
+                        contentDescription = app.name,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape),
+                    )
+                } else {
+                    // 앱이 삭제됐거나 packageName 을 모르는 경우.
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(app.color, CircleShape),
+                    )
+                }
+                Text(
+                    text = info?.label?.takeIf { it.isNotBlank() } ?: app.name,
+                    style = PhoneShimType.KorCaption,
+                    color = PhoneShimTheme.colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** PackageManager 에서 읽어온 앱 표시 정보. */
+private data class InstalledAppInfo(val label: String, val icon: ImageBitmap?)
+
+/**
+ * 설치된 앱의 아이콘과 이름을 기기에서 직접 읽습니다.
+ *
+ * 서버가 아이콘을 내려줄 필요가 없습니다. manifest 의 <queries> 에 LAUNCHER 인텐트가
+ * 선언돼 있어 API 30+ 패키지 가시성 제한에도 런처 앱은 조회할 수 있습니다.
+ * 조회 실패(미설치·가시성 없음)는 null 로 떨어뜨려 호출부에서 대체 표시합니다.
+ */
+@Composable
+private fun rememberInstalledAppInfo(packageName: String): InstalledAppInfo? {
+    if (packageName.isBlank()) return null
+    val context = LocalContext.current
+    return remember(packageName) {
+        runCatching {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            InstalledAppInfo(
+                label = pm.getApplicationLabel(appInfo).toString(),
+                icon = pm.getApplicationIcon(appInfo).toBitmap().asImageBitmap(),
+            )
+        }.getOrNull()
+    }
+}
+
+/** 사용 이유 범례. */
 @Composable
 fun UsageReasonLegendCard(items: List<UsageReasonLegend>, modifier: Modifier = Modifier) {
     Column(
