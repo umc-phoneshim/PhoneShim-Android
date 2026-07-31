@@ -29,7 +29,8 @@ class ForegroundAppDetector @Inject constructor(
      */
     fun currentForegroundPackage(): String? {
         val now = System.currentTimeMillis()
-        val from = if (!seeded) {
+        val seeding = !seeded
+        val from = if (seeding) {
             seeded = true
             now - SEED_LOOKBACK_MS
         } else {
@@ -47,8 +48,39 @@ class ForegroundAppDetector @Inject constructor(
             }
             lastConsumedTime = event.timeStamp
         }
+
+        // 조회 구간에 이벤트가 하나도 없었던 경우. 0 으로 두면 다음 조회가
+        // queryEvents(0, now) 가 되어 시스템이 보관한 이력 전체를 훑는다.
+        if (lastConsumedTime == 0L) lastConsumedTime = now - OVERLAP_MS
+
+        // seed 폴백. 지금 떠 있는 앱이 SEED_LOOKBACK_MS 보다 전에 열렸으면
+        // 되돌아본 창에 여는 이벤트가 없어 null 이 되고, 그러면 BlockerService 의
+        // tick 이 첫 줄에서 리턴해 그 앱을 나갈 때까지 차단이 아예 안 걸린다.
+        // 창을 넓히는 것으로는 임의의 상한을 옮길 뿐이라, 집계 통계에서 직접 찾는다.
+        if (seeding && lastForeground == null) {
+            lastForeground = resolveMostRecentlyUsed(now)
+        }
         return lastForeground
     }
+
+    /**
+     * 이벤트로 못 잡을 때 쓰는 폴백. 최근 사용 시각이 가장 늦은 패키지를 고른다.
+     *
+     * queryUsageStats 는 집계값이라 이벤트만큼 정확하지 않다(포그라운드가 아닌데도
+     * lastTimeUsed 가 갱신되는 경우가 있다). 그래서 평상시엔 쓰지 않고,
+     * 이벤트가 아무것도 없어 어차피 null 을 돌려줄 상황에서만 쓴다.
+     * 틀린 값이 나와도 다음 전환 이벤트가 곧바로 덮어쓴다.
+     */
+    private fun resolveMostRecentlyUsed(now: Long): String? = runCatching {
+        usm.queryUsageStats(
+            UsageStatsManager.INTERVAL_BEST,
+            now - STATS_LOOKBACK_MS,
+            now,
+        )
+            ?.filter { it.lastTimeUsed > 0L }
+            ?.maxByOrNull { it.lastTimeUsed }
+            ?.packageName
+    }.getOrNull()
 
     fun reset() {
         lastForeground = null
@@ -59,5 +91,6 @@ class ForegroundAppDetector @Inject constructor(
     private companion object {
         const val SEED_LOOKBACK_MS = 10 * 60 * 1000L // 시작 시 최근 10분 역조회
         const val OVERLAP_MS = 2 * 1000L             // 조회 겹침 2초
+        const val STATS_LOOKBACK_MS = 24 * 60 * 60 * 1000L // 폴백 조회 창 24시간
     }
 }
