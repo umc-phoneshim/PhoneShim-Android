@@ -57,13 +57,13 @@ fun SectionHeader(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         leadingContent?.invoke() ?: Icon(
-            painter = painterResource(R.drawable.ic_section_indicator),
+            painter = painterResource(R.drawable.ic_goal),
             contentDescription = null,
             tint = PhoneShimTheme.colors.textPrimary,
-            modifier = Modifier.size(width = 8.dp, height = 10.dp),
+            modifier = Modifier.size(24.dp),
         )
         Text(
             text = title,
