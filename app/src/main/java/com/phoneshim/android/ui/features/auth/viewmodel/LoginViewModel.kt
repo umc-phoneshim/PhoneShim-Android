@@ -2,22 +2,25 @@ package com.phoneshim.android.ui.features.auth.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiException
-import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
-import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
-import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
+import com.phoneshim.android.ui.common.base.UiEffect
+import com.phoneshim.android.ui.common.base.UiEvent
+import com.phoneshim.android.ui.features.auth.client.AuthClientResult
+import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
+import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val socialAuthClient: SocialAuthClient,
+    private val googleAuthClient: GoogleAuthClient,
+    private val kakaoAuthClient: KakaoAuthClient,
     private val socialLoginUseCase: SocialLoginUseCase,
     private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
 ) :
@@ -46,25 +49,30 @@ class LoginViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            when (val authResult = socialAuthClient.authenticate(provider)) {
-                SocialAuthResult.Cancelled -> finishLoading()
-                is SocialAuthResult.Failure -> showError(authResult.cause.toUserMessage())
-                is SocialAuthResult.Success -> completeServerLogin(provider, authResult)
+            val authResult = when (provider) {
+                SocialProvider.GOOGLE -> googleAuthClient.authenticate()
+                SocialProvider.KAKAO -> kakaoAuthClient.authenticate()
+            }
+            when (authResult) {
+                AuthClientResult.Cancelled -> finishLoading()
+                is AuthClientResult.Failure -> showError(authResult.cause.toUserMessage())
+                is AuthClientResult.Success -> completeServerLogin(provider, authResult)
             }
         }
     }
 
     private suspend fun completeServerLogin(
         provider: SocialProvider,
-        authResult: SocialAuthResult.Success,
+        authResult: AuthClientResult.Success,
     ) {
         socialLoginUseCase(provider, authResult.providerAccessToken)
             .onSuccess { result ->
                 finishLoading()
                 sendEffect(
-                    when (result) {
-                        SocialLoginResult.NewUser -> LoginUiEffect.NavigateToGoalSetup
-                        SocialLoginResult.ExistingUser -> LoginUiEffect.NavigateToMain
+                    if (result.isNewUser) {
+                        LoginUiEffect.NavigateToGoalSetup
+                    } else {
+                        LoginUiEffect.NavigateToMain
                     },
                 )
             }
@@ -79,7 +87,7 @@ class LoginViewModel @Inject constructor(
 
     private fun showWithdrawalRecovery(
         provider: SocialProvider,
-        authResult: SocialAuthResult.Success,
+        authResult: AuthClientResult.Success,
     ) {
         val providerUserId = authResult.providerUserId
         val email = authResult.email
@@ -139,4 +147,16 @@ class LoginViewModel @Inject constructor(
         -> "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해주세요."
         else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
     }
+}
+
+sealed interface LoginUiEvent : UiEvent {
+    data class LoginClicked(val provider: SocialProvider) : LoginUiEvent
+    data object ErrorDismissed : LoginUiEvent
+    data object WithdrawalRecoveryConfirmed : LoginUiEvent
+    data object WithdrawalRecoveryDismissed : LoginUiEvent
+}
+
+sealed interface LoginUiEffect : UiEffect {
+    data object NavigateToGoalSetup : LoginUiEffect
+    data object NavigateToMain : LoginUiEffect
 }

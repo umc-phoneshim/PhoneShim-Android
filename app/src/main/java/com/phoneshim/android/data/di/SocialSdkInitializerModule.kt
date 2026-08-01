@@ -1,6 +1,6 @@
 package com.phoneshim.android.data.di
 
-import com.phoneshim.android.ui.features.auth.social.SocialSdkInitializer
+import com.phoneshim.android.ui.features.auth.client.SocialSdkInitializer
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent

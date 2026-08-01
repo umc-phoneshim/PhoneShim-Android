@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.navigation.compose.rememberNavController
 import com.phoneshim.android.blocking.BlockingStarter
 import com.phoneshim.android.navigation.PhoneShimNavHost
-import com.phoneshim.android.ui.features.auth.social.ForegroundActivityProvider
+import com.phoneshim.android.ui.features.auth.client.ForegroundActivityProvider
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

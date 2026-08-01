@@ -1,6 +1,6 @@
 package com.phoneshim.android.domain.usecase
 
-import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.AuthUser
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.AuthRepository
 import kotlinx.coroutines.test.runTest
@@ -27,7 +27,7 @@ class SocialLoginUseCaseTest {
 
         val result = useCase(SocialProvider.KAKAO, "provider-token")
 
-        assertEquals(SocialLoginResult.ExistingUser, result.getOrThrow())
+        assertEquals(AuthUser(isNewUser = false), result.getOrThrow())
         assertEquals(SocialProvider.KAKAO, repository.provider)
         assertEquals("provider-token", repository.token)
     }
@@ -40,11 +40,13 @@ class SocialLoginUseCaseTest {
         override suspend fun socialLogin(
             provider: SocialProvider,
             providerAccessToken: String,
-        ): Result<SocialLoginResult> {
+        ): Result<AuthUser> {
             callCount += 1
             this.provider = provider
             token = providerAccessToken
-            return Result.success(SocialLoginResult.ExistingUser)
+            return Result.success(AuthUser(isNewUser = false))
         }
+
+        override suspend fun restoreSession(): Boolean = false
     }
 }

@@ -1,6 +1,6 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
-import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.AuthUser
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
@@ -8,8 +8,9 @@ import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
-import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
-import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
+import com.phoneshim.android.ui.features.auth.client.AuthClientResult
+import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
+import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,7 +54,7 @@ class LoginViewModelTest {
 
     @Test
     fun `existing user login emits main navigation`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginResult = SocialLoginResult.ExistingUser)
+        val viewModel = createViewModel(loginResult = AuthUser(isNewUser = false))
         val effect = async { viewModel.effect.first() }
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
@@ -65,7 +66,7 @@ class LoginViewModelTest {
 
     @Test
     fun `new user login emits goal setup navigation`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginResult = SocialLoginResult.NewUser)
+        val viewModel = createViewModel(loginResult = AuthUser(isNewUser = true))
         val effect = async { viewModel.effect.first() }
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
@@ -76,7 +77,7 @@ class LoginViewModelTest {
 
     @Test
     fun `cancelled social login returns to idle without error`() = runTest(dispatcher) {
-        val viewModel = createViewModel(authResult = SocialAuthResult.Cancelled)
+        val viewModel = createViewModel(authResult = AuthClientResult.Cancelled)
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
         runCurrent()
@@ -87,7 +88,7 @@ class LoginViewModelTest {
 
     @Test
     fun `withdrawal pending login exposes recovery state`() = runTest(dispatcher) {
-        val authResult = SocialAuthResult.Success(
+        val authResult = AuthClientResult.Success(
             providerAccessToken = "provider-token",
             providerUserId = "provider-user",
             email = "user@example.com",
@@ -108,10 +109,10 @@ class LoginViewModelTest {
 
     @Test
     fun `clicks while loading do not replace selected provider`() = runTest(dispatcher) {
-        val deferred = CompletableDeferred<SocialAuthResult>()
+        val deferred = CompletableDeferred<AuthClientResult>()
         val viewModel = createViewModel(
-            socialAuthClient = object : SocialAuthClient {
-                override suspend fun authenticate(provider: SocialProvider): SocialAuthResult = deferred.await()
+            googleAuthClient = object : GoogleAuthClient {
+                override suspend fun authenticate(): AuthClientResult = deferred.await()
             },
         )
 
@@ -122,36 +123,42 @@ class LoginViewModelTest {
         assertEquals(SocialProvider.GOOGLE, viewModel.uiState.value.selectedProvider)
         assertTrue(viewModel.uiState.value.isLoading)
 
-        deferred.complete(SocialAuthResult.Cancelled)
+        deferred.complete(AuthClientResult.Cancelled)
         runCurrent()
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
     private fun createViewModel(
-        authResult: SocialAuthResult = SocialAuthResult.Success("provider-token"),
-        loginResult: SocialLoginResult = SocialLoginResult.ExistingUser,
+        authResult: AuthClientResult = AuthClientResult.Success("provider-token"),
+        loginResult: AuthUser = AuthUser(isNewUser = false),
         loginFailure: Throwable? = null,
-        socialAuthClient: SocialAuthClient = object : SocialAuthClient {
-            override suspend fun authenticate(provider: SocialProvider): SocialAuthResult = authResult
+        googleAuthClient: GoogleAuthClient = object : GoogleAuthClient {
+            override suspend fun authenticate(): AuthClientResult = authResult
+        },
+        kakaoAuthClient: KakaoAuthClient = object : KakaoAuthClient {
+            override suspend fun authenticate(): AuthClientResult = authResult
         },
     ): LoginViewModel {
         val repository = object : AuthRepository {
             override suspend fun socialLogin(
                 provider: SocialProvider,
                 providerAccessToken: String,
-            ): Result<SocialLoginResult> = loginFailure?.let(Result.Companion::failure)
+            ): Result<AuthUser> = loginFailure?.let(Result.Companion::failure)
                 ?: Result.success(loginResult)
+
+            override suspend fun restoreSession(): Boolean = false
         }
         val pendingRepository = object : PendingAuthRepository {
             override suspend fun logout(): Result<Unit> = Result.success(Unit)
             override suspend fun recoverWithdrawal(
                 identity: SocialIdentity,
-            ): Result<SocialLoginResult> = Result.success(SocialLoginResult.ExistingUser)
+            ): Result<AuthUser> = Result.success(AuthUser(isNewUser = false))
 
             override suspend fun linkAccount(identity: SocialIdentity): Result<Unit> = Result.success(Unit)
         }
         return LoginViewModel(
-            socialAuthClient = socialAuthClient,
+            googleAuthClient = googleAuthClient,
+            kakaoAuthClient = kakaoAuthClient,
             socialLoginUseCase = SocialLoginUseCase(repository),
             recoverWithdrawalUseCase = RecoverWithdrawalUseCase(pendingRepository),
         )

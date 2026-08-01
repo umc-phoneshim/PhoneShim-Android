@@ -1,7 +1,7 @@
 package com.phoneshim.android
 
 import android.app.Application
-import com.phoneshim.android.ui.features.auth.social.SocialSdkInitializer
+import com.phoneshim.android.ui.features.auth.client.SocialSdkInitializer
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

@@ -6,9 +6,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.phoneshim.android.data.local.AuthDataStore
-import com.phoneshim.android.data.local.DataStoreAuthSessionStore
-import com.phoneshim.android.domain.repository.AuthSessionStore
-import com.phoneshim.android.domain.repository.TokenProvider
+import com.phoneshim.android.data.local.TokenDataSource
+import com.phoneshim.android.data.local.TokenProvider
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -35,13 +34,7 @@ object AuthDataStoreModule {
 abstract class AuthSessionBindingModule {
     @Binds
     @Singleton
-    abstract fun bindAuthSessionStore(
-        implementation: DataStoreAuthSessionStore,
-    ): AuthSessionStore
-
-    @Binds
-    @Singleton
     abstract fun bindTokenProvider(
-        implementation: DataStoreAuthSessionStore,
+        implementation: TokenDataSource,
     ): TokenProvider
 }

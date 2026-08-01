@@ -1,6 +1,8 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
-import com.phoneshim.android.domain.repository.AuthSessionStore
+import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.usecase.RestoreAuthSessionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,12 +49,14 @@ class SplashViewModelTest {
     }
 
     private fun createViewModel(hasSession: Boolean): SplashViewModel {
-        val store = object : AuthSessionStore {
-            override suspend fun restore(): Boolean = hasSession
-            override suspend fun saveAccessToken(accessToken: String) = Unit
-            override suspend fun clear() = Unit
-            override fun hasSession(): Boolean = hasSession
+        val repository = object : AuthRepository {
+            override suspend fun socialLogin(
+                provider: SocialProvider,
+                providerAccessToken: String,
+            ): Result<AuthUser> = Result.success(AuthUser(isNewUser = false))
+
+            override suspend fun restoreSession(): Boolean = hasSession
         }
-        return SplashViewModel(RestoreAuthSessionUseCase(store))
+        return SplashViewModel(RestoreAuthSessionUseCase(repository))
     }
 }
