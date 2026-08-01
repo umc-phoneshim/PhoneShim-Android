@@ -22,19 +22,26 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.widget.Toast
+import com.phoneshim.android.BuildConfig
 import com.phoneshim.android.R
+import com.phoneshim.android.blocking.detection.BlockingPermissions
+import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.PrimaryButton
+import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
+import com.phoneshim.android.ui.features.setgoal.viewmodel.DemoPresentationViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -53,9 +60,30 @@ fun SetGoalCompleteScreen(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SetGoalViewModel = hiltViewModel(),
+    demoViewModel: DemoPresentationViewModel = hiltViewModel(),
 ) {
     // 플로우에서 설정한 목표 요약을 viewModel이 공유
     val uiState by viewModel.uiState.collectAsState()
+
+    val context = LocalContext.current
+    val demoCandidates = uiState.selectedApps.filterNot { it.packageName in DEMO_EXCLUDED_PACKAGES }
+    val demoTarget = demoCandidates.firstOrNull { app ->
+        uiState.appSettings[app.packageName]?.accessLimited == true
+    } ?: demoCandidates.firstOrNull()
+    fun launchDemoTarget() {
+        val target = demoTarget ?: return
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(target.packageName)
+        if (launchIntent == null) {
+            Toast.makeText(context, "선택한 앱을 실행할 수 없어요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        demoViewModel.arm(target.packageName, target.label)
+        context.startActivity(launchIntent)
+    }
+    val permissionRequest = rememberBlockingPermissionRequest { granted ->
+        if (granted) launchDemoTarget()
+        else Toast.makeText(context, "사용정보 접근과 오버레이 권한을 허용해 주세요.", Toast.LENGTH_LONG).show()
+    }
 
     SetGoalCompleteContent(
         apps = uiState.selectedApps.map { app ->
@@ -64,6 +92,14 @@ fun SetGoalCompleteScreen(
         },
         totalMinutes = uiState.totalMinutes,
         onFinish = onFinish,
+        onDemoBlock = if (BuildConfig.IS_DEMO && demoTarget != null) {
+            {
+                if (BlockingPermissions.hasAll(context)) launchDemoTarget()
+                else permissionRequest.launch()
+            }
+        } else {
+            null
+        },
         modifier = modifier,
     )
 }
@@ -74,6 +110,7 @@ private fun SetGoalCompleteContent(
     totalMinutes: Int,
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
+    onDemoBlock: (() -> Unit)? = null,
 ) {
     // Figma 04-6: Maincontainer p16, 세로 gap 24.
     // 버튼은 하단 고정(Figma 기준 버튼이 y=644~700, 컨테이너 724 → 하단 여백 24)이고
@@ -187,16 +224,20 @@ private fun SetGoalCompleteContent(
         }
 
         // 메인으로 이동 — 하단 고정 (Figma 04-6: 카드 아래 gap 24, 하단 여백 24)
-        PrimaryButton(
-            text = "메인으로 이동",
-            onClick = onFinish,
+        Column(
             modifier = Modifier.padding(
                 start = PhoneShimDimens.spacing16,
                 end = PhoneShimDimens.spacing16,
                 top = PhoneShimDimens.spacing24,
                 bottom = PhoneShimDimens.spacing24,
             ),
-        )
+            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+        ) {
+            onDemoBlock?.let {
+                SecondaryButton(text = "차단 시연 시작", onClick = it)
+            }
+            PrimaryButton(text = "메인으로 이동", onClick = onFinish)
+        }
     }
 }
 
@@ -219,6 +260,15 @@ private fun CompleteTimeUnit(value: String, unit: String) {
         )
     }
 }
+
+private val DEMO_EXCLUDED_PACKAGES = setOf(
+    "com.android.dialer",
+    "com.google.android.dialer",
+    "com.samsung.android.dialer",
+    "com.android.mms",
+    "com.samsung.android.messaging",
+    "com.google.android.apps.messaging",
+)
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable

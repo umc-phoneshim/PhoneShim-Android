@@ -1,6 +1,6 @@
 package com.phoneshim.android.blocking.policy
 
-
+import com.phoneshim.android.blocking.demo.DemoBlockTrigger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,6 +13,7 @@ import javax.inject.Singleton
 class BlockPolicyEngine @Inject constructor(
     private val goalProvider: BlockingPolicyProvider,
     private val scheduleProvider: SchedulePolicyProvider,
+    private val demoBlockTrigger: DemoBlockTrigger,
 ) {
     /**
      * 하드코딩 목록으로는 못 잡는, 기기별 기본 전화/문자 앱을 런타임에 채워 넣는 자리.
@@ -31,6 +32,8 @@ class BlockPolicyEngine @Inject constructor(
         if (foregroundPackage in ALWAYS_ALLOWED || foregroundPackage in extraAllowed) {
             return BlockDecision.Allow
         }
+
+        demoBlockTrigger.decisionFor(foregroundPackage)?.let { return it }
 
         // ── 1) 일정 차단 우선 ──
         when (val schedule = scheduleProvider.activeScheduleBlock()) {

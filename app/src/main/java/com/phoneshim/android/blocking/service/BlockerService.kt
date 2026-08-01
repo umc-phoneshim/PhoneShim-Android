@@ -15,6 +15,7 @@ import com.phoneshim.android.blocking.detection.BlockScope
 import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.ForegroundAppDetector
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
+import com.phoneshim.android.blocking.demo.DemoBlockTrigger
 import com.phoneshim.android.blocking.overlay.BlockOverlayManager
 import com.phoneshim.android.blocking.overlay.OverlayAction
 import com.phoneshim.android.blocking.policy.BlockDecision
@@ -50,6 +51,7 @@ class BlockerService : Service() {
     @Inject lateinit var usageReader: UsageMinutesReader
     @Inject lateinit var engine: BlockPolicyEngine
     @Inject lateinit var policyProvider: BlockingPolicyProvider
+    @Inject lateinit var demoBlockTrigger: DemoBlockTrigger
 
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -111,6 +113,7 @@ class BlockerService : Service() {
 
     // 지금 떠 있는 화면이 '앱 하드 차단'인가(= 확인 누르면 홈으로 보낼 대상인가).
     @Volatile private var showingAppBlock: Boolean = false
+    @Volatile private var showingAppBlockPackage: String? = null
 
     // 차단이 걸려 있던 구간들. 사용량 집계에서 이 시간을 제외한다. 자정에 비운다.
     // (차단 중에는 못 쓰는데도 OS 상으로는 세션이 살아 있어, 빼주지 않으면
@@ -226,6 +229,7 @@ class BlockerService : Service() {
         }
         // 지금 떠 있는 게 '앱 하드 차단'인지. Dismiss(확인) 의 의미가 알림과 달라서 구분한다.
         showingAppBlock = suppressed is BlockDecision.AppBlocked
+        showingAppBlockPackage = (suppressed as? BlockDecision.AppBlocked)?.packageName
 
         // 지금 무엇이 막혀 있는지 기록. 전체 폰 차단이면 모든 앱, 앱 차단이면 그 앱만 제외 대상.
         updateBlockedInterval(
@@ -301,7 +305,9 @@ class BlockerService : Service() {
                     // 그냥 닫으면 차단 앱에 그대로 남아 다음 tick 에 다시 떠서 화면만 깜빡인다.
                     // (전체 폰 차단과 달리 앱 차단 시안엔 탈출 경로가 없어 확인의 귀결을 홈 이동으로 둠)
                     showingAppBlock -> {
+                        showingAppBlockPackage?.let(demoBlockTrigger::consume)
                         showingAppBlock = false
+                        showingAppBlockPackage = null
                         beginActionGrace()
                         overlay.hide()
                         goHome()
