@@ -50,18 +50,23 @@ class UsageMinutesReader @Inject constructor(
      * 이 계산은 매 tick(1초)마다 돌고 하루가 갈수록 이벤트가 쌓여
      * 시간이 지날수록 비용이 커진다(발열·배터리 소모).
      *
+     * 집계 기준은 항상 자정이다. 판정에 쓰는 숫자와 화면·서버에 올라가는 숫자가
+     * 같은 기준을 갖도록, 이 클래스 밖의 어떤 상태도 시작 시각을 바꾸지 못하게 한다.
+     *
      * [blockedIntervals] 차단이 걸려 있던 구간. 세션과 겹치는 만큼 사용량에서 제외한다.
-     * [countFromMs] 집계 시작 하한. 목표를 정한 당일에는 그 시각부터 센다.
-     *   다음날부터는 startOfToday() 가 이 값을 앞질러 자동으로 자정 기준이 된다.
+     * [foregroundPackage] 지금 화면에 떠 있는 앱. 자정 이전부터 이어지고 있는
+     *   세션을 살리는 데만 쓴다. 자세한 건 aggregateByEvents 참고. null 이면 보정하지 않는다.
+     *   [packageName] 과 같은 값이 들어오는 것이 보통이지만 의미가 다르므로 따로 받는다
+     *   ("사용량을 알고 싶은 앱" vs "지금 화면에 있는 앱").
      */
     fun usageSnapshot(
         packageName: String,
         blockedIntervals: List<BlockedInterval> = emptyList(),
-        countFromMs: Long = 0L,
+        foregroundPackage: String? = null,
     ): UsageSnapshot {
-        val start = maxOf(startOfToday(), countFromMs)
+        val start = startOfToday()
         val now = System.currentTimeMillis()
-        val perPackageMs = aggregateByEvents(start, now, blockedIntervals)
+        val perPackageMs = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
 
         val phoneMs = perPackageMs
             .filterKeys { it !in launcherPackages }
@@ -79,14 +84,26 @@ class UsageMinutesReader @Inject constructor(
     /**
      * [start,now) 구간의 패키지별 포그라운드 체류 시간.
      * 각 세션에서 [blockedIntervals] 와 겹치는 시간은 제외한다.
+     *
+     * 세션은 MOVE_TO_FOREGROUND 를 봐야 열린다. 그래서 [start] 이전에 열려서 지금까지
+     * 이어지는 세션은 이 구간에 여는 이벤트가 없어 통째로 빠진다.
+     * (23:50 에 켠 앱을 00:30 까지 쓰면 오늘치 30분이 0분으로 잡히고,
+     *  앱을 빠져나가는 순간 MOVE_TO_BACKGROUND 가 짝 없는 이벤트로 버려져 영구 손실된다.)
+     * 사용량이 실제보다 적게 잡히는 쪽이라 차단이 늦어지므로 방향도 나쁘다.
+     *
+     * [foregroundPackage] 로 보정한다. 그 앱의 전환 이벤트가 이 구간에 하나도 없는데
+     * 지금 화면에 떠 있다면, [start] 부터 계속 떠 있었다는 뜻이므로 그 시각에 연 것으로 본다.
+     * 구간 안에서 들락거렸다면 이벤트가 남아 있어 이 보정에 걸리지 않는다.
      */
     private fun aggregateByEvents(
         start: Long,
         now: Long,
         blockedIntervals: List<BlockedInterval>,
+        foregroundPackage: String?,
     ): Map<String, Long> {
         val total = HashMap<String, Long>()
         val openedAt = HashMap<String, Long>() // 아직 종료 안 된 세션의 시작 시각
+        val switched = HashSet<String>()       // 이 구간에 전환 이벤트가 한 번이라도 관측된 패키지
 
         val events = usm.queryEvents(start, now)
         val event = UsageEvents.Event()
@@ -94,14 +111,22 @@ class UsageMinutesReader @Inject constructor(
             events.getNextEvent(event)
             val pkg = event.packageName ?: continue
             when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND ->
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    switched += pkg
                     openedAt[pkg] = event.timeStamp
+                }
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    switched += pkg
                     val from = openedAt.remove(pkg) ?: continue
                     val counted = countedMs(pkg, from, event.timeStamp, blockedIntervals)
                     if (counted > 0L) total[pkg] = (total[pkg] ?: 0L) + counted
                 }
             }
+        }
+
+        // start 이전부터 이어지는 세션 보정. 위 KDoc 참고.
+        if (foregroundPackage != null && foregroundPackage !in switched) {
+            openedAt[foregroundPackage] = start
         }
 
         // 아직 열려 있는 세션 반영. 이 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않는다.

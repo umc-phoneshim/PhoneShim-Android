@@ -10,9 +10,8 @@ import javax.inject.Singleton
 @Singleton
 class StubBlockingPolicyProvider @Inject constructor() : BlockingPolicyProvider {
 
-    override suspend fun phoneGoalMinutes(): Int = 210 // 3h30m (시안 예시값)
-
-    override suspend fun phoneLimitEnabled(): Boolean = true
+    override suspend fun phoneGoal(): PhoneGoalPolicy =
+        PhoneGoalPolicy(goalMinutes = 210, limitEnabled = true) // 3h30m (시안 예시값)
 
     override suspend fun watchedApps(): List<AppBlockingPolicy> = listOf(
         AppBlockingPolicy("com.kakao.talk", "카카오톡", goalMinutes = 60, limitEnabled = true),

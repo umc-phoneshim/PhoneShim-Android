@@ -57,7 +57,7 @@ fun TodoRow(
         leadingContent?.invoke()
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = title,
@@ -68,7 +68,7 @@ fun TodoRow(
             )
             Text(
                 text = timeRange,
-                style = PhoneShimType.KorCaption,
+                style = PhoneShimType.KorBodyM,
                 color = PhoneShimTheme.colors.textTertiary,
             )
         }

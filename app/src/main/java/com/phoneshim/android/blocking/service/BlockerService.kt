@@ -33,13 +33,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
  * 포그라운드 서비스. 화면이 켜져 있을 때만 짧은 주기로 포그라운드 앱을 확인해 판정.
  * 화면 꺼짐 시 폴 루프를 멈춰 배터리 부하를 없앤다.
- *   리마인더 일정 차단은 폴링이 아니라 AlarmManager 예약이 담당하므로,
- *   화면이 꺼져 있어도 예약된 시각에 깨어나 동작한다.
+ *   리마인더 일정 차단은 폴링이 아니라 AlarmManager 예약이 담당한다. 알람은 화면이 꺼져
+ *   있어도 예약된 시각에 서비스를 깨우지만, 그때 화면이 꺼져 있으면 막을 화면이 없으므로
+ *   판정은 하지 않고 넘긴다. 화면이 켜지는 순간 SCREEN_ON 이 즉시 재판정을 돌린다.
  */
 @AndroidEntryPoint
 class BlockerService : Service() {
@@ -87,7 +89,8 @@ class BlockerService : Service() {
     //   같은 앱을 계속 쓰는 동안엔 다시 안 물음(세션 유지).
     //   다른 앱으로 나갔다가 1분 내 돌아오면 안 물음(쿨다운).
     //   1분 넘겨 돌아오면 다시 물음.
-    private var reasonAskedForPackage: String? = null // 현재 세션에서 이미 물어본 앱
+    // @Volatile: 사유 제출 콜백이 Main 에서 쓰고 tick 이 Default 에서 읽는다.
+    @Volatile private var reasonAskedForPackage: String? = null // 현재 세션에서 이미 물어본 앱
     private var lastForegroundPackage: String? = null // 직전 tick 의 포그라운드
     // 패키지별로 '마지막으로 벗어난 시각'. 단일 슬롯으로 두면 홈 등 중간 경유지에
     // 덮여서 재진입 쿨다운이 걸리지 않는다.
@@ -95,16 +98,19 @@ class BlockerService : Service() {
 
     // #4: "알림만"(차단 OFF) 목표 도달 화면은 Dismiss 후 그날 재출현 안 함.
     // 자정 넘어가면 초기화. 앱별(패키지) + 전체 폰(KEY_PHONE) 각각.
-    private val dismissedGoalToday = mutableSetOf<String>()
+    // 오버레이의 '좋아요' 콜백은 Main, 판정은 Default 에서 돈다.
+    // 일반 Set 으로 두면 Main 의 add 가 Default 에 보인다는 보장이 없어
+    // 확인을 눌러도 알림이 계속 뜰 수 있다(B-2 와 같은 증상, 다른 원인).
+    private val dismissedGoalToday: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private var notifiedDayEpoch: Long = -1L
-    private var showingGoalKey: String? = null // 현재 떠 있는 목표-도달 화면의 키(Dismiss 시 기록용)
+    @Volatile private var showingGoalKey: String? = null // 현재 떠 있는 목표-도달 화면의 키(Dismiss 시 기록용)
 
     // 전화/문자/폰쉼 진입으로 앱을 띄운 직후, 대상 앱이 포그라운드로 올라올 때까지
     // 이전 차단 앱 기준 재차단 오버레이가 번쩍이지 않게 잠깐 억제하는 시각.
     @Volatile private var overlaySuppressedUntilMs: Long = 0L
 
     // 지금 떠 있는 화면이 '앱 하드 차단'인가(= 확인 누르면 홈으로 보낼 대상인가).
-    private var showingAppBlock: Boolean = false
+    @Volatile private var showingAppBlock: Boolean = false
 
     // 차단이 걸려 있던 구간들. 사용량 집계에서 이 시간을 제외한다. 자정에 비운다.
     // (차단 중에는 못 쓰는데도 OS 상으로는 세션이 살아 있어, 빼주지 않으면
@@ -113,11 +119,11 @@ class BlockerService : Service() {
     private var openBlockStartMs: Long = 0L
     private var openBlockScope: BlockScope? = null
 
-    // 목표를 처음 인식한 시각. 그날은 이 시각부터 사용량을 센다(온보딩 직후 즉시 차단 방지).
-    // 한 번 기록하면 덮어쓰지 않는다 — 매 tick 갱신하면 사용량이 항상 0이 되고,
-    // 목표를 다시 저장해 카운트를 리셋하는 우회도 막는다.
-    private val prefs by lazy { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
-    private var goalFirstSeenAtMs: Long = 0L
+    // 하루치 상태(차단 구간 / 확인한 목표 알림)의 영속화 담당.
+    // 서비스는 START_STICKY 로 되살아나고 부팅 때도 다시 뜨는데, 그때마다 메모리가 비어
+    // 오늘 차단됐던 시간이 사용량에 다시 반영되고 확인 누른 알림이 다시 떴다.
+    private val stateStore by lazy { BlockingStateStore(this) }
+    private var lastPersistedAtMs: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -132,8 +138,19 @@ class BlockerService : Service() {
                 addAction(Intent.ACTION_SCREEN_OFF)
             },
         )
+        restoreDayState()
         startAsForeground()
         loop()
+    }
+
+    /** 재시작 전에 저장해둔 오늘치 상태를 되살린다. */
+    private fun restoreDayState() {
+        val restored = stateStore.restore()
+        blockedIntervals += restored.blockedIntervals
+        dismissedGoalToday += restored.dismissedGoals
+        // 이 줄이 없으면 첫 tick 의 rolloverDayIfNeeded() 가 초기값(-1)과 비교해
+        // 방금 복원한 것을 그대로 다시 비운다.
+        notifiedDayEpoch = java.time.LocalDate.now().toEpochDay()
     }
 
     private fun loop() = scope.launch {
@@ -174,9 +191,14 @@ class BlockerService : Service() {
             lastForegroundPackage = pkg
         }
 
-        val countFrom = resolveGoalFirstSeenAt()
         // 전체·앱 사용량을 한 번의 조회로 함께 구한다(따로 부르면 같은 구간을 두 번 파싱).
-        val usage = usageReader.usageSnapshot(pkg, currentBlockedIntervals(), countFrom)
+        val usage = usageReader.usageSnapshot(
+            packageName = pkg,
+            blockedIntervals = currentBlockedIntervals(),
+            // 자정 이전부터 이어서 쓰고 있는 앱은 오늘 구간에 여는 이벤트가 없어
+            // 집계에서 빠진다. 지금 화면에 있는 앱을 알려 살린다.
+            foregroundPackage = pkg,
+        )
         val phoneUsed = usage.phoneMinutes
         val appUsed = usage.appMinutes
 
@@ -247,8 +269,18 @@ class BlockerService : Service() {
         if (today != notifiedDayEpoch) {
             notifiedDayEpoch = today
             dismissedGoalToday.clear()
+            // 사유 입력도 하루치 상태로 본다. 앱에 계속 머무는 동안은 세션이 끊기지 않아
+            // 여기서 비우지 않으면 자정을 넘겨 쓴 시간이 오늘 사유 기록에 한 건도 안 남는다
+            // (REP-03 요약 통계·REP-06 캘린더 hasReason 이 그 시간을 못 본다).
+            reasonAskedForPackage = null
             // 사용량이 자정 기준으로 새로 집계되므로 어제의 차단 구간은 의미가 없다.
             blockedIntervals.clear()
+            // 자정을 넘겨 차단이 이어지는 중이면 어제 시작된 '열린' 구간이 남는다.
+            // 여기서 끊어두면 같은 tick 의 updateBlockedInterval() 이 지금 시각으로 다시 연다.
+            openBlockScope = null
+            openBlockStartMs = 0L
+            stateStore.clear()
+            lastPersistedAtMs = 0L
         }
     }
 
@@ -258,7 +290,10 @@ class BlockerService : Service() {
                 when {
                     // 목표 도달 알림(37/39) 확인 → 그날 다시 안 뜨게 기록하고 닫기만.
                     showingGoalKey != null -> {
-                        showingGoalKey?.let { dismissedGoalToday.add(it) }
+                        showingGoalKey?.let {
+                            dismissedGoalToday.add(it)
+                            stateStore.persistDismissed(dismissedGoalToday)
+                        }
                         showingGoalKey = null
                         overlay.hide()
                     }
@@ -310,16 +345,16 @@ class BlockerService : Service() {
     private fun updateBlockedInterval(scope: BlockScope?) {
         val now = System.currentTimeMillis()
         val open = openBlockScope
+        var finalized = false
 
         if (scope == null) {
             if (open != null) {
                 blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
                 openBlockScope = null
                 openBlockStartMs = 0L
+                finalized = true
             }
-            return
-        }
-        when {
+        } else when {
             open == null -> {
                 openBlockStartMs = now
                 openBlockScope = scope
@@ -328,7 +363,22 @@ class BlockerService : Service() {
                 blockedIntervals += BlockedInterval(openBlockStartMs, now, open)
                 openBlockStartMs = now
                 openBlockScope = scope
+                finalized = true
             }
+        }
+
+        // 구간이 확정된 순간은 즉시 쓰고, 차단이 이어지는 동안은 주기적으로만 쓴다.
+        // 매 tick(1초)마다 저장하면 디스크 I/O 가 초당 한 번씩 돌고,
+        // 프로세스가 죽어 잃는 것은 마지막 저장 이후의 차단 시간뿐이다.
+        // 그건 사용량이 조금 더 잡히는 쪽이라 안전한 방향의 오차다.
+        //
+        // 주기 저장은 '열린 구간이 있을 때'로 한정한다. 차단이 걸려 있지 않으면
+        // 내용이 그대로라 같은 값을 하루 종일 다시 쓰게 된다.
+        // 구간이 닫히는 순간은 finalized 가 잡아주므로 마지막 상태는 유실되지 않는다.
+        val periodicDue = openBlockScope != null && now - lastPersistedAtMs >= PERSIST_INTERVAL_MS
+        if (finalized || periodicDue) {
+            lastPersistedAtMs = now
+            stateStore.persistIntervals(currentBlockedIntervals())
         }
     }
 
@@ -336,30 +386,6 @@ class BlockerService : Service() {
     private fun currentBlockedIntervals(): List<BlockedInterval> {
         val open = openBlockScope ?: return blockedIntervals
         return blockedIntervals + BlockedInterval(openBlockStartMs, System.currentTimeMillis(), open)
-    }
-
-    /**
-     * 목표를 처음 인식한 시각을 반환한다. 목표가 아직 없으면 0(= 자정 기준).
-     * 최초 1회만 기록하고 이후에는 저장된 값을 그대로 쓴다.
-     */
-    private suspend fun resolveGoalFirstSeenAt(): Long {
-        if (goalFirstSeenAtMs != 0L) return goalFirstSeenAtMs
-
-        val stored = prefs.getLong(KEY_GOAL_FIRST_SEEN_AT, 0L)
-        if (stored != 0L) {
-            goalFirstSeenAtMs = stored
-            return stored
-        }
-
-        // 아직 기록 전. 목표가 실제로 생긴 시점에만 기록한다.
-        val hasGoal = policyProvider.phoneGoalMinutes() != null ||
-                policyProvider.watchedApps().isNotEmpty()
-        if (!hasGoal) return 0L
-
-        val now = System.currentTimeMillis()
-        prefs.edit().putLong(KEY_GOAL_FIRST_SEEN_AT, now).apply()
-        goalFirstSeenAtMs = now
-        return now
     }
 
     /** 차단 앱에서 빠져나오도록 런처로 이동. */
@@ -431,8 +457,15 @@ class BlockerService : Service() {
     }
 
     override fun onDestroy() {
-        runCatching { unregisterReceiver(screenReceiver) }
+        // 폴 루프부터 멈춘다. 아래에서 blockedIntervals 를 읽는 동안 tick 이
+        // 같은 리스트에 계속 쓰면 순회 중 변경이 되어 마지막 저장이 통째로 날아간다.
+        // (취소는 협조적이라 실행 중이던 tick 이 즉시 서지는 않지만,
+        //  tick 은 매 반복마다 중단점을 지나므로 겹칠 여지가 크게 줄어든다.)
         scope.cancel()
+        // 정상 종료 경로에서는 진행 중이던 구간까지 확정해 남긴다.
+        // (강제 종료 시엔 여기까지 못 오므로 위의 주기 저장이 최후 방어선이다.)
+        runCatching { stateStore.persistIntervals(currentBlockedIntervals()) }
+        runCatching { unregisterReceiver(screenReceiver) }
         if (::overlay.isInitialized) overlay.hide()
         super.onDestroy()
     }
@@ -443,9 +476,10 @@ class BlockerService : Service() {
         const val ACTION_REEVALUATE = "com.phoneshim.android.action.REEVALUATE"
         private const val POLL_INTERVAL_MS = 1_000L
         private const val REASON_COOLDOWN_MS = 60_000L
-        private const val PREFS_NAME = "blocking_engine"
-        private const val KEY_GOAL_FIRST_SEEN_AT = "goal_first_seen_at"
         private const val KEY_PHONE = "__PHONE__"
+
+        // 차단이 계속되는 동안 진행 중 구간을 디스크에 밀어 넣는 주기.
+        private const val PERSIST_INTERVAL_MS = 15_000L
 
         // 앱 전환 유예: 전화/문자/폰쉼 진입 후 대상 앱이 뜰 때까지 재차단 억제 시간.
         private const val ACTION_GRACE_MS = 2_000L

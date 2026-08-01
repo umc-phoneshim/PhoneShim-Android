@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.setgoal.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,15 +19,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -37,11 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.InstalledApp
-import com.phoneshim.android.ui.features.setgoal.component.AppLabel
 import com.phoneshim.android.ui.common.AppInfoRow
+import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
+import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -62,26 +64,33 @@ fun AppSelectScreen(
 ) {
     // 설치 앱 목록은 viewModel이 그래프 진입 시 로드, 선택 상태는 플로우 전체에 공유
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is SetGoalEffect.ShowMessage ->
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                is SetGoalEffect.ShowMessage -> snackbarHostState.showSnackbar(
+                    message = effect.message,
+                    duration = SnackbarDuration.Short,
+                )
                 SetGoalEffect.NavigateNext -> onNext()
             }
         }
     }
 
-    AppSelectContent(
-        apps = uiState.installedApps,
-        selectedPackages = uiState.selectedApps.mapTo(HashSet()) { it.packageName },
-        onToggleApp = { viewModel.onEvent(SetGoalEvent.ToggleApp(it)) },
-        onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppSelection) },
-        onBack = onBack,
-        modifier = modifier,
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        AppSelectContent(
+            apps = uiState.installedApps,
+            selectedPackages = uiState.selectedApps.mapTo(HashSet()) { it.packageName },
+            onToggleApp = { viewModel.onEvent(SetGoalEvent.ToggleApp(it)) },
+            onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppSelection) },
+            onBack = onBack,
+        )
+        SetGoalSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }
 
 @Composable
@@ -145,6 +154,7 @@ private fun AppSelectContent(
                                 .fillMaxWidth()
                                 .height(28.dp)
                                 .clickable { onToggleApp(app) },
+                            iconContent = { AppIcon(packageName = app.packageName) },
                             trailingContent = {
                                 AppCheckCircle(checked = selectedPackages.contains(app.packageName))
                             },

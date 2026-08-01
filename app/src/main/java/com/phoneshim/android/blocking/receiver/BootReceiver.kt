@@ -45,6 +45,16 @@ class BootReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 scheduler.rescheduleToday()
+            } catch (t: Throwable) {
+                /*
+                 * 예약 실패가 부팅 복구 전체를 죽이지 않게 한다.
+                 * launch 밖으로 빠져나온 예외는 핸들러가 없으면 프로세스를 종료시킨다.
+                 *
+                 * 실제 경로: USE_EXACT_ALARM 이 심사에서 반려되면 SCHEDULE_EXACT_ALARM 만 남긴다
+                 *
+                 * 알람이 없어도 화면이 켜져 있으면 폴링이 일정 차단을 잡으므로,
+                 * 위의 서비스 기동만 살아 있으면 복구는 성립한다.
+                 */
             } finally {
                 pending.finish()
             }

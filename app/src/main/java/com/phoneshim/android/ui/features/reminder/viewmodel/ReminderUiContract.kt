@@ -8,6 +8,8 @@ import java.time.YearMonth
 
 enum class RestrictionMode { NONE, FULL_PHONE, SPECIFIC_APPS }
 
+internal const val DUPLICATE_SCHEDULE_MESSAGE = "중복된 일정은 등록할 수 없어요!"
+
 data class ReminderTaskUiModel(
     val id: String,
     val date: LocalDate,
@@ -29,25 +31,16 @@ data class ReminderDraft(
     val timeError: String? = null,
 )
 
-data class MockRestrictedApp(val id: String, val name: String)
-
 data class ReminderUiState(
     val todayDate: LocalDate = LocalDate.of(2026, 7, 11),
     val selectedDate: LocalDate = LocalDate.of(2026, 7, 17),
     val visibleMonth: YearMonth = YearMonth.of(2026, 7),
     val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = defaultTasks(),
-    val editingTask: ReminderTaskUiModel? = null,
     val isTaskPopupVisible: Boolean = false,
-    val isDatePickerVisible: Boolean = false,
     val draft: ReminderDraft = ReminderDraft(),
-    val mockApps: List<MockRestrictedApp> = listOf(
-        MockRestrictedApp("kakao", "카카오톡"),
-        MockRestrictedApp("youtube", "YouTube"),
-        MockRestrictedApp("instagram", "Instagram"),
-    ),
 ) : UiState {
     val selectedTasks: List<ReminderTaskUiModel>
-        get() = tasksByDate[selectedDate].orEmpty().sortedBy { it.startMinutes }
+        get() = tasksByDate[selectedDate].orEmpty()
 }
 
 sealed interface ReminderUiEvent : UiEvent {
@@ -55,6 +48,7 @@ sealed interface ReminderUiEvent : UiEvent {
     data class MonthMoved(val offset: Long) : ReminderUiEvent
     data object AddTaskClicked : ReminderUiEvent
     data class EditTaskClicked(val task: ReminderTaskUiModel) : ReminderUiEvent
+    data class TaskMoved(val fromIndex: Int, val toIndex: Int) : ReminderUiEvent
     data object PopupDismissed : ReminderUiEvent
     data class TitleChanged(val value: String) : ReminderUiEvent
     data class StartTimeChanged(val value: String) : ReminderUiEvent
