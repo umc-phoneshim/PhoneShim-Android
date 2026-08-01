@@ -31,10 +31,12 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://api.phoneshim.com/\"")
+            buildConfigField("boolean", "ENABLE_NETWORK_BODY_LOGGING", "true")
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
+            buildConfigField("boolean", "ENABLE_NETWORK_BODY_LOGGING", "false")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
             buildConfigField("String", "KAKAO_NATIVE_APP_KEY", kakaoNativeAppKey.asBuildConfigString())
             manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
