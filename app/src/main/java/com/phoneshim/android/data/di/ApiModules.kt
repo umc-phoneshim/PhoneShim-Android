@@ -7,6 +7,7 @@ import com.phoneshim.android.data.api.MainApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,6 +53,11 @@ object ReportApiModule {
     @Provides
     @Singleton
     fun provideReportApi(retrofit: Retrofit): ReportApi = retrofit.create(ReportApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUsageReasonApi(retrofit: Retrofit): UsageReasonApi =
+        retrofit.create(UsageReasonApi::class.java)
 }
 
 @Module
