@@ -70,7 +70,10 @@ data class PrefUiState(
     val editingAppId: String? = null,
     val appDescriptionInput: String = "",
     val validation: PrefValidationResult = PrefValidationResult(),
-) : UiState
+) : UiState {
+    val hasUnsavedChanges: Boolean
+        get() = draftSettings != savedSettings
+}
 
 sealed interface PrefUiEvent : UiEvent {
     data object GenderSelectionOpened : PrefUiEvent

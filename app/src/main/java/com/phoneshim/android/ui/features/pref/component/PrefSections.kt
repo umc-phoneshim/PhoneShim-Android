@@ -21,18 +21,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.common.SelectableChip
 import com.phoneshim.android.ui.common.SelectableChipVariant
-import com.phoneshim.android.ui.common.SelectionDropdown
 import com.phoneshim.android.ui.features.pref.viewmodel.AgeGroup
 import com.phoneshim.android.ui.features.pref.viewmodel.AppGoal
 import com.phoneshim.android.ui.features.pref.viewmodel.Gender
@@ -55,6 +64,11 @@ private object PrefSectionDefaults {
     val appIconSize = 24.dp
     val actionIconSize = 20.dp
     val listDividerThickness = 1.dp
+    val selectionPopupWidth = 96.dp
+    val selectionPopupOffset = 4.dp
+    val selectionPopupPadding = 12.dp
+    val selectionOptionSpacing = 10.dp
+    val selectionIndicatorSize = 12.dp
 }
 
 @Composable
@@ -147,17 +161,45 @@ private fun <T> SingleSelectionMenu(
     onSelected: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    SelectionDropdown(
-        expanded = expanded,
-        options = options,
-        selected = selected,
-        optionLabel = label,
-        onSelected = onSelected,
-        onDismiss = onDismiss,
-        optionTrailingContent = { _, isSelected ->
-            SquareSelectionIndicator(selected = isSelected)
-        },
-    )
+    if (!expanded) return
+
+    val density = LocalDensity.current
+    val positionProvider = remember(density) {
+        BelowAnchorPositionProvider(
+            gapPx = with(density) { PrefSectionDefaults.selectionPopupOffset.roundToPx() },
+        )
+    }
+    Popup(
+        popupPositionProvider = positionProvider,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .width(PrefSectionDefaults.selectionPopupWidth)
+                .clip(RoundedCornerShape(8.dp))
+                .background(PhoneShimTheme.colors.brandSubtle)
+                .padding(PrefSectionDefaults.selectionPopupPadding),
+            verticalArrangement = Arrangement.spacedBy(PrefSectionDefaults.selectionOptionSpacing),
+        ) {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(role = Role.RadioButton) { onSelected(option) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = label(option),
+                        style = PhoneShimType.KorLabel,
+                        color = PhoneShimTheme.colors.textSecondary,
+                    )
+                    SquareSelectionIndicator(selected = option == selected)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -165,14 +207,41 @@ private fun SquareSelectionIndicator(selected: Boolean) {
     val color = if (selected) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.divider
     Box(
         modifier = Modifier
-            .size(11.dp)
-            .clip(MaterialTheme.shapes.extraSmall)
-            .border(1.dp, color, MaterialTheme.shapes.extraSmall)
-            .then(
-                if (selected) Modifier.background(color, MaterialTheme.shapes.extraSmall)
-                else Modifier
+            .size(PrefSectionDefaults.selectionIndicatorSize)
+            .clip(RoundedCornerShape(4.dp))
+            .border(1.dp, color, RoundedCornerShape(4.dp))
+            .background(
+                color = if (selected) color else PhoneShimPalette.White,
+                shape = RoundedCornerShape(4.dp),
             ),
     )
+}
+
+private class BelowAnchorPositionProvider(
+    private val gapPx: Int,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val preferredX = when (layoutDirection) {
+            LayoutDirection.Ltr -> anchorBounds.left
+            LayoutDirection.Rtl -> anchorBounds.right - popupContentSize.width
+        }
+        val x = preferredX.coerceIn(
+            minimumValue = 0,
+            maximumValue = (windowSize.width - popupContentSize.width).coerceAtLeast(0),
+        )
+        val below = anchorBounds.bottom + gapPx
+        val y = if (below + popupContentSize.height <= windowSize.height) {
+            below
+        } else {
+            (anchorBounds.top - gapPx - popupContentSize.height).coerceAtLeast(0)
+        }
+        return IntOffset(x, y)
+    }
 }
 
 @Composable
