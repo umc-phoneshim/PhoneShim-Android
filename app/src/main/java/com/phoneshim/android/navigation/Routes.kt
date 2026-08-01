@@ -5,7 +5,6 @@ object Routes {
     // 01~02. auth
     const val SPLASH = "splash"
     const val LOGIN = "login"
-    const val SIGN_UP = "sign_up"
 
     // 04. setgoal
     const val SET_GOAL_GRAPH = "set_goal_graph"

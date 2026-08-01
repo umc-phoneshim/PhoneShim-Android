@@ -1,6 +1,5 @@
 package com.phoneshim.android.data.di
 
-import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.HealthApi
 import com.phoneshim.android.data.api.MainApi
@@ -14,14 +13,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import retrofit2.Retrofit
-
-@Module
-@InstallIn(SingletonComponent::class)
-object AuthApiModule {
-    @Provides
-    @Singleton
-    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
-}
 
 @Module
 @InstallIn(SingletonComponent::class)

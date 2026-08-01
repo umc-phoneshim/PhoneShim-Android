@@ -35,7 +35,6 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onNavigateToSignUp: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {

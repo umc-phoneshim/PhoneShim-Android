@@ -12,7 +12,6 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.features.auth.screen.LoginScreen
-import com.phoneshim.android.ui.features.auth.screen.SignUpScreen
 import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.main.screen.MainScreen
@@ -57,17 +56,6 @@ fun PhoneShimNavHost(navController: NavHostController) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onNavigateToSignUp = { navController.navigate(Routes.SIGN_UP) },
-            )
-        }
-        composable(Routes.SIGN_UP) {
-            SignUpScreen(
-                onSignUpSuccess = {
-                    navController.navigate(Routes.MAIN) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
-                onNavigateBack = { navController.popBackStack() },
             )
         }
 
