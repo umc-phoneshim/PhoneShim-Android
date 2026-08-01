@@ -6,4 +6,6 @@ import com.phoneshim.android.domain.model.SocialProvider
 sealed interface LoginUiEvent : UiEvent {
     data class LoginClicked(val provider: SocialProvider) : LoginUiEvent
     data object ErrorDismissed : LoginUiEvent
+    data object WithdrawalRecoveryConfirmed : LoginUiEvent
+    data object WithdrawalRecoveryDismissed : LoginUiEvent
 }

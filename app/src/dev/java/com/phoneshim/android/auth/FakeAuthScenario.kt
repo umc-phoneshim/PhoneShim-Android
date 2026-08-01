@@ -9,6 +9,8 @@ enum class FakeAuthScenario {
     CANCELLED,
     SDK_FAILURE,
     SERVER_FAILURE,
+    WITHDRAWAL_PENDING,
+    RECOVERY_FAILURE,
 }
 
 @Singleton

@@ -2,6 +2,7 @@ package com.phoneshim.android.auth
 
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.AuthSessionStore
 import javax.inject.Inject
@@ -19,6 +20,9 @@ class FakeAuthRepository @Inject constructor(
         require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         if (scenarioStore.scenario == FakeAuthScenario.SERVER_FAILURE) {
             error("dev 서버 로그인 실패")
+        }
+        if (scenarioStore.scenario == FakeAuthScenario.WITHDRAWAL_PENDING) {
+            throw AuthException.WithdrawalPending
         }
 
         authSessionStore.saveAccessToken("dev-phoneshim-jwt")

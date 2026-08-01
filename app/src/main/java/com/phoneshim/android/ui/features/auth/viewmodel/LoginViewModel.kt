@@ -4,7 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.model.SocialIdentity
+import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
+import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
 import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
@@ -16,6 +19,7 @@ import kotlinx.coroutines.launch
 class LoginViewModel @Inject constructor(
     private val socialAuthClient: SocialAuthClient,
     private val socialLoginUseCase: SocialLoginUseCase,
+    private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
 ) :
     BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(LoginUiState()) {
 
@@ -23,6 +27,10 @@ class LoginViewModel @Inject constructor(
         when (event) {
             is LoginUiEvent.LoginClicked -> startLogin(event.provider)
             LoginUiEvent.ErrorDismissed -> setState { copy(errorMessage = null) }
+            LoginUiEvent.WithdrawalRecoveryConfirmed -> recoverWithdrawal()
+            LoginUiEvent.WithdrawalRecoveryDismissed -> setState {
+                copy(withdrawalRecovery = null)
+            }
         }
     }
 
@@ -41,16 +49,16 @@ class LoginViewModel @Inject constructor(
             when (val authResult = socialAuthClient.authenticate(provider)) {
                 SocialAuthResult.Cancelled -> finishLoading()
                 is SocialAuthResult.Failure -> showError(authResult.cause.toUserMessage())
-                is SocialAuthResult.Success -> completeServerLogin(provider, authResult.providerAccessToken)
+                is SocialAuthResult.Success -> completeServerLogin(provider, authResult)
             }
         }
     }
 
     private suspend fun completeServerLogin(
         provider: SocialProvider,
-        providerAccessToken: String,
+        authResult: SocialAuthResult.Success,
     ) {
-        socialLoginUseCase(provider, providerAccessToken)
+        socialLoginUseCase(provider, authResult.providerAccessToken)
             .onSuccess { result ->
                 finishLoading()
                 sendEffect(
@@ -60,7 +68,54 @@ class LoginViewModel @Inject constructor(
                     },
                 )
             }
-            .onFailure { error -> showError(error.toUserMessage()) }
+            .onFailure { error ->
+                if (error is AuthException.WithdrawalPending) {
+                    showWithdrawalRecovery(provider, authResult)
+                } else {
+                    showError(error.toUserMessage())
+                }
+            }
+    }
+
+    private fun showWithdrawalRecovery(
+        provider: SocialProvider,
+        authResult: SocialAuthResult.Success,
+    ) {
+        val providerUserId = authResult.providerUserId
+        val email = authResult.email
+        if (providerUserId == null || email == null) {
+            showError("계정 복구 정보를 확인하지 못했습니다. 다시 로그인해주세요.")
+            return
+        }
+        setState {
+            copy(
+                isLoading = false,
+                selectedProvider = null,
+                withdrawalRecovery = SocialIdentity(provider, providerUserId, email),
+            )
+        }
+    }
+
+    private fun recoverWithdrawal() {
+        val identity = currentState.withdrawalRecovery ?: return
+        if (currentState.isLoading) return
+        setState { copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            recoverWithdrawalUseCase(identity)
+                .onSuccess {
+                    setState {
+                        copy(
+                            isLoading = false,
+                            withdrawalRecovery = null,
+                        )
+                    }
+                    sendEffect(LoginUiEffect.NavigateToMain)
+                }
+                .onFailure { error ->
+                    setState { copy(isLoading = false) }
+                    showError(error.toUserMessage())
+                }
+        }
     }
 
     private fun finishLoading() {

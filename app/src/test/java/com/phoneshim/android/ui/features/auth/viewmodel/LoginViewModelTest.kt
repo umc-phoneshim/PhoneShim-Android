@@ -2,8 +2,12 @@ package com.phoneshim.android.ui.features.auth.viewmodel
 
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.model.SocialIdentity
+import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
+import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
 import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
 import kotlinx.coroutines.CompletableDeferred
@@ -82,6 +86,27 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `withdrawal pending login exposes recovery state`() = runTest(dispatcher) {
+        val authResult = SocialAuthResult.Success(
+            providerAccessToken = "provider-token",
+            providerUserId = "provider-user",
+            email = "user@example.com",
+        )
+        val viewModel = createViewModel(
+            authResult = authResult,
+            loginFailure = AuthException.WithdrawalPending,
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+
+        assertEquals(
+            SocialIdentity(SocialProvider.GOOGLE, "provider-user", "user@example.com"),
+            viewModel.uiState.value.withdrawalRecovery,
+        )
+    }
+
+    @Test
     fun `clicks while loading do not replace selected provider`() = runTest(dispatcher) {
         val deferred = CompletableDeferred<SocialAuthResult>()
         val viewModel = createViewModel(
@@ -105,6 +130,7 @@ class LoginViewModelTest {
     private fun createViewModel(
         authResult: SocialAuthResult = SocialAuthResult.Success("provider-token"),
         loginResult: SocialLoginResult = SocialLoginResult.ExistingUser,
+        loginFailure: Throwable? = null,
         socialAuthClient: SocialAuthClient = object : SocialAuthClient {
             override suspend fun authenticate(provider: SocialProvider): SocialAuthResult = authResult
         },
@@ -113,11 +139,21 @@ class LoginViewModelTest {
             override suspend fun socialLogin(
                 provider: SocialProvider,
                 providerAccessToken: String,
-            ): Result<SocialLoginResult> = Result.success(loginResult)
+            ): Result<SocialLoginResult> = loginFailure?.let(Result.Companion::failure)
+                ?: Result.success(loginResult)
+        }
+        val pendingRepository = object : PendingAuthRepository {
+            override suspend fun logout(): Result<Unit> = Result.success(Unit)
+            override suspend fun recoverWithdrawal(
+                identity: SocialIdentity,
+            ): Result<SocialLoginResult> = Result.success(SocialLoginResult.ExistingUser)
+
+            override suspend fun linkAccount(identity: SocialIdentity): Result<Unit> = Result.success(Unit)
         }
         return LoginViewModel(
             socialAuthClient = socialAuthClient,
             socialLoginUseCase = SocialLoginUseCase(repository),
+            recoverWithdrawalUseCase = RecoverWithdrawalUseCase(pendingRepository),
         )
     }
 }

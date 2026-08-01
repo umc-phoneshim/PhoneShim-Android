@@ -1,6 +1,7 @@
 package com.phoneshim.android.auth
 
 import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
 import dagger.Binds
 import dagger.Module
@@ -31,6 +32,12 @@ abstract class ProdAuthBindingModule {
     abstract fun bindKakaoSdkInitializer(
         implementation: KakaoSdkInitializer,
     ): com.phoneshim.android.ui.features.auth.social.SocialSdkInitializer
+
+    @Binds
+    @Singleton
+    abstract fun bindPendingAuthRepository(
+        implementation: UnavailablePendingAuthRepository,
+    ): PendingAuthRepository
 }
 
 @Module

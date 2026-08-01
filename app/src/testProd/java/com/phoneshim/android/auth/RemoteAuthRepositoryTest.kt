@@ -2,7 +2,7 @@ package com.phoneshim.android.auth
 
 import com.google.gson.Gson
 import com.phoneshim.android.data.api.common.ApiCallExecutor
-import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.AuthSessionStore
@@ -88,9 +88,7 @@ class RemoteAuthRepositoryTest {
 
         val result = repository.socialLogin(SocialProvider.GOOGLE, "google-token")
 
-        val error = result.exceptionOrNull() as ApiException.Http
-        assertEquals(409, error.statusCode)
-        assertEquals("ACCOUNT_WITHDRAWAL_PENDING", error.error?.code)
+        assertEquals(AuthException.WithdrawalPending, result.exceptionOrNull())
         assertFalse(sessionStore.hasSession())
     }
 

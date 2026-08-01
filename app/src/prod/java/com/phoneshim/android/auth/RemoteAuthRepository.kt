@@ -1,6 +1,8 @@
 package com.phoneshim.android.auth
 
 import com.phoneshim.android.data.api.common.ApiCallExecutor
+import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.AuthRepository
@@ -38,6 +40,20 @@ class RemoteAuthRepository @Inject constructor(
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
-        Result.failure(error)
+        Result.failure(error.toAuthError())
+    }
+
+    private fun Throwable.toAuthError(): Throwable =
+        if (
+            this is ApiException.Http &&
+            error?.code == ACCOUNT_WITHDRAWAL_PENDING
+        ) {
+            AuthException.WithdrawalPending
+        } else {
+            this
+        }
+
+    private companion object {
+        const val ACCOUNT_WITHDRAWAL_PENDING = "ACCOUNT_WITHDRAWAL_PENDING"
     }
 }

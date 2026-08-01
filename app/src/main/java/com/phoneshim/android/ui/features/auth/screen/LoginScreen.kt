@@ -24,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.IconButton
+import com.phoneshim.android.ui.common.ConfirmationDialog
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginViewModel
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEvent
@@ -61,6 +62,20 @@ fun LoginScreen(
         },
         modifier = modifier,
     )
+
+    if (uiState.withdrawalRecovery != null) {
+        ConfirmationDialog(
+            title = "탈퇴 유예 중인 계정입니다",
+            message = "탈퇴 요청 후 14일 이내에는 계정을 복구할 수 있습니다.",
+            confirmText = "계정 복구",
+            onConfirm = {
+                viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+            },
+            onDismiss = {
+                viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryDismissed)
+            },
+        )
+    }
 }
 
 @Composable
