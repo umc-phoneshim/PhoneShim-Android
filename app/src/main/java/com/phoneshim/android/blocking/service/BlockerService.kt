@@ -415,6 +415,10 @@ class BlockerService : Service() {
      */
     private fun resolveEssentialAllowed(): Set<String> {
         val set = mutableSetOf<String>()
+        // 폰쉼 자신. ALWAYS_ALLOWED 에 문자열로 박혀 있는 값은 기본 applicationId 뿐이라,
+        // 빌드 변형이 suffix(.dev 등)를 붙이면 그 목록에 걸리지 않는다.
+        // 그러면 전체 폰 차단 중 폰쉼 앱 자체가 막혀 '폰쉼 열기'로도 빠져나올 수 없다.
+        set += packageName
         runCatching {
             getSystemService(TelecomManager::class.java)?.defaultDialerPackage?.let { set += it }
         }
