@@ -2,22 +2,11 @@ package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.repository.AuthRepositoryImpl
 import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
-import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
-import com.phoneshim.android.data.repository.MainRepositoryImpl
-import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReminderRepositoryImpl
-import com.phoneshim.android.data.repository.ReportRepositoryImpl
-import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
-import com.phoneshim.android.data.repository.mock.MockMainRepositoryImpl
 import com.phoneshim.android.domain.repository.AuthRepository
-import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
-import com.phoneshim.android.domain.repository.MainRepository
-import com.phoneshim.android.domain.repository.MyPageRepository
 import com.phoneshim.android.domain.repository.ReminderRepository
-import com.phoneshim.android.domain.repository.ReportRepository
-import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
 import com.phoneshim.android.domain.repository.UsageReasonRepository
 import dagger.Binds
 import dagger.Module
@@ -35,29 +24,13 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindGoalRepository(impl: GoalRepositoryImpl): GoalRepository
-
-    @Binds
-    @Singleton
     abstract fun bindInstalledAppsRepository(
         impl: InstalledAppsRepositoryImpl,
     ): InstalledAppsRepository
 
     @Binds
     @Singleton
-    abstract fun bindMainRepository(impl: MockMainRepositoryImpl): MainRepository
-
-    @Binds
-    @Singleton
     abstract fun bindReminderRepository(impl: ReminderRepositoryImpl): ReminderRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindReportRepository(impl: ReportRepositoryImpl): ReportRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindMyPageRepository(impl: MyPageRepositoryImpl): MyPageRepository
 
     /**
      * 앱 차단 오버레이 경로. 아직 Fake 입니다.
@@ -71,10 +44,4 @@ abstract class RepositoryModule {
         impl: FakeUsageReasonRepositoryImpl,
     ): UsageReasonRepository
 
-    /** 리포트 도메인의 사용 사유 입력/달력. 실제 API 연동 완료. */
-    @Binds
-    @Singleton
-    abstract fun bindReportUsageReasonRepository(
-        impl: ReportUsageReasonRepositoryImpl,
-    ): ReportUsageReasonRepository
 }

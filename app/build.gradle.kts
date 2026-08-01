@@ -25,10 +25,19 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://api.phoneshim.com/\"")
+            buildConfigField("boolean", "IS_DEMO", "false")
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
+            buildConfigField("boolean", "IS_DEMO", "false")
+        }
+        create("demo") {
+            dimension = "environment"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            buildConfigField("String", "BASE_URL", "\"https://demo.invalid/\"")
+            buildConfigField("boolean", "IS_DEMO", "true")
         }
     }
 

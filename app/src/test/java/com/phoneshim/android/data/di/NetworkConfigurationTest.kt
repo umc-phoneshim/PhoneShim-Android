@@ -11,6 +11,7 @@ class NetworkConfigurationTest {
         val expectedUrl = when (BuildConfig.FLAVOR) {
             "dev" -> "https://api.phoneshim.com/"
             "prod" -> "http://52.79.234.34:3000/"
+            "demo" -> "https://demo.invalid/"
             else -> throw AssertionError("Unexpected flavor: ${BuildConfig.FLAVOR}")
         }
 
