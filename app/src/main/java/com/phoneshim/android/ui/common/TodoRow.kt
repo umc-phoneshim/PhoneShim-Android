@@ -47,10 +47,14 @@ fun TodoRow(
         TodoRowVariant.Plain -> 12.dp
         TodoRowVariant.Card -> 24.dp
     }
+    val contentPadding = when (variant) {
+        TodoRowVariant.Plain -> androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
+        TodoRowVariant.Card -> androidx.compose.foundation.layout.PaddingValues(12.dp)
+    }
     Row(
         modifier = containerModifier
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(12.dp),
+            .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(contentSpacing),
     ) {
