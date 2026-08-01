@@ -7,6 +7,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import javax.inject.Singleton
 import retrofit2.Retrofit
 
@@ -24,6 +25,12 @@ abstract class ProdAuthBindingModule {
     abstract fun bindSocialAuthClient(
         implementation: ProdSocialAuthClient,
     ): SocialAuthClient
+
+    @Binds
+    @IntoSet
+    abstract fun bindKakaoSdkInitializer(
+        implementation: KakaoSdkInitializer,
+    ): com.phoneshim.android.ui.features.auth.social.SocialSdkInitializer
 }
 
 @Module

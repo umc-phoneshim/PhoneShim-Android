@@ -10,6 +10,7 @@ fun String.asBuildConfigString(): String =
     "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse("").get()
+val kakaoNativeAppKey = providers.gradleProperty("KAKAO_NATIVE_APP_KEY").orElse("").get()
 
 android {
     namespace = "com.phoneshim.android"
@@ -35,6 +36,8 @@ android {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
+            buildConfigField("String", "KAKAO_NATIVE_APP_KEY", kakaoNativeAppKey.asBuildConfigString())
+            manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
         }
     }
 
@@ -94,6 +97,7 @@ dependencies {
     "prodImplementation"(libs.androidx.credentials)
     "prodImplementation"(libs.androidx.credentials.play.services.auth)
     "prodImplementation"(libs.googleid)
+    "prodImplementation"(libs.kakao.user)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

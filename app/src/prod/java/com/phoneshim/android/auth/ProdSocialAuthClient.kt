@@ -10,14 +10,13 @@ import javax.inject.Singleton
 @Singleton
 class ProdSocialAuthClient @Inject constructor(
     private val googleSocialAuthClient: GoogleSocialAuthClient,
+    private val kakaoSocialAuthClient: KakaoSocialAuthClient,
 ) : SocialAuthClient {
     override suspend fun authenticate(
         activity: Activity,
         provider: SocialProvider,
     ): SocialAuthResult = when (provider) {
         SocialProvider.GOOGLE -> googleSocialAuthClient.authenticate(activity)
-        SocialProvider.KAKAO -> SocialAuthResult.Failure(
-            UnsupportedOperationException("Kakao 인증 클라이언트가 아직 연결되지 않았습니다."),
-        )
+        SocialProvider.KAKAO -> kakaoSocialAuthClient.authenticate(activity)
     }
 }
