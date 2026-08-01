@@ -1,6 +1,7 @@
 package com.phoneshim.android.auth
 
 import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -17,6 +18,12 @@ abstract class ProdAuthBindingModule {
     abstract fun bindAuthRepository(
         implementation: RemoteAuthRepository,
     ): AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSocialAuthClient(
+        implementation: ProdSocialAuthClient,
+    ): SocialAuthClient
 }
 
 @Module

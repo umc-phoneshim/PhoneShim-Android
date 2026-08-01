@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun String.asBuildConfigString(): String =
+    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse("").get()
+
 android {
     namespace = "com.phoneshim.android"
     compileSdk = 34
@@ -29,6 +34,7 @@ android {
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
         }
     }
 
@@ -84,6 +90,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.socketio.client)
+
+    "prodImplementation"(libs.androidx.credentials)
+    "prodImplementation"(libs.androidx.credentials.play.services.auth)
+    "prodImplementation"(libs.googleid)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
