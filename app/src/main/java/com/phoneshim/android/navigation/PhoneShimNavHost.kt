@@ -35,13 +35,17 @@ import com.phoneshim.android.ui.features.setgoal.screen.UsageTimeSetScreen
 // 앱 전체 화면 이동 경로(그래프)를 정의하는 네비게이션 호스트
 @Composable
 fun PhoneShimNavHost(navController: NavHostController) {
-    // TODO: SplashScreen의 완료 callback을 구현한 뒤 시작 경로를 Routes.SPLASH로 복원합니다.
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+    NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
         // 인증(스플래시/로그인/회원가입) 화면
         composable(Routes.SPLASH) {
             SplashScreen(
-                onSplashFinished = {
+                onAuthenticated = {
+                    navController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                },
+                onUnauthenticated = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
