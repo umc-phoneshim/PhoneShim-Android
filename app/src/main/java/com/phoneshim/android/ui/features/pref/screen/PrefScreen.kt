@@ -54,6 +54,7 @@ private object PrefScreenDefaults {
     val topBarStartPadding = 4.dp
     val userToGoalSpacing = 20.dp
     val contentBottomPadding = 32.dp
+    val actionToBottomBarSpacing = 8.dp
 }
 
 @Suppress("UNUSED_PARAMETER")
@@ -100,8 +101,21 @@ fun PrefScreen(
                 onTotalGoalClick = onTotalGoalClick,
                 onEditAppTime = onEditAppTime,
                 onToggleLimit = onToggleLimit,
+            )
+        }
+        if (uiState.hasUnsavedChanges) {
+            PrefActionButtons(
                 onCancel = onCancel,
                 onSave = onSave,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(
+                        start = PhoneShimDimens.screenHorizontalPadding,
+                        end = PhoneShimDimens.screenHorizontalPadding,
+                        bottom = BottomBarDefaults.ContentBottomPadding +
+                            PrefScreenDefaults.actionToBottomBarSpacing,
+                    ),
             )
         }
         BottomBar(
@@ -184,9 +198,12 @@ private fun PrefContent(
     onTotalGoalClick: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
-    onCancel: () -> Unit,
-    onSave: () -> Unit,
 ) {
+    val actionButtonsReservedSpace = if (uiState.hasUnsavedChanges) {
+        PhoneShimButtonSize.Medium.height + PrefScreenDefaults.actionToBottomBarSpacing
+    } else {
+        0.dp
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -197,7 +214,8 @@ private fun PrefContent(
                 start = PhoneShimDimens.screenHorizontalPadding,
                 end = PhoneShimDimens.screenHorizontalPadding,
                 bottom = PrefScreenDefaults.contentBottomPadding +
-                    BottomBarDefaults.ContentBottomPadding,
+                    BottomBarDefaults.ContentBottomPadding +
+                    actionButtonsReservedSpace,
             ),
     ) {
         PrefUserInfoSection(
@@ -219,28 +237,35 @@ private fun PrefContent(
             onEditAppTime = onEditAppTime,
             onToggleLimit = onToggleLimit,
         )
-        Spacer(Modifier.height(PhoneShimDimens.spacing24))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-        ) {
-            SecondaryButton(
-                text = "취소",
-                onClick = onCancel,
-                modifier = Modifier.weight(1f),
-                size = PhoneShimButtonSize.Medium,
-                fullWidth = false,
-                labelStyle = PhoneShimType.KorCaption,
-            )
-            PrimaryButton(
-                text = "저장",
-                onClick = onSave,
-                modifier = Modifier.weight(1f),
-                size = PhoneShimButtonSize.Medium,
-                fullWidth = false,
-                labelStyle = PhoneShimType.KorCaption,
-            )
-        }
+    }
+}
+
+@Composable
+private fun PrefActionButtons(
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+    ) {
+        SecondaryButton(
+            text = "취소",
+            onClick = onCancel,
+            modifier = Modifier.weight(1f),
+            size = PhoneShimButtonSize.Medium,
+            fullWidth = false,
+            labelStyle = PhoneShimType.KorCaption,
+        )
+        PrimaryButton(
+            text = "확인",
+            onClick = onSave,
+            modifier = Modifier.weight(1f),
+            size = PhoneShimButtonSize.Medium,
+            fullWidth = false,
+            labelStyle = PhoneShimType.KorCaption,
+        )
     }
 }
 
