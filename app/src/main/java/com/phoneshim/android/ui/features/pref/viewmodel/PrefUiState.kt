@@ -92,10 +92,12 @@ sealed interface PrefUiEvent : UiEvent {
     data object AppDescriptionSaved : PrefUiEvent
     data object SaveChanges : PrefUiEvent
     data object DiscardChanges : PrefUiEvent
+    data object ResetDemoData : PrefUiEvent
 }
 
 sealed interface PrefUiEffect : UiEffect {
     data object SettingsSaved : PrefUiEffect
+    data object DemoDataReset : PrefUiEffect
 }
 
 object PrefMockData {

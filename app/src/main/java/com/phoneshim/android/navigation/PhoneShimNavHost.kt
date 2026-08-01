@@ -36,8 +36,7 @@ import com.phoneshim.android.ui.features.setgoal.screen.UsageTimeSetScreen
 // 앱 전체 화면 이동 경로(그래프)를 정의하는 네비게이션 호스트
 @Composable
 fun PhoneShimNavHost(navController: NavHostController) {
-    // TODO: SplashScreen의 완료 callback을 구현한 뒤 시작 경로를 Routes.SPLASH로 복원합니다.
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+    NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
         // 인증(스플래시/로그인/회원가입) 화면
         composable(Routes.SPLASH) {
@@ -63,7 +62,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
         composable(Routes.SIGN_UP) {
             SignUpScreen(
                 onSignUpSuccess = {
-                    navController.navigate(Routes.MAIN) {
+                    navController.navigate(Routes.SET_GOAL_GRAPH) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
@@ -152,6 +151,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToMain = { navController.navigateFromTransientToTopLevel(Routes.MAIN) },
                 onNavigateToReminder = { navController.navigateFromTransientToTopLevel(Routes.REMINDER) },
                 onNavigateToReport = { navController.navigateFromTransientToTopLevel(Routes.TIMETABLE) },
+                onDemoReset = { navController.navigateToLogin() },
             )
         }
 
@@ -215,15 +215,14 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToMain = { navController.navigateFromTransientToTopLevel(Routes.MAIN) },
                 onNavigateToReminder = { navController.navigateFromTransientToTopLevel(Routes.REMINDER) },
                 onNavigateToReport = { navController.navigateFromTransientToTopLevel(Routes.TIMETABLE) },
-                // TODO: 로그아웃 API 연동 후 Routes.LOGIN 으로 이동하도록 연결하세요.
-                onNavigateToLogin = { },
+                onNavigateToLogin = { navController.navigateToLogin() },
             )
         }
         composable(Routes.MY_SIDE_MENU) {
             MySideMenuRoute(
-                // TODO: 탈퇴 완료 화면/로그인 화면 이동을 연결하세요.
-                onNavigateToWithdraw = { },
+                onNavigateToWithdraw = { navController.navigateToLogin() },
                 onDismiss = { navController.popBackStack() },
+                onNavigateToLogin = { navController.navigateToLogin() },
             )
         }
     }
@@ -251,6 +250,13 @@ private fun NavHostController.navigateToTopLevel(route: String) {
 private fun NavHostController.navigateFromTransientToTopLevel(route: String) {
     popBackStack()
     navigateToTopLevel(route)
+}
+
+private fun NavHostController.navigateToLogin() {
+    navigate(Routes.LOGIN) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
+    }
 }
 
 // setgoal 그래프 범위로 스코프된 SetGoalViewModel을 가져옵니다.

@@ -5,6 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import com.phoneshim.android.BuildConfig
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.pref.viewmodel.PrefUiEffect
@@ -20,9 +23,11 @@ fun PrefRoute(
     onNavigateToMain: () -> Unit,
     onNavigateToReminder: () -> Unit,
     onNavigateToReport: () -> Unit,
+    onDemoReset: () -> Unit,
     viewModel: PrefViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     val discardAndGoBack = {
         viewModel.onEvent(PrefUiEvent.DiscardChanges)
@@ -33,6 +38,10 @@ fun PrefRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 PrefUiEffect.SettingsSaved -> onSave()
+                PrefUiEffect.DemoDataReset -> {
+                    Toast.makeText(context, "시연 데이터를 초기화했습니다.", Toast.LENGTH_SHORT).show()
+                    onDemoReset()
+                }
             }
         }
     }
@@ -76,5 +85,10 @@ fun PrefRoute(
             viewModel.onEvent(PrefUiEvent.AppGoalEditorDismissed)
         },
         onAppGoalSaved = { viewModel.onEvent(PrefUiEvent.AppDescriptionSaved) },
+        onResetDemoData = if (BuildConfig.IS_DEMO) {
+            { viewModel.onEvent(PrefUiEvent.ResetDemoData) }
+        } else {
+            null
+        },
     )
 }

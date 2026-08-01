@@ -32,9 +32,9 @@ data class ReminderDraft(
 )
 
 data class ReminderUiState(
-    val todayDate: LocalDate = LocalDate.of(2026, 7, 11),
-    val selectedDate: LocalDate = LocalDate.of(2026, 7, 17),
-    val visibleMonth: YearMonth = YearMonth.of(2026, 7),
+    val todayDate: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate = LocalDate.now(),
+    val visibleMonth: YearMonth = YearMonth.now(),
     val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = defaultTasks(),
     val isTaskPopupVisible: Boolean = false,
     val draft: ReminderDraft = ReminderDraft(),
@@ -64,7 +64,7 @@ sealed interface ReminderUiEffect : UiEffect {
 }
 
 private fun defaultTasks(): Map<LocalDate, List<ReminderTaskUiModel>> {
-    val date = LocalDate.of(2026, 7, 17)
+    val date = LocalDate.now()
     return mapOf(
         date to listOf(
             ReminderTaskUiModel("mock-1", date, "과제하기", 600, 660),

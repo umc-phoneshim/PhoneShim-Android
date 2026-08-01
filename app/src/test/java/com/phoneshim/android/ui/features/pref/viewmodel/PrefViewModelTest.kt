@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
+import com.phoneshim.android.data.demo.DemoScenarioResetter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -25,7 +26,11 @@ class PrefViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = PrefViewModel()
+        viewModel = PrefViewModel(
+            object : DemoScenarioResetter {
+                override suspend fun reset() = Unit
+            },
+        )
     }
 
     @After

@@ -25,6 +25,9 @@ interface GoalDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertPhoneGoal(goal: PhoneGoalEntity)
 
+    @Query("DELETE FROM phone_goal_cache")
+    suspend fun clearPhoneGoal()
+
     // --- 앱 별 차단 목표 ---
     @Query("SELECT * FROM app_goal_cache")
     fun observeAppGoals(): Flow<List<AppGoalEntity>>

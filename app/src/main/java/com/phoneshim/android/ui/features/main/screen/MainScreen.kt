@@ -30,7 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +51,7 @@ import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
+import com.phoneshim.android.ui.features.main.viewmodel.MainUiState as MainViewModelState
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import androidx.compose.material3.Text
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -120,9 +121,8 @@ fun MainScreen(
     onNavigateToReport: () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
 ) {
-    // TODO: viewModel.uiState 연동 필요. 지금은 로컬 프로젝트에서 그대로 가져온
-    // 더미 상태로 UI 쉘만 확인합니다 (viewModel은 아직 사용하지 않음).
-    val uiState by remember { mutableStateOf(MainUiState()) }
+    val viewModelState by viewModel.uiState.collectAsState()
+    val uiState = viewModelState.toScreenState()
 
     Box(
         modifier = modifier
@@ -206,6 +206,45 @@ fun MainScreen(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+}
+
+private fun MainViewModelState.toScreenState(): MainUiState {
+    val usedMinutes = todayUsage.sumOf { it.usageMinutes }
+    val targetMinutes = goal?.dailyGoalMinutes?.takeIf { it > 0 } ?: 180
+    val remainingMinutes = (targetMinutes - usedMinutes).coerceAtLeast(0)
+    return MainUiState(
+        usedHour = "%02d".format(usedMinutes / 60),
+        usedMinute = "%02d".format(usedMinutes % 60),
+        remainingTime = "${remainingMinutes / 60}h ${remainingMinutes % 60}m",
+        totalTimeProgress = (usedMinutes.toFloat() / targetMinutes).coerceIn(0f, 1f),
+        isSetupCompleted = isGoalSet,
+        cautionApps = todayUsage.mapIndexed { index, usage ->
+            val appTarget = goal?.apps?.firstOrNull { it.packageName == usage.packageName }?.goalMinutes
+                ?.takeIf { it > 0 } ?: 90
+            MainCautionAppItem(
+                iconRes = usage.iconResource(),
+                usedTime = formatUsageMinutes(usage.usageMinutes),
+                progress = (usage.usageMinutes.toFloat() / appTarget).coerceIn(0f, 1f),
+                entryCount = "${index + 2}회",
+            )
+        },
+        todayTodos = listOf(
+            MainTodoItem("과제하기", "10:00 ~ 11:00"),
+            MainTodoItem("산책하기", "18:30 ~ 19:00"),
+        ),
+    )
+}
+
+private fun com.phoneshim.android.domain.model.AppUsage.iconResource(): Int = when {
+    packageName.contains("youtube", ignoreCase = true) -> R.drawable.app_youtube
+    packageName.contains("kakao", ignoreCase = true) -> R.drawable.app_kakaotalk
+    packageName.contains("instagram", ignoreCase = true) -> R.drawable.app_tiktok
+    else -> R.drawable.app_facebook
+}
+
+private fun formatUsageMinutes(minutes: Int): String = when {
+    minutes >= 60 -> "${minutes / 60}h ${minutes % 60}m"
+    else -> "${minutes}m"
 }
 
 /* ============================================================

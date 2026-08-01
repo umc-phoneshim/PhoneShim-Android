@@ -81,6 +81,7 @@ fun PrefScreen(
     onAppDescriptionChanged: (String) -> Unit,
     onAppGoalEditorDismissed: () -> Unit,
     onAppGoalSaved: () -> Unit,
+    onResetDemoData: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -102,6 +103,7 @@ fun PrefScreen(
                 onToggleLimit = onToggleLimit,
                 onCancel = onCancel,
                 onSave = onSave,
+                onResetDemoData = onResetDemoData,
             )
         }
         BottomBar(
@@ -186,6 +188,7 @@ private fun PrefContent(
     onToggleLimit: (String) -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit,
+    onResetDemoData: (() -> Unit)?,
 ) {
     Column(
         modifier = Modifier
@@ -220,6 +223,15 @@ private fun PrefContent(
             onToggleLimit = onToggleLimit,
         )
         Spacer(Modifier.height(PhoneShimDimens.spacing24))
+        onResetDemoData?.let { reset ->
+            SecondaryButton(
+                text = "시연 데이터 초기화",
+                onClick = reset,
+                size = PhoneShimButtonSize.Medium,
+                labelStyle = PhoneShimType.KorCaption,
+            )
+            Spacer(Modifier.height(PhoneShimDimens.spacing12))
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),

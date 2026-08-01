@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.auth.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,6 +55,7 @@ fun LoginScreen(
         uiState = uiState,
         onGoogleLogin = { viewModel.onEvent(LoginUiEvent.GoogleLoginClicked) },
         onKakaoLogin = { viewModel.onEvent(LoginUiEvent.KakaoLoginClicked) },
+        onSignUp = onNavigateToSignUp,
         modifier = modifier,
     )
 }
@@ -63,6 +65,7 @@ private fun LoginContent(
     uiState: LoginUiState,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
+    onSignUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -145,6 +148,12 @@ private fun LoginContent(
                 style = PhoneShimType.KorLabel,
                 textAlign = TextAlign.Center,
             )
+            Text(
+                text = "이메일로 회원가입",
+                color = PhoneShimPalette.Primary600,
+                style = PhoneShimType.KorCaption,
+                modifier = Modifier.clickable(onClick = onSignUp),
+            )
         }
     }
 }
@@ -157,6 +166,7 @@ private fun LoginScreenPreview() {
             uiState = LoginUiState(),
             onGoogleLogin = {},
             onKakaoLogin = {},
+            onSignUp = {},
         )
     }
 }

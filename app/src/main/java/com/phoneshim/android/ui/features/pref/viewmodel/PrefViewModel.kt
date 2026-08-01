@@ -1,13 +1,18 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
+import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.data.demo.DemoScenarioResetter
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 private const val MINIMUM_GOAL_MINUTES = 10
 
 @HiltViewModel
-class PrefViewModel @Inject constructor() :
+class PrefViewModel @Inject constructor(
+    private val demoScenarioResetter: DemoScenarioResetter,
+) :
     BaseViewModel<PrefUiState, PrefUiEvent, PrefUiEffect>(PrefUiState()) {
 
     override fun handleEvent(event: PrefUiEvent) {
@@ -31,6 +36,7 @@ class PrefViewModel @Inject constructor() :
             PrefUiEvent.AppDescriptionSaved -> saveAppDescription()
             PrefUiEvent.SaveChanges -> saveChanges()
             PrefUiEvent.DiscardChanges -> discardChanges()
+            PrefUiEvent.ResetDemoData -> resetDemoData()
         }
     }
 
@@ -206,6 +212,19 @@ class PrefViewModel @Inject constructor() :
             appDescriptionInput = "",
             validation = PrefValidationResult(),
         )
+    }
+
+    private fun resetDemoData() {
+        viewModelScope.launch {
+            demoScenarioResetter.reset()
+            setState {
+                copy(
+                    savedSettings = PrefMockData.initialSettings,
+                    draftSettings = PrefMockData.initialSettings,
+                )
+            }
+            sendEffect(PrefUiEffect.DemoDataReset)
+        }
     }
 
     private fun validate(settings: PrefSettings): PrefValidationResult {
