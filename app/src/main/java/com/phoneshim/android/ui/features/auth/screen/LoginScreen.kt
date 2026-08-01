@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.IconButton
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginViewModel
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEffect
@@ -34,7 +35,8 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+    onNavigateToGoalSetup: () -> Unit,
+    onNavigateToMain: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
@@ -43,16 +45,20 @@ fun LoginScreen(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                LoginUiEffect.NavigateToGoalSetup -> onLoginSuccess()
-                is LoginUiEffect.ShowSnackbar -> Unit
+                LoginUiEffect.NavigateToGoalSetup -> onNavigateToGoalSetup()
+                LoginUiEffect.NavigateToMain -> onNavigateToMain()
             }
         }
     }
 
     LoginContent(
         uiState = uiState,
-        onGoogleLogin = { viewModel.onEvent(LoginUiEvent.GoogleLoginClicked) },
-        onKakaoLogin = { viewModel.onEvent(LoginUiEvent.KakaoLoginClicked) },
+        onGoogleLogin = {
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        },
+        onKakaoLogin = {
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        },
         modifier = modifier,
     )
 }
@@ -133,6 +139,15 @@ private fun LoginContent(
                     onClick = onKakaoLogin,
                     enabled = !uiState.isLoading,
                 )
+                uiState.errorMessage?.let { message ->
+                    Text(
+                        text = message,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = PhoneShimPalette.Error,
+                        style = PhoneShimType.KorLabel,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
 
             Text(

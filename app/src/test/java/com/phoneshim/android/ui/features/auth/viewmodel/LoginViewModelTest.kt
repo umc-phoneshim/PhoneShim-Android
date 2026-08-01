@@ -1,11 +1,17 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
+import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.domain.usecase.SocialLoginUseCase
+import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
+import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -34,7 +40,7 @@ class LoginViewModelTest {
 
     @Test
     fun `initial state is idle`() {
-        val state = LoginViewModel().uiState.value
+        val state = createViewModel().uiState.value
 
         assertNull(state.selectedProvider)
         assertFalse(state.isLoading)
@@ -42,43 +48,76 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `google login updates state then emits navigation effect`() = runTest(dispatcher) {
-        val viewModel = LoginViewModel()
+    fun `existing user login emits main navigation`() = runTest(dispatcher) {
+        val viewModel = createViewModel(loginResult = SocialLoginResult.ExistingUser)
         val effect = async { viewModel.effect.first() }
 
-        viewModel.onEvent(LoginUiEvent.GoogleLoginClicked)
-
-        assertEquals(LoginProvider.GOOGLE, viewModel.uiState.value.selectedProvider)
-        assertTrue(viewModel.uiState.value.isLoading)
-
-        advanceTimeBy(500)
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
         runCurrent()
 
+        assertEquals(LoginUiEffect.NavigateToMain, effect.await())
         assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `new user login emits goal setup navigation`() = runTest(dispatcher) {
+        val viewModel = createViewModel(loginResult = SocialLoginResult.NewUser)
+        val effect = async { viewModel.effect.first() }
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        runCurrent()
+
         assertEquals(LoginUiEffect.NavigateToGoalSetup, effect.await())
     }
 
     @Test
-    fun `kakao login updates selected provider`() = runTest(dispatcher) {
-        val viewModel = LoginViewModel()
+    fun `cancelled social login returns to idle without error`() = runTest(dispatcher) {
+        val viewModel = createViewModel(authResult = SocialAuthResult.Cancelled)
 
-        viewModel.onEvent(LoginUiEvent.KakaoLoginClicked)
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
 
-        assertEquals(LoginProvider.KAKAO, viewModel.uiState.value.selectedProvider)
-        assertTrue(viewModel.uiState.value.isLoading)
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertNull(viewModel.uiState.value.errorMessage)
     }
 
     @Test
-    fun `clicks while loading do not start another login`() = runTest(dispatcher) {
-        val viewModel = LoginViewModel()
+    fun `clicks while loading do not replace selected provider`() = runTest(dispatcher) {
+        val deferred = CompletableDeferred<SocialAuthResult>()
+        val viewModel = createViewModel(
+            socialAuthClient = object : SocialAuthClient {
+                override suspend fun authenticate(provider: SocialProvider): SocialAuthResult = deferred.await()
+            },
+        )
 
-        viewModel.onEvent(LoginUiEvent.GoogleLoginClicked)
-        viewModel.onEvent(LoginUiEvent.KakaoLoginClicked)
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
 
-        assertEquals(LoginProvider.GOOGLE, viewModel.uiState.value.selectedProvider)
+        assertEquals(SocialProvider.GOOGLE, viewModel.uiState.value.selectedProvider)
+        assertTrue(viewModel.uiState.value.isLoading)
 
-        advanceTimeBy(500)
+        deferred.complete(SocialAuthResult.Cancelled)
         runCurrent()
         assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    private fun createViewModel(
+        authResult: SocialAuthResult = SocialAuthResult.Success("provider-token"),
+        loginResult: SocialLoginResult = SocialLoginResult.ExistingUser,
+        socialAuthClient: SocialAuthClient = object : SocialAuthClient {
+            override suspend fun authenticate(provider: SocialProvider): SocialAuthResult = authResult
+        },
+    ): LoginViewModel {
+        val repository = object : AuthRepository {
+            override suspend fun socialLogin(
+                provider: SocialProvider,
+                providerAccessToken: String,
+            ): Result<SocialLoginResult> = Result.success(loginResult)
+        }
+        return LoginViewModel(
+            socialAuthClient = socialAuthClient,
+            socialLoginUseCase = SocialLoginUseCase(repository),
+        )
     }
 }

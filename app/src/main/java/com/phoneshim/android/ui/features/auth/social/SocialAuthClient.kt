@@ -1,13 +1,9 @@
 package com.phoneshim.android.ui.features.auth.social
 
-import android.app.Activity
 import com.phoneshim.android.domain.model.SocialProvider
 
 interface SocialAuthClient {
-    suspend fun authenticate(
-        activity: Activity,
-        provider: SocialProvider,
-    ): SocialAuthResult
+    suspend fun authenticate(provider: SocialProvider): SocialAuthResult
 }
 
 sealed interface SocialAuthResult {

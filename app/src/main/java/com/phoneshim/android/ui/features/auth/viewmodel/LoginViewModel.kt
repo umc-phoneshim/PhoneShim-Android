@@ -1,25 +1,32 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
 import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.features.auth.social.SocialAuthClient
+import com.phoneshim.android.ui.features.auth.social.SocialAuthResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class LoginViewModel @Inject constructor() :
+class LoginViewModel @Inject constructor(
+    private val socialAuthClient: SocialAuthClient,
+    private val socialLoginUseCase: SocialLoginUseCase,
+) :
     BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(LoginUiState()) {
 
     override fun handleEvent(event: LoginUiEvent) {
         when (event) {
-            LoginUiEvent.GoogleLoginClicked -> startMockLogin(LoginProvider.GOOGLE)
-            LoginUiEvent.KakaoLoginClicked -> startMockLogin(LoginProvider.KAKAO)
+            is LoginUiEvent.LoginClicked -> startLogin(event.provider)
             LoginUiEvent.ErrorDismissed -> setState { copy(errorMessage = null) }
         }
     }
 
-    private fun startMockLogin(provider: LoginProvider) {
+    private fun startLogin(provider: SocialProvider) {
         if (currentState.isLoading) return
 
         setState {
@@ -31,14 +38,50 @@ class LoginViewModel @Inject constructor() :
         }
 
         viewModelScope.launch {
-            // TODO: 화면 전용 mock 로직을 실제 소셜 로그인 usecase로 교체한다.
-            delay(MOCK_LOGIN_DELAY_MILLIS)
-            setState { copy(isLoading = false) }
-            sendEffect(LoginUiEffect.NavigateToGoalSetup)
+            when (val authResult = socialAuthClient.authenticate(provider)) {
+                SocialAuthResult.Cancelled -> finishLoading()
+                is SocialAuthResult.Failure -> showError(authResult.cause.toUserMessage())
+                is SocialAuthResult.Success -> completeServerLogin(provider, authResult.providerAccessToken)
+            }
         }
     }
 
-    private companion object {
-        const val MOCK_LOGIN_DELAY_MILLIS = 500L
+    private suspend fun completeServerLogin(
+        provider: SocialProvider,
+        providerAccessToken: String,
+    ) {
+        socialLoginUseCase(provider, providerAccessToken)
+            .onSuccess { result ->
+                finishLoading()
+                sendEffect(
+                    when (result) {
+                        SocialLoginResult.NewUser -> LoginUiEffect.NavigateToGoalSetup
+                        SocialLoginResult.ExistingUser -> LoginUiEffect.NavigateToMain
+                    },
+                )
+            }
+            .onFailure { error -> showError(error.toUserMessage()) }
+    }
+
+    private fun finishLoading() {
+        setState { copy(isLoading = false, selectedProvider = null) }
+    }
+
+    private fun showError(message: String) {
+        setState {
+            copy(
+                isLoading = false,
+                selectedProvider = null,
+                errorMessage = message,
+            )
+        }
+    }
+
+    private fun Throwable.toUserMessage(): String = when (this) {
+        is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
+        is ApiException.Serialization,
+        is ApiException.InvalidResponse,
+        -> "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해주세요."
+        else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
     }
 }
