@@ -2,7 +2,6 @@ package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.api.AppGoalApi
 import com.phoneshim.android.data.api.AuthApi
-import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.HealthApi
 import com.phoneshim.android.data.api.MainApi
 import com.phoneshim.android.data.api.MonitoredAppApi
@@ -26,15 +25,7 @@ object AuthApiModule {
     fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
-object GoalApiModule {
-    @Provides
-    @Singleton
-    fun provideGoalApi(retrofit: Retrofit): GoalApi = retrofit.create(GoalApi::class.java)
-}
-
-// 목표 도메인 3종. 기존 단일 GoalApi를 대체합니다(GoalApi.kt 주석 참고).
+// 목표 도메인 3종.
 @Module
 @InstallIn(SingletonComponent::class)
 object MonitoredAppApiModule {

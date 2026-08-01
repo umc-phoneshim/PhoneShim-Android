@@ -15,6 +15,8 @@ data class PhoneGoalEntity(
     @PrimaryKey val id: Int = SINGLE_ROW_ID,
     val goalMinutes: Int,
     val limitEnabled: Boolean,
+    // 서버 TotalGoal 식별자. 있으면 PATCH, 없으면 POST 로 보낸다. 동기화 전이면 null.
+    val serverGoalId: String? = null,
 ) {
     companion object {
         const val SINGLE_ROW_ID = 0
