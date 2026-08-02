@@ -70,6 +70,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
         composable(Routes.LOGIN) {
             LoginRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
                 // 로그인 직후 목표 설정 시작 화면으로 진입 (접근 권한 동의 팝업이 그 위에 표시됨)
                 onNavigateToGoalSetup = {
                     navController.navigate(Routes.SET_GOAL_GRAPH) {

@@ -4,10 +4,16 @@ import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
+import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.model.User
+import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.domain.repository.CurrentUserRepository
+import com.phoneshim.android.domain.repository.MyPageRepository
 import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.ui.features.auth.client.AuthClientResult
 import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
 import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
@@ -16,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -159,6 +166,31 @@ class LoginViewModelTest {
             kakaoAuthClient = kakaoAuthClient,
             socialLoginUseCase = SocialLoginUseCase(repository),
             recoverWithdrawalUseCase = RecoverWithdrawalUseCase(pendingRepository),
+            getMyInfoUseCase = GetMyInfoUseCase(
+                object : MyPageRepository {
+                    override suspend fun getMyInfo() = Result.success(TEST_USER)
+                    override suspend fun updateMyInfo(name: String?, motivation: String?) =
+                        Result.success(TEST_USER)
+                    override suspend fun withdraw(): Result<WithdrawalResult> = error("unused")
+                },
+            ),
+            currentUserRepository = object : CurrentUserRepository {
+                override val user = MutableStateFlow<User?>(null)
+                override fun update(user: User) { this.user.value = user }
+                override fun clear() { user.value = null }
+            },
+            authFeatureAvailability = AuthFeatureAvailability(
+                canRecoverWithdrawal = true,
+                shouldLoadRemoteProfile = true,
+            ),
+        )
+    }
+
+    private companion object {
+        val TEST_USER = User(
+            id = "user-id",
+            email = "user@example.com",
+            nickname = "쉼이",
         )
     }
 }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,11 +8,23 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun secretProperty(name: String): String =
+    providers.gradleProperty(name).orNull
+        ?: providers.environmentVariable(name).orNull
+        ?: localProperties.getProperty(name).orEmpty()
+
 fun String.asBuildConfigString(): String =
     "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
-val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse("").get()
-val kakaoNativeAppKey = providers.gradleProperty("KAKAO_NATIVE_APP_KEY").orElse("").get()
+val googleWebClientId = secretProperty("GOOGLE_WEB_CLIENT_ID")
+val kakaoNativeAppKey = secretProperty("KAKAO_NATIVE_APP_KEY")
+val googleIdTokenLoginEnabled = secretProperty("GOOGLE_ID_TOKEN_LOGIN_ENABLED")
+    .toBooleanStrictOrNull() ?: false
 
 android {
     namespace = "com.phoneshim.android"
@@ -38,6 +52,7 @@ android {
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
             buildConfigField("boolean", "ENABLE_NETWORK_BODY_LOGGING", "false")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
+            buildConfigField("boolean", "GOOGLE_ID_TOKEN_LOGIN_ENABLED", googleIdTokenLoginEnabled.toString())
             buildConfigField("String", "KAKAO_NATIVE_APP_KEY", kakaoNativeAppKey.asBuildConfigString())
             manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
         }

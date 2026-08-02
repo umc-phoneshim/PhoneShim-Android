@@ -9,7 +9,8 @@ import com.phoneshim.android.BuildConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Singleton
 class KakaoAuthClientImpl @Inject constructor(
@@ -23,10 +24,22 @@ class KakaoAuthClientImpl @Inject constructor(
             )
         }
 
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
+            val completed = AtomicBoolean(false)
+
+            fun resumeOnce(result: AuthClientResult) {
+                if (completed.compareAndSet(false, true) && continuation.isActive) {
+                    continuation.resume(result)
+                }
+            }
+
             fun completeWithToken(token: OAuthToken?, error: Throwable?) {
+                if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
+                    resumeOnce(AuthClientResult.Cancelled)
+                    return
+                }
                 if (error != null || token == null) {
-                    continuation.resume(
+                    resumeOnce(
                         AuthClientResult.Failure(
                             error ?: IllegalStateException("Kakao access token이 없습니다."),
                         ),
@@ -34,14 +47,22 @@ class KakaoAuthClientImpl @Inject constructor(
                     return
                 }
 
-                UserApiClient.instance.me { user, _ ->
-                    continuation.resume(
-                        AuthClientResult.Success(
-                            providerAccessToken = token.accessToken,
-                            providerUserId = user?.id?.toString(),
-                            email = user?.kakaoAccount?.email,
-                        ),
-                    )
+                UserApiClient.instance.me { user, userError ->
+                    if (userError != null || user == null) {
+                        resumeOnce(
+                            AuthClientResult.Failure(
+                                userError ?: IllegalStateException("Kakao 사용자 정보가 없습니다."),
+                            ),
+                        )
+                    } else {
+                        resumeOnce(
+                            AuthClientResult.Success(
+                                providerAccessToken = token.accessToken,
+                                providerUserId = user.id?.toString(),
+                                email = user.kakaoAccount?.email,
+                            ),
+                        )
+                    }
                 }
             }
 
@@ -52,7 +73,7 @@ class KakaoAuthClientImpl @Inject constructor(
             if (UserApiClient.instance.isKakaoTalkLoginAvailable(activity)) {
                 UserApiClient.instance.loginWithKakaoTalk(activity) { token, error ->
                     if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
-                        continuation.resume(AuthClientResult.Cancelled)
+                        resumeOnce(AuthClientResult.Cancelled)
                     } else if (error != null) {
                         loginWithKakaoAccount()
                     } else {

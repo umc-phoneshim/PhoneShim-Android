@@ -9,8 +9,10 @@ import com.phoneshim.android.data.local.AuthDataStore
 import com.phoneshim.android.data.local.AndroidKeystoreTokenCipher
 import com.phoneshim.android.data.local.TokenDataSource
 import com.phoneshim.android.data.local.TokenCipher
+import com.phoneshim.android.data.local.CurrentUserStore
 import com.phoneshim.android.data.local.TokenProvider
 import com.phoneshim.android.domain.repository.AuthSessionRepository
+import com.phoneshim.android.domain.repository.CurrentUserRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -35,6 +37,12 @@ object AuthDataStoreModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AuthSessionBindingModule {
+    @Binds
+    @Singleton
+    abstract fun bindCurrentUserRepository(
+        implementation: CurrentUserStore,
+    ): CurrentUserRepository
+
     @Binds
     @Singleton
     abstract fun bindTokenCipher(

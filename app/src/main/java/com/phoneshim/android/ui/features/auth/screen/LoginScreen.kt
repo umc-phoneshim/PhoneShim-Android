@@ -25,6 +25,7 @@ import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.IconButton
 import com.phoneshim.android.ui.common.ConfirmationDialog
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginViewModel
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEvent
@@ -38,10 +39,12 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 fun LoginRoute(
     onNavigateToGoalSetup: () -> Unit,
     onNavigateToMain: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
@@ -66,8 +69,12 @@ fun LoginRoute(
     if (uiState.withdrawalRecovery != null) {
         ConfirmationDialog(
             title = "탈퇴 유예 중인 계정입니다",
-            message = "탈퇴 요청 후 14일 이내에는 계정을 복구할 수 있습니다.",
-            confirmText = "계정 복구",
+            message = if (uiState.canRecoverWithdrawal) {
+                "탈퇴 요청 후 14일 이내에는 계정을 복구할 수 있습니다."
+            } else {
+                "계정 복구 API가 준비 중입니다. 현재 앱에서는 복구를 진행할 수 없습니다."
+            },
+            confirmText = if (uiState.canRecoverWithdrawal) "계정 복구" else "확인",
             onConfirm = {
                 viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
             },

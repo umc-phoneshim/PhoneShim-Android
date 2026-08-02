@@ -5,6 +5,9 @@ import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
+import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.repository.CurrentUserRepository
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -23,8 +26,13 @@ class LoginViewModel @Inject constructor(
     private val kakaoAuthClient: KakaoAuthClient,
     private val socialLoginUseCase: SocialLoginUseCase,
     private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
+    private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val currentUserRepository: CurrentUserRepository,
+    private val authFeatureAvailability: AuthFeatureAvailability,
 ) :
-    BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(LoginUiState()) {
+    BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(
+        LoginUiState(canRecoverWithdrawal = authFeatureAvailability.canRecoverWithdrawal),
+    ) {
 
     override fun handleEvent(event: LoginUiEvent) {
         when (event) {
@@ -67,20 +75,38 @@ class LoginViewModel @Inject constructor(
     ) {
         socialLoginUseCase(provider, authResult.providerAccessToken)
             .onSuccess { result ->
-                finishLoading()
-                sendEffect(
-                    if (result.isNewUser) {
-                        LoginUiEffect.NavigateToGoalSetup
-                    } else {
-                        LoginUiEffect.NavigateToMain
-                    },
-                )
+                if (result.isNewUser) {
+                    finishLoading()
+                    sendEffect(LoginUiEffect.NavigateToGoalSetup)
+                } else if (!authFeatureAvailability.shouldLoadRemoteProfile) {
+                    finishLoading()
+                    sendEffect(LoginUiEffect.NavigateToMain)
+                } else {
+                    loadExistingUserProfile()
+                }
             }
             .onFailure { error ->
                 if (error is AuthException.WithdrawalPending) {
                     showWithdrawalRecovery(provider, authResult)
                 } else {
                     showError(error.toUserMessage())
+                }
+            }
+    }
+
+    private suspend fun loadExistingUserProfile() {
+        getMyInfoUseCase()
+            .onSuccess { user ->
+                currentUserRepository.update(user)
+                finishLoading()
+                sendEffect(LoginUiEffect.NavigateToMain)
+            }
+            .onFailure { throwable ->
+                handleError(throwable) { error ->
+                    finishLoading()
+                    if (error.kind != com.phoneshim.android.ui.common.base.UiError.Kind.AUTH) {
+                        sendEffect(LoginUiEffect.NavigateToMain)
+                    }
                 }
             }
     }
@@ -106,6 +132,10 @@ class LoginViewModel @Inject constructor(
 
     private fun recoverWithdrawal() {
         val identity = currentState.withdrawalRecovery ?: return
+        if (!currentState.canRecoverWithdrawal) {
+            setState { copy(withdrawalRecovery = null) }
+            return
+        }
         if (currentState.isLoading) return
         setState { copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
@@ -141,6 +171,7 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun Throwable.toUserMessage(): String = when (this) {
+        is AuthException.FeatureUnavailable -> message ?: "현재 사용할 수 없는 기능입니다."
         is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
         is ApiException.Serialization,
         is ApiException.InvalidResponse,

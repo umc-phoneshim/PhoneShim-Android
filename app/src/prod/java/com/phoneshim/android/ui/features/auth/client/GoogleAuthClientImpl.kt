@@ -8,6 +8,8 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.phoneshim.android.BuildConfig
+import com.phoneshim.android.domain.model.AuthException
+import com.phoneshim.android.domain.model.PendingAuthFeature
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +19,11 @@ class GoogleAuthClientImpl @Inject constructor(
 ) : GoogleAuthClient {
     override suspend fun authenticate(): AuthClientResult {
         val activity = activityProvider.requireActivity()
+        if (!BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED) {
+            return AuthClientResult.Failure(
+                AuthException.FeatureUnavailable(PendingAuthFeature.GOOGLE_LOGIN_TOKEN_CONTRACT),
+            )
+        }
         if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
             return AuthClientResult.Failure(
                 IllegalStateException("GOOGLE_WEB_CLIENT_ID가 설정되지 않았습니다."),
@@ -41,7 +48,6 @@ class GoogleAuthClientImpl @Inject constructor(
                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
             ) {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                // TODO: 서버의 accessToken 필드가 Google ID token을 허용하는지 확정해야 합니다.
                 AuthClientResult.Success(
                     providerAccessToken = googleCredential.idToken,
                     providerUserId = googleCredential.id,

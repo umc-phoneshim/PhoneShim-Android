@@ -9,6 +9,7 @@ sealed class AuthException(message: String) : Exception(message) {
 }
 
 enum class PendingAuthFeature {
+    GOOGLE_LOGIN_TOKEN_CONTRACT,
     LOGOUT,
     RECOVER_WITHDRAWAL,
     LINK_ACCOUNT,

@@ -5,6 +5,7 @@ import com.phoneshim.android.data.repository.AuthRepositoryImpl
 import com.phoneshim.android.data.repository.UnavailablePendingAuthRepositoryImpl
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.PendingAuthRepository
+import com.phoneshim.android.domain.model.AuthFeatureAvailability
 import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
 import com.phoneshim.android.ui.features.auth.client.GoogleAuthClientImpl
 import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
@@ -23,6 +24,15 @@ import retrofit2.Retrofit
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ProdAuthBindingModule {
+    companion object {
+        @Provides
+        @Singleton
+        fun provideAuthFeatureAvailability() = AuthFeatureAvailability(
+            canRecoverWithdrawal = false,
+            shouldLoadRemoteProfile = true,
+        )
+    }
+
     @Binds @Singleton
     abstract fun bindAuthRepository(implementation: AuthRepositoryImpl): AuthRepository
 

@@ -9,4 +9,5 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val withdrawalRecovery: SocialIdentity? = null,
+    val canRecoverWithdrawal: Boolean = false,
 ) : UiState
