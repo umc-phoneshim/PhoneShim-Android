@@ -12,9 +12,33 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SessionTerminationUseCaseTest {
+
+    @Test
+    fun `clearing an expired session removes the token and cached user`() = runTest {
+        val session = RecordingSessionRepository()
+        val currentUser = RecordingCurrentUserRepository()
+
+        ClearAuthSessionUseCase(session, currentUser)()
+
+        assertFalse(session.hasSession())
+        assertNull(currentUser.user.value)
+    }
+
+    @Test
+    fun `cached user is removed even when token deletion fails`() = runTest {
+        val currentUser = RecordingCurrentUserRepository()
+
+        val result = runCatching {
+            ClearAuthSessionUseCase(FailingSessionRepository(), currentUser)()
+        }
+
+        assertTrue(result.isFailure)
+        assertNull(currentUser.user.value)
+    }
 
     @Test
     fun `로그아웃은 서버 API 없이 로컬 토큰과 사용자 캐시를 삭제한다`() = runTest {
@@ -50,6 +74,12 @@ class SessionTerminationUseCaseTest {
         override suspend fun restoreSession() = active
         override suspend fun clearSession() { active = false }
         override fun hasSession() = active
+    }
+
+    private class FailingSessionRepository : AuthSessionRepository {
+        override suspend fun restoreSession() = true
+        override suspend fun clearSession() = error("token deletion failed")
+        override fun hasSession() = true
     }
 
     private class RecordingCurrentUserRepository : CurrentUserRepository {
