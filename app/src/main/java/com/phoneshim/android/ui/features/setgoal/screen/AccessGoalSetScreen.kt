@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -30,19 +28,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.InstalledApp
+import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
 import com.phoneshim.android.ui.common.AppInfoRow
 import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
@@ -55,7 +48,6 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.sanitizeTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppGoalSetting
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
@@ -265,13 +257,17 @@ private fun TimeUnitGroup(
     }
 }
 
-// 시/분 입력 셀 치수 (Figma 36×28 라운드 Text Field 기준).
-private val TIME_CELL_MIN_WIDTH = 36.dp
-private val TIME_CELL_HORIZONTAL_PADDING = 8.dp
-// 커서가 글자 옆에 설 자리. 없으면 포커스 시 숫자가 잘린다.
-private val TIME_CELL_CURSOR_SLACK = 4.dp
+// 시/분 입력 셀 치수 (Figma 36×28 라운드 박스).
+private val TIME_CELL_WIDTH = 36.dp
+private val TIME_CELL_HEIGHT = 28.dp
 
-// 시/분 값을 직접 입력하는 소형 셀 (Figma 36×28 라운드 Text Field).
+// 시/분 값을 직접 입력하는 소형 셀.
+//
+// 04-2·설정 팝업과 같은 입력 동작(2자리 제한, 상한 검사, 포커스 시 전체 선택,
+// 포커스 해제 시 "5" -> "05" 정규화)이 필요해 공용 InteractiveTimeSegmentInput 을 쓴다.
+// 다만 공용 컴포넌트는 평상시 배경·테두리가 투명이고 04-4 는 평상시에도 박스가 보여야 해서,
+// 박스는 이 래퍼가 그리고 공용 컴포넌트는 안에서 입력만 담당한다.
+// resting 과 active 크기를 같게 줘서 고정 박스 안에서 크기가 변하지 않도록 한다.
 @Composable
 private fun TimeCell(
     value: String,
@@ -279,67 +275,27 @@ private fun TimeCell(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val displayValue = value.ifEmpty { "00" }
-    val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-
-    // 폭을 '현재 값'으로 재면 두 가지가 깨진다.
-    //  1) "1" → "11" 처럼 자릿수가 바뀔 때마다 셀 폭이 흔들린다.
-    //  2) 글자 폭에 딱 맞아 커서가 들어갈 자리가 없어 숫자가 잘려 보인다.
-    // 그래서 가장 넓은 두 자리를 기준으로 폭을 고정하고 커서 여유를 더한다.
-    // 폰트가 좁아도 Figma 규격(36dp) 아래로는 줄이지 않는다.
-    val fieldWidth = remember(textMeasurer, density) {
-        val widestDigit = (0..9).maxOf { digit ->
-            textMeasurer.measure(
-                text = AnnotatedString(digit.toString()),
-                style = PhoneShimType.EngLabel,
-                maxLines = 1,
-            ).size.width
-        }
-        val contentWidth = with(density) { (widestDigit * 2).toDp() }
-        maxOf(
-            TIME_CELL_MIN_WIDTH,
-            contentWidth + TIME_CELL_HORIZONTAL_PADDING * 2 + TIME_CELL_CURSOR_SLACK,
-        )
-    }
-
-    BasicTextField(
-        value = value,
-        onValueChange = { raw ->
-            onValueChange(sanitizeTimeInput(raw, value, maxValue))
-        },
+    Box(
         modifier = modifier
-            .width(fieldWidth)
-            .height(28.dp)
+            .size(width = TIME_CELL_WIDTH, height = TIME_CELL_HEIGHT)
             .clip(MaterialTheme.shapes.small)
             .background(PhoneShimTheme.colors.surface)
             .border(1.dp, PhoneShimTheme.colors.border, MaterialTheme.shapes.small),
-        textStyle = PhoneShimType.EngLabel.copy(
-            color = PhoneShimTheme.colors.textPrimary,
-            textAlign = TextAlign.Center,
-        ),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        cursorBrush = SolidColor(PhoneShimTheme.colors.brandStrong),
-        singleLine = true,
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = TIME_CELL_HORIZONTAL_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (value.isEmpty()) {
-                    Text(
-                        text = displayValue,
-                        style = PhoneShimType.EngLabel,
-                        color = PhoneShimTheme.colors.textPrimary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                innerTextField()
-            }
-        },
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        InteractiveTimeSegmentInput(
+            value = value,
+            maxValue = maxValue,
+            onValueChange = onValueChange,
+            textStyle = PhoneShimType.EngLabel,
+            restingWidth = TIME_CELL_WIDTH,
+            activeWidth = TIME_CELL_WIDTH,
+            restingHeight = TIME_CELL_HEIGHT,
+            activeHeight = TIME_CELL_HEIGHT,
+            restingTextColor = PhoneShimTheme.colors.textPrimary,
+            activeTextColor = PhoneShimTheme.colors.brandStrong,
+        )
+    }
 }
 
 // 접근 제한 토글 아이콘 (금지 표시). 활성화 시 붉은색으로 표시됩니다.

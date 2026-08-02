@@ -8,12 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -23,20 +19,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
 import com.phoneshim.android.ui.common.Toggle
 import com.phoneshim.android.ui.features.setgoal.component.MAX_HOUR_VALUE
 import com.phoneshim.android.ui.features.setgoal.component.MAX_MINUTE_VALUE
@@ -45,13 +36,11 @@ import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
-import com.phoneshim.android.ui.features.setgoal.component.sanitizeTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.AppTimeInput
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEffect
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalEvent
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
-import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
@@ -205,7 +194,14 @@ private fun UsageTimeSetContent(
     }
 }
 
-// Figma "Time Cell (On Boarding)": 기본 56×39, 포커스 시 Primary 300 배경/500 테두리.
+// Figma "Time Cell (On Boarding)" 규격. 설정(PREF) 팝업의 같은 셀과 값을 맞춘다.
+private val CLOCK_RESTING_WIDTH = 56.dp
+private val CLOCK_ACTIVE_WIDTH = 64.dp
+private val CLOCK_RESTING_HEIGHT = 39.dp
+private val CLOCK_ACTIVE_HEIGHT = 47.dp
+
+// Figma "Time Cell (On Boarding)". 설정(PREF) 팝업과 같은 셀이라 공용 컴포넌트를 그대로 쓴다.
+// 크기·색 전환과 입력 정제는 InteractiveTimeSegmentInput 이 담당한다.
 @Composable
 private fun ClockField(
     value: String,
@@ -213,61 +209,18 @@ private fun ClockField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var focused by remember { mutableStateOf(false) }
-    val textColor = if (focused) {
-        PhoneShimTheme.colors.brandStrong
-    } else {
-        PhoneShimTheme.colors.textPrimary
-    }
-
-    BasicTextField(
+    InteractiveTimeSegmentInput(
         value = value,
-        onValueChange = { raw ->
-            onValueChange(sanitizeTimeInput(raw, value, maxValue))
-        },
-        modifier = modifier
-            .width(56.dp)
-            .height(if (focused) 46.dp else 39.dp)
-            .onFocusChanged { focused = it.isFocused },
-        textStyle = PhoneShimType.EngDisplay.copy(
-            color = textColor,
-            textAlign = TextAlign.Center,
-        ),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        cursorBrush = SolidColor(PhoneShimTheme.colors.brandStrong),
-        singleLine = true,
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (focused) {
-                            Modifier
-                                .clip(MaterialTheme.shapes.extraSmall)
-                                .background(PhoneShimPalette.Primary300)
-                                .border(
-                                    1.dp,
-                                    PhoneShimTheme.colors.brand,
-                                    MaterialTheme.shapes.extraSmall,
-                                )
-                                .padding(4.dp)
-                        } else {
-                            Modifier.background(Color.Transparent)
-                        },
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (value.isEmpty()) {
-                    Text(
-                        text = "00",
-                        style = PhoneShimType.EngDisplay,
-                        color = textColor,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                innerTextField()
-            }
-        },
+        maxValue = maxValue,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        textStyle = PhoneShimType.EngDisplay,
+        restingWidth = CLOCK_RESTING_WIDTH,
+        activeWidth = CLOCK_ACTIVE_WIDTH,
+        restingHeight = CLOCK_RESTING_HEIGHT,
+        activeHeight = CLOCK_ACTIVE_HEIGHT,
+        restingTextColor = PhoneShimTheme.colors.textPrimary,
+        activeTextColor = PhoneShimTheme.colors.brandStrong,
     )
 }
 
