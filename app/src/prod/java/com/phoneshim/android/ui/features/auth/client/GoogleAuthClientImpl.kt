@@ -19,6 +19,7 @@ class GoogleAuthClientImpl @Inject constructor(
 ) : GoogleAuthClient {
     override suspend fun authenticate(): AuthClientResult {
         val activity = activityProvider.requireActivity()
+        // 현재 서버의 accessToken 필드가 Google ID token을 검증하는 계약으로 확정되기 전에는 실행하지 않는다.
         if (!BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED) {
             return AuthClientResult.Failure(
                 AuthException.FeatureUnavailable(PendingAuthFeature.GOOGLE_LOGIN_TOKEN_CONTRACT),
@@ -49,7 +50,9 @@ class GoogleAuthClientImpl @Inject constructor(
             ) {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 AuthClientResult.Success(
+                    // 공통 모델의 이름은 providerAccessToken이지만 Google에서는 OIDC ID token을 전달한다.
                     providerAccessToken = googleCredential.idToken,
+                    // TODO: 서버가 ID token의 sub/email claim을 검증하도록 계약 변경 후 식별 정보 직접 전달을 제거한다.
                     providerUserId = googleCredential.id,
                     email = googleCredential.id,
                 )

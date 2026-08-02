@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 interface TokenProvider {
+    /** OkHttp interceptor에서 디스크 I/O 없이 읽도록 앱 시작 시 복원한 메모리 값만 반환한다. */
     fun getAccessToken(): String?
 }
 
@@ -28,6 +29,10 @@ class TokenDataSource @Inject constructor(
     @Volatile
     private var cachedToken: AuthToken? = null
 
+    /**
+     * 앱 진입 전에 암호화 토큰을 메모리로 복원한다.
+     * 구버전 평문 값은 한 번만 암호화해 이전하고, 복호화할 수 없는 값은 로그인 세션으로 인정하지 않는다.
+     */
     override suspend fun restoreSession(): Boolean {
         val preferences = dataStore.data.first()
         val encryptedToken = preferences[ENCRYPTED_ACCESS_TOKEN]

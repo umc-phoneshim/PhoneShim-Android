@@ -26,6 +26,7 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // 시작 시에는 로컬 토큰 복원만 판단한다. 서버 유효성은 이후 API의 401 흐름에서 처리한다.
             _state.value = try {
                 if (restoreAuthSessionUseCase()) {
                     SessionRestoreState.AUTHENTICATED

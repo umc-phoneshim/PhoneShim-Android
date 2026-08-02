@@ -77,12 +77,14 @@ class LoginViewModel @Inject constructor(
         provider: SocialProvider,
         authResult: AuthClientResult.Success,
     ) {
+        // provider token은 서버 JWT 교환에만 전달하며 ViewModel 상태나 로컬 저장소에 보관하지 않는다.
         socialLoginUseCase(provider, authResult.providerAccessToken)
             .onSuccess { result ->
                 if (result.isNewUser) {
                     finishLoading()
                     sendEffect(LoginUiEffect.NavigateToGoalSetup)
                 } else if (!authFeatureAvailability.shouldLoadRemoteProfile) {
+                    // dev mock은 서버 사용자 API에 의존하지 않고 화면 흐름만 검증한다.
                     finishLoading()
                     sendEffect(LoginUiEffect.NavigateToMain)
                 } else {

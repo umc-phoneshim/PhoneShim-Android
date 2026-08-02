@@ -25,6 +25,7 @@ class KakaoAuthClientImpl @Inject constructor(
         }
 
         return suspendCancellableCoroutine { continuation ->
+            // Kakao 로그인과 사용자 조회 callback이 경쟁해도 coroutine은 정확히 한 번만 완료한다.
             val completed = AtomicBoolean(false)
 
             fun resumeOnce(result: AuthClientResult) {
@@ -75,6 +76,7 @@ class KakaoAuthClientImpl @Inject constructor(
                     if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
                         resumeOnce(AuthClientResult.Cancelled)
                     } else if (error != null) {
+                        // 명시적인 사용자 취소는 fallback하지 않고, 카카오톡 실행 실패만 카카오계정으로 대체한다.
                         loginWithKakaoAccount()
                     } else {
                         completeWithToken(token, null)

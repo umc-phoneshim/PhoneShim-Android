@@ -12,6 +12,7 @@ class ClearAuthSessionUseCase @Inject constructor(
         try {
             authSessionRepository.clearSession()
         } finally {
+            // 토큰 저장소 정리가 실패해도 이전 사용자의 화면 데이터가 새 로그인에 노출되면 안 된다.
             currentUserRepository.clear()
         }
     }

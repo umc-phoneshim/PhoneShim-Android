@@ -30,6 +30,7 @@ class AuthSessionViewModel @Inject constructor(
     private var isExpirationHandled = false
 
     fun onAuthExpired() {
+        // 여러 화면의 동시 401이 세션 삭제와 로그인 이동을 중복 실행하지 않도록 현재 세션에서 한 번만 처리한다.
         if (isExpirationHandled) return
         isExpirationHandled = true
         _noticeMessage.value = null
@@ -52,6 +53,7 @@ class AuthSessionViewModel @Inject constructor(
     }
 
     fun onSessionStarted() {
+        // 재로그인 이후 발생하는 401은 새로운 세션의 만료이므로 다시 처리할 수 있어야 한다.
         isExpirationHandled = false
         _noticeMessage.value = null
     }

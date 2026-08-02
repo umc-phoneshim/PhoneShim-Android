@@ -10,10 +10,12 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
+        // 로그인 API가 붙이는 내부 표식이며 실제 서버 요청에는 노출하지 않는다.
         val requiresAuthentication = originalRequest.header(NO_AUTH_HEADER) == null
         val requestBuilder = originalRequest.newBuilder().removeHeader(NO_AUTH_HEADER)
 
         if (requiresAuthentication) {
+            // interceptor는 동기 API이므로 DataStore를 직접 읽지 않고 복원된 메모리 토큰만 사용한다.
             tokenProvider.getAccessToken()
                 ?.takeIf(String::isNotBlank)
                 ?.let { token -> requestBuilder.header(AUTHORIZATION, "Bearer $token") }

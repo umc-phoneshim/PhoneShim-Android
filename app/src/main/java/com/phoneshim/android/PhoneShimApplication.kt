@@ -12,6 +12,7 @@ class PhoneShimApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // main은 특정 SDK를 알지 않고 prod flavor가 등록한 initializer만 실행한다.
         socialSdkInitializers.forEach { initializer -> initializer.initialize(this) }
     }
 }

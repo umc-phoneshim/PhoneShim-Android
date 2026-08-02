@@ -32,6 +32,7 @@ class AuthRepositoryImpl @Inject constructor(
                 SocialProvider.KAKAO -> authApi.loginWithKakao(request)
             }
         }
+        // 소셜 provider token 대신 폰쉼 서버가 발급한 JWT만 장기 세션으로 저장한다.
         tokenDataSource.save(AuthToken(response.accessToken))
         Result.success(SocialLoginResult(isNewUser = response.isNewUser))
     } catch (error: CancellationException) {
