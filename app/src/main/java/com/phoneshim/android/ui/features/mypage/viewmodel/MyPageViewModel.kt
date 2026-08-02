@@ -1,7 +1,6 @@
 package com.phoneshim.android.ui.features.mypage.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
@@ -44,8 +43,10 @@ class MyPageViewModel @Inject constructor(
             getMyInfoUseCase()
                 .onSuccess { user -> setState { copy(user = user, isLoading = false) } }
                 .onFailure { throwable ->
-                    setState { copy(isLoading = false) }
-                    sendEffect(MyPageUiEffect.ShowMessage(throwable.toUserMessage("프로필을 불러오지 못했습니다.")))
+                    handleError(throwable) { error ->
+                        setState { copy(isLoading = false) }
+                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                    }
                 }
         }
     }
@@ -91,8 +92,10 @@ class MyPageViewModel @Inject constructor(
                     sendEffect(MyPageUiEffect.ShowMessage("저장했습니다."))
                 }
                 .onFailure { throwable ->
-                    setState { copy(isSaving = false) }
-                    sendEffect(MyPageUiEffect.ShowMessage(throwable.toUserMessage("저장하지 못했습니다.")))
+                    handleError(throwable) { error ->
+                        setState { copy(isSaving = false) }
+                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                    }
                 }
         }
     }
@@ -117,20 +120,12 @@ class MyPageViewModel @Inject constructor(
                     sendEffect(MyPageUiEffect.NavigateToWithdraw)
                 }
                 .onFailure { throwable ->
-                    setState { copy(isSaving = false) }
-                    sendEffect(MyPageUiEffect.ShowMessage(throwable.toUserMessage("탈퇴 처리에 실패했습니다.")))
+                    handleError(throwable) { error ->
+                        setState { copy(isSaving = false) }
+                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                    }
                 }
         }
     }
 }
 
-/** 서버가 준 메시지가 있으면 그대로 쓰고, 없으면 기본 문구를 사용합니다. */
-private fun Throwable.toUserMessage(fallback: String): String = when (this) {
-    is ApiException -> if (isUnauthorized) {
-        "다시 로그인해 주세요."
-    } else {
-        message?.takeIf { it.isNotBlank() } ?: fallback
-    }
-    is IllegalArgumentException -> message ?: fallback
-    else -> fallback
-}

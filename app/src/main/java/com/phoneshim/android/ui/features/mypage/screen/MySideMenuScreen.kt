@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.features.mypage.component.WithdrawPopup
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiState
@@ -42,6 +43,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 fun MySideMenuRoute(
     onNavigateToWithdraw: () -> Unit,
     onDismiss: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToLogin: () -> Unit = {},
     onContactSupport: () -> Unit = {},
@@ -49,6 +51,7 @@ fun MySideMenuRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->

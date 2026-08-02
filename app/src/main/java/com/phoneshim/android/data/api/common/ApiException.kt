@@ -58,6 +58,7 @@ sealed class ApiException(
 }
 
 object ApiErrorCodes {
+    const val INSUFFICIENT_PREFIX = "INSUFFICIENT_"
     const val UNAUTHORIZED = "UNAUTHORIZED"
     const val INVALID_TOKEN = "INVALID_TOKEN"
     const val VALIDATION_ERROR = "VALIDATION_ERROR"

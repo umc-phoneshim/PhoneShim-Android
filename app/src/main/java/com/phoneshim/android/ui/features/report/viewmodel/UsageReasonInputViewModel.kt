@@ -2,7 +2,6 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
-import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.domain.usecase.SubmitUsageReasonUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -104,21 +103,20 @@ class UsageReasonInputViewModel @Inject constructor(
                     sendEffect(UsageReasonInputUiEffect.Submitted)
                 }
                 .onFailure { throwable ->
-                    val api = throwable as? ApiException
-                    val outsideWindow = api?.code == ApiErrorCodes.USAGE_REASON_TIME_FORBIDDEN
-                    setState {
-                        copy(
-                            isSubmitting = false,
-                            isOutsideInputWindow = outsideWindow,
-                            errorMessage = when {
-                                outsideWindow ->
+                    handleError(throwable) { error ->
+                        val outsideWindow = error.code == ApiErrorCodes.USAGE_REASON_TIME_FORBIDDEN
+                        setState {
+                            copy(
+                                isSubmitting = false,
+                                isOutsideInputWindow = outsideWindow,
+                                errorMessage = if (outsideWindow) {
                                     "사용 이유는 당일 ${UsageReasonEntry.INPUT_WINDOW_START_HOUR}시부터 " +
                                         "다음날 ${UsageReasonEntry.INPUT_WINDOW_END_HOUR}시까지만 입력할 수 있어요."
-                                api != null && api.isUnauthorized -> "다시 로그인해 주세요."
-                                api != null -> api.message
-                                else -> "저장하지 못했습니다. 다시 시도해 주세요."
-                            },
-                        )
+                                } else {
+                                    error.message
+                                },
+                            )
+                        }
                     }
                 }
         }

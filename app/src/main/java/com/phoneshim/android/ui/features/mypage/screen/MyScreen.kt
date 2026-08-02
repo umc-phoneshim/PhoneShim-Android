@@ -42,6 +42,7 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiState
@@ -57,6 +58,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 @Composable
 fun MyRoute(
     onNavigateToSideMenu: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
     onNavigateToMain: () -> Unit = {},
@@ -67,6 +69,7 @@ fun MyRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MyPageUiEvent.ScreenEntered)

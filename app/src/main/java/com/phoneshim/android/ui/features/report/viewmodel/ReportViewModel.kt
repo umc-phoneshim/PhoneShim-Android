@@ -1,7 +1,7 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
@@ -133,25 +133,20 @@ class ReportViewModel @Inject constructor(
      * 오류 화면 대신 안내 문구로 표시하도록 상태에만 담고 스낵바는 띄우지 않습니다.
      */
     private fun handleFailure(throwable: Throwable, fallback: String) {
-        val api = throwable as? ApiException
-        if (api != null && api.isInsufficientData) {
-            setState {
-                copy(
-                    isLoading = false,
-                    insufficientDataMessage = api.message
-                        ?.takeIf { it.isNotBlank() }
-                        ?: DEFAULT_INSUFFICIENT_MESSAGE,
-                )
+        handleError(throwable) { error ->
+            if (error.code?.startsWith(ApiErrorCodes.INSUFFICIENT_PREFIX) == true) {
+                setState {
+                    copy(
+                        isLoading = false,
+                        insufficientDataMessage = error.message.takeIf { it.isNotBlank() }
+                            ?: DEFAULT_INSUFFICIENT_MESSAGE,
+                    )
+                }
+            } else {
+                setState { copy(isLoading = false) }
+                sendEffect(ReportUiEffect.ShowMessage(error.message.takeIf { it.isNotBlank() } ?: fallback))
             }
-            return
         }
-        setState { copy(isLoading = false) }
-        val message = when {
-            api == null -> fallback
-            api.isUnauthorized -> "다시 로그인해 주세요."
-            else -> api.message?.takeIf { it.isNotBlank() } ?: fallback
-        }
-        sendEffect(ReportUiEffect.ShowMessage(message))
     }
 
     private companion object {

@@ -35,7 +35,7 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
 @Composable
-fun LoginScreen(
+fun LoginRoute(
     onNavigateToGoalSetup: () -> Unit,
     onNavigateToMain: () -> Unit,
     modifier: Modifier = Modifier,
@@ -52,7 +52,7 @@ fun LoginScreen(
         }
     }
 
-    LoginContent(
+    LoginScreen(
         uiState = uiState,
         onGoogleLogin = {
             viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
@@ -79,7 +79,7 @@ fun LoginScreen(
 }
 
 @Composable
-private fun LoginContent(
+fun LoginScreen(
     uiState: LoginUiState,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
@@ -182,7 +182,7 @@ private fun LoginContent(
 @Composable
 private fun LoginScreenPreview() {
     PhoneShimTheme {
-        LoginContent(
+        LoginScreen(
             uiState = LoginUiState(),
             onGoogleLogin = {},
             onKakaoLogin = {},

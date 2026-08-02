@@ -1,7 +1,6 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.ReasonCalendarDay
 import com.phoneshim.android.domain.usecase.GetUsageReasonCalendarUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -88,17 +87,14 @@ class UsageReasonCalendarViewModel @Inject constructor(
             getUsageReasonCalendarUseCase(month)
                 .onSuccess { days -> setState { copy(daysWithReason = days.toDateSet(), isLoading = false, emptyMessage = null) } }
                 .onFailure { throwable ->
-                    val api = throwable as? ApiException
-                    setState {
-                        copy(
-                            daysWithReason = emptySet(),
-                            isLoading = false,
-                            // 서버 미구현 구간에서도 화면이 오류처럼 보이지 않게 안내로 처리합니다.
-                            emptyMessage = when {
-                                api != null && api.isUnauthorized -> "다시 로그인해 주세요."
-                                else -> "아직 기록을 불러올 수 없어요."
-                            },
-                        )
+                    handleError(throwable) { error ->
+                        setState {
+                            copy(
+                                daysWithReason = emptySet(),
+                                isLoading = false,
+                                emptyMessage = error.message,
+                            )
+                        }
                     }
                 }
         }

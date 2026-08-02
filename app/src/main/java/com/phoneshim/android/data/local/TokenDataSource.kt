@@ -9,6 +9,7 @@ import com.phoneshim.android.domain.repository.AuthSessionRepository
 import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 interface TokenProvider {
@@ -43,6 +44,8 @@ class TokenDataSource @Inject constructor(
                 else -> save(AuthToken(requireNotNull(preferences[LEGACY_ACCESS_TOKEN])))
             }
             cachedToken != null
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (_: Throwable) {
             clearSession()
             false
