@@ -2,6 +2,7 @@ package com.phoneshim.android.data.di
 
 import com.google.gson.Gson
 import com.phoneshim.android.BuildConfig
+import com.phoneshim.android.data.network.AuthInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,6 +25,7 @@ object NetworkModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor =
         HttpLoggingInterceptor().apply {
+            redactHeader(AuthInterceptor.AUTHORIZATION)
             level = if (BuildConfig.DEBUG && BuildConfig.ENABLE_NETWORK_BODY_LOGGING) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -33,8 +35,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient =
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient =
         OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .build()
 
