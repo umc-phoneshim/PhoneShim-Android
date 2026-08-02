@@ -1,7 +1,7 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.ApiException
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
@@ -138,7 +138,9 @@ class ReportViewModel @Inject constructor(
             setState {
                 copy(
                     isLoading = false,
-                    insufficientDataMessage = api.message.ifBlank { DEFAULT_INSUFFICIENT_MESSAGE },
+                    insufficientDataMessage = api.message
+                        ?.takeIf { it.isNotBlank() }
+                        ?: DEFAULT_INSUFFICIENT_MESSAGE,
                 )
             }
             return
@@ -147,7 +149,7 @@ class ReportViewModel @Inject constructor(
         val message = when {
             api == null -> fallback
             api.isUnauthorized -> "다시 로그인해 주세요."
-            else -> api.message.ifBlank { fallback }
+            else -> api.message?.takeIf { it.isNotBlank() } ?: fallback
         }
         sendEffect(ReportUiEffect.ShowMessage(message))
     }

@@ -1,8 +1,8 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.ApiErrorCodes
-import com.phoneshim.android.data.api.ApiException
+import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.domain.usecase.SubmitUsageReasonUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel

@@ -13,7 +13,7 @@ interface ReportRepository {
      */
     suspend fun getDailyReport(date: String, isToday: Boolean): Result<DailyReport>
 
-    /** 주간/월간 요약. 데이터 부족은 ApiException.isInsufficientData 로 구분됩니다. */
+    /** 주간/월간 요약. 데이터 부족은 공통 API 오류 코드로 구분됩니다. */
     suspend fun getReportSummary(range: ReportRange, date: String?): Result<ReportSummary>
 
     /** 쉼이의 제안. 백엔드 분석 결과 문구를 그대로 받습니다. */

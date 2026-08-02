@@ -1,7 +1,7 @@
 package com.phoneshim.android.ui.features.mypage.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.ApiException
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
@@ -126,7 +126,11 @@ class MyPageViewModel @Inject constructor(
 
 /** 서버가 준 메시지가 있으면 그대로 쓰고, 없으면 기본 문구를 사용합니다. */
 private fun Throwable.toUserMessage(fallback: String): String = when (this) {
-    is ApiException -> if (isUnauthorized) "다시 로그인해 주세요." else message
+    is ApiException -> if (isUnauthorized) {
+        "다시 로그인해 주세요."
+    } else {
+        message?.takeIf { it.isNotBlank() } ?: fallback
+    }
     is IllegalArgumentException -> message ?: fallback
     else -> fallback
 }

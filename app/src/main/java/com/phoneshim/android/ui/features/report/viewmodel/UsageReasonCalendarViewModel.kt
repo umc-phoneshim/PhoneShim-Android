@@ -1,7 +1,7 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.data.api.ApiException
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.ReasonCalendarDay
 import com.phoneshim.android.domain.usecase.GetUsageReasonCalendarUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
