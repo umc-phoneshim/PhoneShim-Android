@@ -6,7 +6,7 @@ import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.local.TokenDataSource
 import com.phoneshim.android.data.local.createTestTokenDataSource
 import com.phoneshim.android.domain.model.AuthException
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import java.io.File
 import kotlinx.coroutines.test.TestScope
@@ -49,7 +49,7 @@ class AuthRepositoryImplTest {
 
         val result = repository(tokens).socialLogin(SocialProvider.GOOGLE, "google-token")
 
-        assertEquals(AuthUser(isNewUser = false), result.getOrThrow())
+        assertEquals(SocialLoginResult(isNewUser = false), result.getOrThrow())
         assertEquals("phoneshim-jwt", tokens.getAccessToken())
         assertEquals("/api/auth/google", server.takeRequest().path)
     }
@@ -61,7 +61,7 @@ class AuthRepositoryImplTest {
         val result = repository(tokens("kakao"))
             .socialLogin(SocialProvider.KAKAO, "kakao-token")
 
-        assertEquals(AuthUser(isNewUser = true), result.getOrThrow())
+        assertEquals(SocialLoginResult(isNewUser = true), result.getOrThrow())
         assertEquals("/api/auth/kakao", server.takeRequest().path)
     }
 
@@ -76,7 +76,7 @@ class AuthRepositoryImplTest {
         val result = repository(tokens).socialLogin(SocialProvider.GOOGLE, "google-token")
 
         assertEquals(AuthException.WithdrawalPending, result.exceptionOrNull())
-        assertFalse(tokens.hasToken())
+        assertFalse(tokens.hasSession())
     }
 
     private fun TestScope.tokens(name: String) = createTestTokenDataSource(

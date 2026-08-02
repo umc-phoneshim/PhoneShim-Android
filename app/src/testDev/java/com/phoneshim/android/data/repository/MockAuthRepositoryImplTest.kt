@@ -1,7 +1,7 @@
 package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.local.createTestTokenDataSource
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.MockAuthScenario
 import com.phoneshim.android.domain.model.MockAuthScenarioStore
 import com.phoneshim.android.domain.model.SocialProvider
@@ -24,8 +24,8 @@ class MockAuthRepositoryImplTest {
 
         val result = repository.socialLogin(SocialProvider.GOOGLE, "provider-token")
 
-        assertEquals(AuthUser(isNewUser = false), result.getOrThrow())
-        assertTrue(tokens.hasToken())
+        assertEquals(SocialLoginResult(isNewUser = false), result.getOrThrow())
+        assertTrue(tokens.hasSession())
     }
 
     @Test
@@ -34,7 +34,7 @@ class MockAuthRepositoryImplTest {
         val repository = MockAuthRepositoryImpl(createTestTokenDataSource(file("new")), scenario)
 
         assertEquals(
-            AuthUser(isNewUser = true),
+            SocialLoginResult(isNewUser = true),
             repository.socialLogin(SocialProvider.KAKAO, "provider-token").getOrThrow(),
         )
     }
@@ -47,7 +47,7 @@ class MockAuthRepositoryImplTest {
             .socialLogin(SocialProvider.GOOGLE, "provider-token")
 
         assertTrue(result.isFailure)
-        assertFalse(tokens.hasToken())
+        assertFalse(tokens.hasSession())
     }
 
     private fun file(name: String) = File(temporaryFolder.root, "$name.preferences_pb")

@@ -1,5 +1,5 @@
 package com.phoneshim.android.domain.model
 
-data class AuthUser(
+data class SocialLoginResult(
     val isNewUser: Boolean,
 )

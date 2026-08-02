@@ -3,12 +3,15 @@ package com.phoneshim.android.data.local
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.phoneshim.android.domain.model.AuthToken
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -26,15 +29,15 @@ class TokenDataSourceTest {
     fun `token is saved restored and exposed through TokenProvider`() = runTest {
         val file = File(temporaryFolder.root, "auth.preferences_pb")
         val dataStore = createDataStore(file)
-        val firstStore = TokenDataSource(dataStore)
+        val firstStore = TokenDataSource(dataStore, FakeTokenCipher())
 
         firstStore.save(AuthToken("jwt-token"))
 
-        assertTrue(firstStore.hasToken())
+        assertTrue(firstStore.hasSession())
         assertEquals("jwt-token", firstStore.getAccessToken())
 
-        val restoredStore = TokenDataSource(dataStore)
-        assertTrue(restoredStore.restore())
+        val restoredStore = TokenDataSource(dataStore, FakeTokenCipher())
+        assertTrue(restoredStore.restoreSession())
         assertEquals("jwt-token", restoredStore.getAccessToken())
     }
 
@@ -42,14 +45,38 @@ class TokenDataSourceTest {
     fun `clear removes persisted and cached token`() = runTest {
         val file = File(temporaryFolder.root, "clear.preferences_pb")
         val dataStore = createDataStore(file)
-        val store = TokenDataSource(dataStore)
+        val store = TokenDataSource(dataStore, FakeTokenCipher())
         store.save(AuthToken("jwt-token"))
 
-        store.clear()
+        store.clearSession()
 
-        assertFalse(store.hasToken())
+        assertFalse(store.hasSession())
         assertNull(store.getAccessToken())
-        assertFalse(TokenDataSource(dataStore).restore())
+        assertFalse(TokenDataSource(dataStore, FakeTokenCipher()).restoreSession())
+    }
+
+    @Test
+    fun `saved token is encrypted at rest`() = runTest {
+        val dataStore = createDataStore(File(temporaryFolder.root, "encrypted.preferences_pb"))
+
+        TokenDataSource(dataStore, FakeTokenCipher()).save(AuthToken("jwt-token"))
+
+        val preferences = dataStore.data.first()
+        assertFalse(preferences.asMap().values.contains("jwt-token"))
+        assertEquals("nekot-twj", preferences[stringPreferencesKey("encrypted_jwt_access_token")])
+    }
+
+    @Test
+    fun `legacy plain token is migrated to encrypted storage`() = runTest {
+        val dataStore = createDataStore(File(temporaryFolder.root, "legacy.preferences_pb"))
+        val legacyKey = stringPreferencesKey("jwt_access_token")
+        dataStore.edit { preferences -> preferences[legacyKey] = "legacy-jwt" }
+
+        val store = TokenDataSource(dataStore, FakeTokenCipher())
+
+        assertTrue(store.restoreSession())
+        assertEquals("legacy-jwt", store.getAccessToken())
+        assertNull(dataStore.data.first()[legacyKey])
     }
 
     private fun TestScope.createDataStore(file: File): DataStore<Preferences> =

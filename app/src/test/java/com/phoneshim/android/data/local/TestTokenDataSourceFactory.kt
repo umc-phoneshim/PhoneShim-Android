@@ -9,4 +9,15 @@ fun TestScope.createTestTokenDataSource(file: File): TokenDataSource = TokenData
         scope = backgroundScope,
         produceFile = { file },
     ),
+    FakeTokenCipher(),
 )
+
+class FakeTokenCipher : TokenCipher {
+    override fun encrypt(plainText: String): EncryptedToken = EncryptedToken(
+        ciphertext = plainText.reversed(),
+        initializationVector = "test-iv",
+    )
+
+    override fun decrypt(encryptedToken: EncryptedToken): String =
+        encryptedToken.ciphertext.reversed()
+}

@@ -3,7 +3,7 @@ package com.phoneshim.android.data.repository
 import com.phoneshim.android.data.local.TokenDataSource
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthToken
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.MockAuthScenario
 import com.phoneshim.android.domain.model.MockAuthScenarioStore
 import com.phoneshim.android.domain.model.SocialProvider
@@ -19,7 +19,7 @@ class MockAuthRepositoryImpl @Inject constructor(
     override suspend fun socialLogin(
         provider: SocialProvider,
         providerAccessToken: String,
-    ): Result<AuthUser> = runCatching {
+    ): Result<SocialLoginResult> = runCatching {
         require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         when (scenarioStore.scenario) {
             MockAuthScenario.SERVER_FAILURE -> error("dev mock 서버 로그인 실패")
@@ -27,8 +27,6 @@ class MockAuthRepositoryImpl @Inject constructor(
             else -> Unit
         }
         tokenDataSource.save(AuthToken("dev-mock-phoneshim-jwt"))
-        AuthUser(isNewUser = scenarioStore.scenario == MockAuthScenario.NEW_USER)
+        SocialLoginResult(isNewUser = scenarioStore.scenario == MockAuthScenario.NEW_USER)
     }
-
-    override suspend fun restoreSession(): Boolean = tokenDataSource.restore()
 }

@@ -7,7 +7,7 @@ import com.phoneshim.android.data.api.dto.SocialLoginRequest
 import com.phoneshim.android.data.local.TokenDataSource
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthToken
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -23,7 +23,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun socialLogin(
         provider: SocialProvider,
         providerAccessToken: String,
-    ): Result<AuthUser> = try {
+    ): Result<SocialLoginResult> = try {
         require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         val request = SocialLoginRequest(providerAccessToken)
         val response = apiCallExecutor.execute {
@@ -33,14 +33,12 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }
         tokenDataSource.save(AuthToken(response.accessToken))
-        Result.success(AuthUser(isNewUser = response.isNewUser))
+        Result.success(SocialLoginResult(isNewUser = response.isNewUser))
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
         Result.failure(error.toAuthError())
     }
-
-    override suspend fun restoreSession(): Boolean = tokenDataSource.restore()
 
     private fun Throwable.toAuthError(): Throwable =
         if (this is ApiException.Http && error?.code == ACCOUNT_WITHDRAWAL_PENDING) {

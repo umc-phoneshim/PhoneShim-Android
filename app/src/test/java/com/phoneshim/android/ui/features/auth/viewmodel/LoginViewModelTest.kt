@@ -1,6 +1,6 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
@@ -54,7 +54,7 @@ class LoginViewModelTest {
 
     @Test
     fun `existing user login emits main navigation`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginResult = AuthUser(isNewUser = false))
+        val viewModel = createViewModel(loginResult = SocialLoginResult(isNewUser = false))
         val effect = async { viewModel.effect.first() }
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
@@ -66,7 +66,7 @@ class LoginViewModelTest {
 
     @Test
     fun `new user login emits goal setup navigation`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginResult = AuthUser(isNewUser = true))
+        val viewModel = createViewModel(loginResult = SocialLoginResult(isNewUser = true))
         val effect = async { viewModel.effect.first() }
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
@@ -130,7 +130,7 @@ class LoginViewModelTest {
 
     private fun createViewModel(
         authResult: AuthClientResult = AuthClientResult.Success("provider-token"),
-        loginResult: AuthUser = AuthUser(isNewUser = false),
+        loginResult: SocialLoginResult = SocialLoginResult(isNewUser = false),
         loginFailure: Throwable? = null,
         googleAuthClient: GoogleAuthClient = object : GoogleAuthClient {
             override suspend fun authenticate(): AuthClientResult = authResult
@@ -143,16 +143,14 @@ class LoginViewModelTest {
             override suspend fun socialLogin(
                 provider: SocialProvider,
                 providerAccessToken: String,
-            ): Result<AuthUser> = loginFailure?.let(Result.Companion::failure)
+            ): Result<SocialLoginResult> = loginFailure?.let(Result.Companion::failure)
                 ?: Result.success(loginResult)
-
-            override suspend fun restoreSession(): Boolean = false
         }
         val pendingRepository = object : PendingAuthRepository {
             override suspend fun logout(): Result<Unit> = Result.success(Unit)
             override suspend fun recoverWithdrawal(
                 identity: SocialIdentity,
-            ): Result<AuthUser> = Result.success(AuthUser(isNewUser = false))
+            ): Result<SocialLoginResult> = Result.success(SocialLoginResult(isNewUser = false))
 
             override suspend fun linkAccount(identity: SocialIdentity): Result<Unit> = Result.success(Unit)
         }

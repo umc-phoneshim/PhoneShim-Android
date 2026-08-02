@@ -2,7 +2,7 @@ package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.local.createTestTokenDataSource
 import com.phoneshim.android.domain.model.AuthToken
-import com.phoneshim.android.domain.model.AuthUser
+import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.MockAuthScenarioStore
 import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.SocialProvider
@@ -25,8 +25,8 @@ class MockPendingAuthRepositoryImplTest {
         val result = MockPendingAuthRepositoryImpl(tokens, MockAuthScenarioStore())
             .recoverWithdrawal(identity)
 
-        assertEquals(AuthUser(isNewUser = false), result.getOrThrow())
-        assertTrue(tokens.hasToken())
+        assertEquals(SocialLoginResult(isNewUser = false), result.getOrThrow())
+        assertTrue(tokens.hasSession())
     }
 
     @Test
@@ -36,7 +36,7 @@ class MockPendingAuthRepositoryImplTest {
 
         MockPendingAuthRepositoryImpl(tokens, MockAuthScenarioStore()).logout().getOrThrow()
 
-        assertFalse(tokens.hasToken())
+        assertFalse(tokens.hasSession())
     }
 
     private fun file(name: String) = File(temporaryFolder.root, "$name.preferences_pb")
