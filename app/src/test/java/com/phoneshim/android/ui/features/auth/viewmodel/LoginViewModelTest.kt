@@ -60,6 +60,17 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `unavailable Google login ignores clicks`() = runTest(dispatcher) {
+        val viewModel = createViewModel(canGoogleLogin = false)
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+
+        assertNull(viewModel.uiState.value.selectedProvider)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
     fun `existing user login emits main navigation`() = runTest(dispatcher) {
         val viewModel = createViewModel(loginResult = SocialLoginResult(isNewUser = false))
         val effect = async { viewModel.effect.first() }
@@ -145,6 +156,7 @@ class LoginViewModelTest {
         kakaoAuthClient: KakaoAuthClient = object : KakaoAuthClient {
             override suspend fun authenticate(): AuthClientResult = authResult
         },
+        canGoogleLogin: Boolean = true,
     ): LoginViewModel {
         val repository = object : AuthRepository {
             override suspend fun socialLogin(
@@ -180,6 +192,7 @@ class LoginViewModelTest {
                 override fun clear() { user.value = null }
             },
             authFeatureAvailability = AuthFeatureAvailability(
+                canGoogleLogin = canGoogleLogin,
                 canRecoverWithdrawal = true,
                 shouldLoadRemoteProfile = true,
             ),

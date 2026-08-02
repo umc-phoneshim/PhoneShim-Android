@@ -23,6 +23,7 @@ abstract class DevAuthModule {
         @Provides
         @Singleton
         fun provideAuthFeatureAvailability() = AuthFeatureAvailability(
+            canGoogleLogin = true,
             canRecoverWithdrawal = true,
             shouldLoadRemoteProfile = false,
         )

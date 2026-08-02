@@ -31,7 +31,10 @@ class LoginViewModel @Inject constructor(
     private val authFeatureAvailability: AuthFeatureAvailability,
 ) :
     BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(
-        LoginUiState(canRecoverWithdrawal = authFeatureAvailability.canRecoverWithdrawal),
+        LoginUiState(
+            canGoogleLogin = authFeatureAvailability.canGoogleLogin,
+            canRecoverWithdrawal = authFeatureAvailability.canRecoverWithdrawal,
+        ),
     ) {
 
     override fun handleEvent(event: LoginUiEvent) {
@@ -47,6 +50,7 @@ class LoginViewModel @Inject constructor(
 
     private fun startLogin(provider: SocialProvider) {
         if (currentState.isLoading) return
+        if (provider == SocialProvider.GOOGLE && !currentState.canGoogleLogin) return
 
         setState {
             copy(

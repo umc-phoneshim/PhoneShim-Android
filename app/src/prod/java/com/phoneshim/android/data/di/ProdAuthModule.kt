@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.di
 
+import com.phoneshim.android.BuildConfig
 import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.repository.AuthRepositoryImpl
 import com.phoneshim.android.data.repository.UnavailablePendingAuthRepositoryImpl
@@ -28,6 +29,8 @@ abstract class ProdAuthBindingModule {
         @Provides
         @Singleton
         fun provideAuthFeatureAvailability() = AuthFeatureAvailability(
+            canGoogleLogin = BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED &&
+                BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank(),
             canRecoverWithdrawal = false,
             shouldLoadRemoteProfile = true,
         )

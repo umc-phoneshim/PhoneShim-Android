@@ -34,6 +34,27 @@ class AuthSessionViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun `a new session allows the next expiration to be handled`() = runTest {
+        val repository = RecordingAuthSessionRepository()
+        val viewModel = AuthSessionViewModel(ClearAuthSessionUseCase(repository))
+        val effects = mutableListOf<AuthSessionEffect>()
+        val job = collectEffects(viewModel, effects)
+
+        viewModel.onAuthExpired()
+        advanceUntilIdle()
+        viewModel.onSessionStarted()
+        viewModel.onAuthExpired()
+        advanceUntilIdle()
+
+        assertEquals(2, repository.clearCount)
+        assertEquals(
+            listOf(AuthSessionEffect.NavigateToLogin, AuthSessionEffect.NavigateToLogin),
+            effects,
+        )
+        job.cancel()
+    }
+
     private fun TestScope.collectEffects(
         viewModel: AuthSessionViewModel,
         into: MutableList<AuthSessionEffect>,

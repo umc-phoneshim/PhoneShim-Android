@@ -77,11 +77,13 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 noticeMessage = authNoticeMessage,
                 // 로그인 직후 목표 설정 시작 화면으로 진입 (접근 권한 동의 팝업이 그 위에 표시됨)
                 onNavigateToGoalSetup = {
+                    authSessionViewModel.onSessionStarted()
                     navController.navigate(Routes.SET_GOAL_GRAPH) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
                 onNavigateToMain = {
+                    authSessionViewModel.onSessionStarted()
                     navController.navigate(Routes.MAIN) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }

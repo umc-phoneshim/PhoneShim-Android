@@ -147,22 +147,28 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
             ) {
                 IconButton(
-                    label = "구글로 계속하기",
+                    label = if (
+                        uiState.selectedProvider == SocialProvider.GOOGLE && uiState.isLoading
+                    ) "구글 로그인 중" else "구글로 계속하기",
                     icon = R.drawable.google_logo,
                     iconWidth = 16.dp,
                     backgroundColor = PhoneShimPalette.Gray100,
                     contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onGoogleLogin,
-                    enabled = !uiState.isLoading,
+                    enabled = uiState.canGoogleLogin && !uiState.isLoading,
+                    isLoading = uiState.selectedProvider == SocialProvider.GOOGLE && uiState.isLoading,
                 )
                 IconButton(
-                    label = "카카오톡으로 계속하기",
+                    label = if (
+                        uiState.selectedProvider == SocialProvider.KAKAO && uiState.isLoading
+                    ) "카카오 로그인 중" else "카카오톡으로 계속하기",
                     icon = R.drawable.kakao_logo,
                     iconWidth = 17.dp,
                     backgroundColor = PhoneShimPalette.KakaoYellow,
                     contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onKakaoLogin,
                     enabled = !uiState.isLoading,
+                    isLoading = uiState.selectedProvider == SocialProvider.KAKAO && uiState.isLoading,
                 )
                 uiState.errorMessage?.let { message ->
                     Text(

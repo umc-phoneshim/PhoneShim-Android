@@ -50,4 +50,9 @@ class AuthSessionViewModel @Inject constructor(
         _noticeMessage.value = noticeMessage
         viewModelScope.launch { _effect.send(AuthSessionEffect.NavigateToLogin) }
     }
+
+    fun onSessionStarted() {
+        isExpirationHandled = false
+        _noticeMessage.value = null
+    }
 }
