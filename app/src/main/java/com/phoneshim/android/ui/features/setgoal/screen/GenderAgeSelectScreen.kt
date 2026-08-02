@@ -118,10 +118,9 @@ private fun GenderAgeSelectContent(
             SetGoalStepIndicator(currentStep = 1)
             SetGoalTitle(
 
-                title = "하루 목표 폰 사용 시간을 설정해주세요!",
-                subtitle = "하루 동안 사용할 목표 시간을 설정해요",
+                title = "성별과 나이를 알려주세요!",
+                subtitle = "정확한 분석을 통해 나에게 맞는 목표를 추천해드려요",
             )
-
             SetGoalCard {
                 Row(
                     modifier = Modifier

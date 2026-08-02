@@ -2,7 +2,6 @@ package com.phoneshim.android.ui.features.setgoal.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -262,6 +265,12 @@ private fun TimeUnitGroup(
     }
 }
 
+// 시/분 입력 셀 치수 (Figma 36×28 라운드 Text Field 기준).
+private val TIME_CELL_MIN_WIDTH = 36.dp
+private val TIME_CELL_HORIZONTAL_PADDING = 8.dp
+// 커서가 글자 옆에 설 자리. 없으면 포커스 시 숫자가 잘린다.
+private val TIME_CELL_CURSOR_SLACK = 4.dp
+
 // 시/분 값을 직접 입력하는 소형 셀 (Figma 36×28 라운드 Text Field).
 @Composable
 private fun TimeCell(
@@ -273,13 +282,26 @@ private fun TimeCell(
     val displayValue = value.ifEmpty { "00" }
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val fieldWidth = with(density) {
-        textMeasurer.measure(
-            text = AnnotatedString(displayValue),
-            style = PhoneShimType.EngLabel,
-            maxLines = 1,
-        ).size.width.toDp()
-    } + 24.dp
+
+    // 폭을 '현재 값'으로 재면 두 가지가 깨진다.
+    //  1) "1" → "11" 처럼 자릿수가 바뀔 때마다 셀 폭이 흔들린다.
+    //  2) 글자 폭에 딱 맞아 커서가 들어갈 자리가 없어 숫자가 잘려 보인다.
+    // 그래서 가장 넓은 두 자리를 기준으로 폭을 고정하고 커서 여유를 더한다.
+    // 폰트가 좁아도 Figma 규격(36dp) 아래로는 줄이지 않는다.
+    val fieldWidth = remember(textMeasurer, density) {
+        val widestDigit = (0..9).maxOf { digit ->
+            textMeasurer.measure(
+                text = AnnotatedString(digit.toString()),
+                style = PhoneShimType.EngLabel,
+                maxLines = 1,
+            ).size.width
+        }
+        val contentWidth = with(density) { (widestDigit * 2).toDp() }
+        maxOf(
+            TIME_CELL_MIN_WIDTH,
+            contentWidth + TIME_CELL_HORIZONTAL_PADDING * 2 + TIME_CELL_CURSOR_SLACK,
+        )
+    }
 
     BasicTextField(
         value = value,
@@ -303,7 +325,7 @@ private fun TimeCell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = TIME_CELL_HORIZONTAL_PADDING),
                 contentAlignment = Alignment.Center,
             ) {
                 if (value.isEmpty()) {
@@ -333,7 +355,20 @@ private fun AccessLimitIcon(
             .size(20.dp)
             .clip(CircleShape)
             .border(1.5.dp, color, CircleShape)
-            .clickable(onClick = onClick),
+            // 토글이라는 걸 알 수 있도록 역할과 상태를 노출한다.
+            // 아이콘만으로는 기능을 알기 어렵다는 피드백이 있어 최소한 접근성 경로는 열어둔다.
+            .toggleable(
+                value = active,
+                role = Role.Switch,
+                onValueChange = { onClick() },
+            )
+            .semantics {
+                contentDescription = if (active) {
+                    "목표 시간 이후 앱 사용 제한 켬"
+                } else {
+                    "목표 시간 이후 앱 사용 제한 끔"
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(

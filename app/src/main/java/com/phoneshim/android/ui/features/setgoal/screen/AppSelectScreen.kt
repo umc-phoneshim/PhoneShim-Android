@@ -117,6 +117,9 @@ private fun AppSelectContent(
                     start = PhoneShimDimens.screenHorizontalPadding,
                     end = PhoneShimDimens.screenHorizontalPadding,
                     top = PhoneShimDimens.spacing16,
+                    // 버튼이 스크롤 안에 있어서, 앱이 많아 끝까지 내리면 버튼이 화면 밑변에
+                    // 붙어버린다. 다른 04-x 화면의 하단 여백과 같은 16을 준다.
+                    bottom = PhoneShimDimens.spacing16,
                 )
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
