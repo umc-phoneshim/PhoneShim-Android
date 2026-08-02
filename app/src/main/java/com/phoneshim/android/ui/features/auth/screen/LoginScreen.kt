@@ -40,6 +40,7 @@ fun LoginRoute(
     onNavigateToGoalSetup: () -> Unit,
     onNavigateToMain: () -> Unit,
     onAuthExpired: () -> Unit,
+    noticeMessage: String? = null,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
@@ -57,6 +58,7 @@ fun LoginRoute(
 
     LoginScreen(
         uiState = uiState,
+        noticeMessage = noticeMessage,
         onGoogleLogin = {
             viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
         },
@@ -88,6 +90,7 @@ fun LoginRoute(
 @Composable
 fun LoginScreen(
     uiState: LoginUiState,
+    noticeMessage: String? = null,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
     modifier: Modifier = Modifier,
@@ -169,6 +172,17 @@ fun LoginScreen(
                         style = PhoneShimType.KorLabel,
                         textAlign = TextAlign.Center,
                     )
+                }
+                if (uiState.errorMessage == null) {
+                    noticeMessage?.let { message ->
+                        Text(
+                            text = message,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = PhoneShimPalette.Gray700,
+                            style = PhoneShimType.KorLabel,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
 

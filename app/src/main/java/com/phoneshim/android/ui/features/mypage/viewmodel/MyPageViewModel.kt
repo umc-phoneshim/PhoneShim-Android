@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
+import com.phoneshim.android.domain.usecase.LogoutUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -14,6 +15,7 @@ class MyPageViewModel @Inject constructor(
     private val getMyInfoUseCase: GetMyInfoUseCase,
     private val updateMyInfoUseCase: UpdateMyInfoUseCase,
     private val withdrawUseCase: WithdrawUseCase,
+    private val logoutUseCase: LogoutUseCase,
 ) : BaseViewModel<MyPageUiState, MyPageUiEvent, MyPageUiEffect>(MyPageUiState()) {
 
     override fun handleEvent(event: MyPageUiEvent) {
@@ -101,9 +103,25 @@ class MyPageViewModel @Inject constructor(
     }
 
     private fun logout() {
-        // TODO(Auth 담당): POST /api/auth/logout 이 서버에 구현되면(현재 "예정")
-        //  LogoutUseCase 를 만들어 호출하고 저장된 토큰도 함께 비워 주세요.
-        sendEffect(MyPageUiEffect.NavigateToLogin)
+        if (currentState.isSaving) return
+        setState { copy(isSaving = true) }
+        viewModelScope.launch {
+            logoutUseCase()
+                .onSuccess {
+                    setState { copy(isSaving = false) }
+                    sendEffect(
+                        MyPageUiEffect.NavigateToLogin(
+                            "서버 로그아웃 API가 준비 중이어서 이 기기의 세션만 종료했습니다.",
+                        ),
+                    )
+                }
+                .onFailure { throwable ->
+                    handleError(throwable) { error ->
+                        setState { copy(isSaving = false) }
+                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                    }
+                }
+        }
     }
 
     /**
@@ -117,7 +135,11 @@ class MyPageViewModel @Inject constructor(
             withdrawUseCase()
                 .onSuccess { result ->
                     setState { copy(isSaving = false, withdrawal = result) }
-                    sendEffect(MyPageUiEffect.NavigateToWithdraw)
+                    sendEffect(
+                        MyPageUiEffect.NavigateToLogin(
+                            "탈퇴 요청이 접수되었습니다. 14일 이내에는 계정을 복구할 수 있습니다.",
+                        ),
+                    )
                 }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->

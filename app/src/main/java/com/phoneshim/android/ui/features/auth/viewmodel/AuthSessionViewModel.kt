@@ -8,6 +8,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,12 +24,15 @@ class AuthSessionViewModel @Inject constructor(
 ) : ViewModel() {
     private val _effect = Channel<AuthSessionEffect>(Channel.BUFFERED)
     val effect: Flow<AuthSessionEffect> = _effect.receiveAsFlow()
+    private val _noticeMessage = MutableStateFlow<String?>(null)
+    val noticeMessage: StateFlow<String?> = _noticeMessage.asStateFlow()
 
     private var isExpirationHandled = false
 
     fun onAuthExpired() {
         if (isExpirationHandled) return
         isExpirationHandled = true
+        _noticeMessage.value = null
 
         viewModelScope.launch {
             try {
@@ -38,5 +44,10 @@ class AuthSessionViewModel @Inject constructor(
             }
             _effect.send(AuthSessionEffect.NavigateToLogin)
         }
+    }
+
+    fun onSessionEnded(noticeMessage: String) {
+        _noticeMessage.value = noticeMessage
+        viewModelScope.launch { _effect.send(AuthSessionEffect.NavigateToLogin) }
     }
 }

@@ -3,6 +3,8 @@ package com.phoneshim.android.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -39,6 +41,7 @@ import com.phoneshim.android.ui.features.setgoal.screen.UsageTimeSetScreen
 @Composable
 fun PhoneShimNavHost(navController: NavHostController) {
     val authSessionViewModel: AuthSessionViewModel = hiltViewModel()
+    val authNoticeMessage by authSessionViewModel.noticeMessage.collectAsState()
 
     LaunchedEffect(authSessionViewModel, navController) {
         authSessionViewModel.effect.collect { effect ->
@@ -71,6 +74,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
         composable(Routes.LOGIN) {
             LoginRoute(
                 onAuthExpired = authSessionViewModel::onAuthExpired,
+                noticeMessage = authNoticeMessage,
                 // 로그인 직후 목표 설정 시작 화면으로 진입 (접근 권한 동의 팝업이 그 위에 표시됨)
                 onNavigateToGoalSetup = {
                     navController.navigate(Routes.SET_GOAL_GRAPH) {
@@ -237,14 +241,13 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToReminder = { navController.navigateFromTransientToTopLevel(Routes.REMINDER) },
                 onNavigateToReport = { navController.navigateFromTransientToTopLevel(Routes.TIMETABLE) },
                 // TODO: 로그아웃 API 연동 후 Routes.LOGIN 으로 이동하도록 연결하세요.
-                onNavigateToLogin = { },
+                onNavigateToLogin = authSessionViewModel::onSessionEnded,
             )
         }
         composable(Routes.MY_SIDE_MENU) {
             MySideMenuRoute(
                 onAuthExpired = authSessionViewModel::onAuthExpired,
-                // TODO: 탈퇴 완료 화면/로그인 화면 이동을 연결하세요.
-                onNavigateToWithdraw = { },
+                onNavigateToLogin = authSessionViewModel::onSessionEnded,
                 onDismiss = { navController.popBackStack() },
             )
         }

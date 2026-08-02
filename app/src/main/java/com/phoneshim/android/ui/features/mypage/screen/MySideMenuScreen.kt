@@ -41,11 +41,10 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 @Composable
 fun MySideMenuRoute(
-    onNavigateToWithdraw: () -> Unit,
     onDismiss: () -> Unit,
     onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
-    onNavigateToLogin: () -> Unit = {},
+    onNavigateToLogin: (String) -> Unit = {},
     onContactSupport: () -> Unit = {},
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
@@ -56,8 +55,9 @@ fun MySideMenuRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                MyPageUiEffect.NavigateToWithdraw -> onNavigateToWithdraw()
-                MyPageUiEffect.NavigateToLogin -> onNavigateToLogin()
+                is MyPageUiEffect.NavigateToLogin -> {
+                    onNavigateToLogin(effect.noticeMessage)
+                }
                 MyPageUiEffect.OpenContactSupport -> onContactSupport()
                 is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 사이드 메뉴에서는 발생하지 않는 이펙트입니다. (마이페이지 본체 전용)
