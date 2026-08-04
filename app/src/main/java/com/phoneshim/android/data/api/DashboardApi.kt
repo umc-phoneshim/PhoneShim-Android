@@ -1,11 +1,12 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.GET
 
 interface DashboardApi {
 
     @GET("api/dashboard/daily-summary")
-    suspend fun getDailySummary(): ApiEnvelope<DashboardSummaryResponse>
+    suspend fun getDailySummary(): ApiResponse<DashboardSummaryResponse>
 }
 
 data class DashboardSummaryResponse(

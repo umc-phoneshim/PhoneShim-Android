@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.PUT
 
@@ -8,7 +9,7 @@ interface DeviceUsageApi {
     @PUT("api/device-usage")
     suspend fun putDeviceUsage(
         @Body request: DeviceUsageUpsertRequest,
-    ): ApiEnvelope<DeviceUsageResponse>
+    ): ApiResponse<DeviceUsageResponse>
 }
 
 /** date 생략 시 KST 오늘 기준. */

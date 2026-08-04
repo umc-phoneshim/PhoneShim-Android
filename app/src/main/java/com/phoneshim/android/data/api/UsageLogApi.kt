@@ -9,6 +9,7 @@
 //  이 이름도 다시 정리해주세요.
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PUT
@@ -19,15 +20,15 @@ interface UsageLogApi {
     @GET("api/usage-logs")
     suspend fun getUsageLogs(
         @Query("date") date: String? = null,
-    ): ApiEnvelope<List<UsageLogEntryResponse>>
+    ): ApiResponse<List<UsageLogEntryResponse>>
 
     @GET("api/usage-logs/status")
-    suspend fun getUsageStatus(): ApiEnvelope<List<UsageAppStatusResponse>>
+    suspend fun getUsageStatus(): ApiResponse<List<UsageAppStatusResponse>>
 
     @PUT("api/usage-logs")
     suspend fun putUsageLog(
         @Body request: UsageLogUpsertRequest,
-    ): ApiEnvelope<UsageLogEntryResponse>
+    ): ApiResponse<UsageLogEntryResponse>
 }
 
 data class UsageLogEntryResponse(
