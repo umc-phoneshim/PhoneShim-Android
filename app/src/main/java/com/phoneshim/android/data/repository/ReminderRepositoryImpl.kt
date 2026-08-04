@@ -2,6 +2,8 @@ package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
+import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.data.mapper.ReminderMappingException
 import com.phoneshim.android.data.mapper.toDomain
 import com.phoneshim.android.data.mapper.toRequest
 import com.phoneshim.android.domain.model.CreateReminderCommand
@@ -11,7 +13,6 @@ import com.phoneshim.android.domain.repository.ReminderRepository
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import retrofit2.HttpException
 
 class ReminderRepositoryImpl @Inject constructor(
     private val reminderApi: ReminderApi,
@@ -43,8 +44,7 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun deleteReminder(id: String): Result<Unit> =
         resultOf {
-            val response = reminderApi.deleteReminder(id)
-            if (!response.isSuccessful) throw HttpException(response)
+            apiCallExecutor.executeNoContent { reminderApi.deleteReminder(id) }
         }
 
     private suspend fun <T> resultOf(block: suspend () -> T): Result<T> =
@@ -52,6 +52,8 @@ class ReminderRepositoryImpl @Inject constructor(
             Result.success(block())
         } catch (error: CancellationException) {
             throw error
+        } catch (error: ReminderMappingException) {
+            Result.failure(ApiException.Serialization(error))
         } catch (error: Throwable) {
             Result.failure(error)
         }

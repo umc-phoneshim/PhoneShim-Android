@@ -48,7 +48,7 @@ class ReminderMapperTest {
         val request = command.toRequest()
 
         assertEquals("2026-07-16", request.date)
-        assertEquals("2026-07-16T01:00:00Z", request.startTime)
+        assertEquals("2026-07-16T10:00+09:00", request.startTime)
         assertEquals("SPECIFIC_APP", request.restrictMode)
         assertEquals(listOf("app-1", "app-2"), request.restrictedAppIds)
     }
@@ -76,5 +76,35 @@ class ReminderMapperTest {
         assertEquals(null, request.startTime)
         assertEquals(null, request.restrictMode)
         assertEquals(null, request.restrictedAppIds)
+    }
+
+    @Test(expected = ReminderMappingException::class)
+    fun `알 수 없는 제한 모드는 매핑 오류로 처리한다`() {
+        ReminderResponse(
+            id = "reminder-1",
+            userId = "user-1",
+            date = "2026-07-16",
+            title = "과제하기",
+            startTime = "2026-07-16T01:00:00Z",
+            endTime = "2026-07-16T02:00:00Z",
+            restrictMode = "UNKNOWN_MODE",
+            createdAt = "2026-07-15T12:00:00Z",
+            updatedAt = "2026-07-15T12:00:00Z",
+        ).toDomain()
+    }
+
+    @Test(expected = ReminderMappingException::class)
+    fun `잘못된 서버 시간은 매핑 오류로 처리한다`() {
+        ReminderResponse(
+            id = "reminder-1",
+            userId = "user-1",
+            date = "2026-07-16",
+            title = "과제하기",
+            startTime = "invalid-time",
+            endTime = "2026-07-16T02:00:00Z",
+            restrictMode = "NONE",
+            createdAt = "2026-07-15T12:00:00Z",
+            updatedAt = "2026-07-15T12:00:00Z",
+        ).toDomain()
     }
 }

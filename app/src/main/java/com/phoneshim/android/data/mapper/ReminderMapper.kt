@@ -16,25 +16,31 @@ import java.time.ZoneId
 private val koreaZoneId: ZoneId = ZoneId.of("Asia/Seoul")
 
 fun ReminderResponse.toDomain(): Reminder =
-    Reminder(
-        id = id,
-        userId = userId,
-        date = date.toLocalDate(),
-        title = title,
-        startTime = startTime.toInstant(),
-        endTime = endTime.toInstant(),
-        restrictionMode = restrictMode.toRestrictionMode(),
-        restrictedAppIds = restrictedAppIds.toSet(),
-        createdAt = createdAt.toInstant(),
-        updatedAt = updatedAt.toInstant(),
-    )
+    try {
+        Reminder(
+            id = id,
+            userId = userId,
+            date = date.toLocalDate(),
+            title = title,
+            startTime = startTime.toInstant(),
+            endTime = endTime.toInstant(),
+            restrictionMode = restrictMode.toRestrictionMode(),
+            restrictedAppIds = restrictedAppIds.toSet(),
+            createdAt = createdAt.toInstant(),
+            updatedAt = updatedAt.toInstant(),
+        )
+    } catch (error: ReminderMappingException) {
+        throw error
+    } catch (error: RuntimeException) {
+        throw ReminderMappingException("Invalid reminder response.", error)
+    }
 
 fun CreateReminderCommand.toRequest(): CreateReminderRequest =
     CreateReminderRequest(
         date = date.toString(),
         title = title,
-        startTime = startTime.toString(),
-        endTime = endTime.toString(),
+        startTime = startTime.toKoreaOffsetString(),
+        endTime = endTime.toKoreaOffsetString(),
         restrictMode = restrictionMode.toApiValue(),
         restrictedAppIds = restrictionMode.validatedAppIds(restrictedAppIds),
     )
@@ -43,8 +49,8 @@ fun UpdateReminderCommand.toRequest(): UpdateReminderRequest =
     UpdateReminderRequest(
         date = date?.toString(),
         title = title,
-        startTime = startTime?.toString(),
-        endTime = endTime?.toString(),
+        startTime = startTime?.toKoreaOffsetString(),
+        endTime = endTime?.toKoreaOffsetString(),
         restrictMode = restrictionMode?.toApiValue(),
         restrictedAppIds = when (restrictionMode) {
             ReminderRestrictionMode.NONE,
@@ -71,7 +77,7 @@ private fun String.toRestrictionMode(): ReminderRestrictionMode =
         ReminderRestrictModeValue.NONE -> ReminderRestrictionMode.NONE
         ReminderRestrictModeValue.FULL_PHONE -> ReminderRestrictionMode.FULL_PHONE
         ReminderRestrictModeValue.SPECIFIC_APP -> ReminderRestrictionMode.SPECIFIC_APP
-        else -> error("Unknown reminder restrict mode: $this")
+        else -> throw ReminderMappingException("Unknown reminder restrict mode: $this")
     }
 
 private fun ReminderRestrictionMode.toApiValue(): String =
@@ -83,3 +89,10 @@ private fun ReminderRestrictionMode.toApiValue(): String =
 
 private fun ReminderRestrictionMode.validatedAppIds(appIds: Set<String>): List<String> =
     if (this == ReminderRestrictionMode.SPECIFIC_APP) appIds.sorted() else emptyList()
+
+private fun Instant.toKoreaOffsetString(): String = atZone(koreaZoneId).toOffsetDateTime().toString()
+
+class ReminderMappingException(
+    message: String,
+    cause: Throwable? = null,
+) : IllegalArgumentException(message, cause)
