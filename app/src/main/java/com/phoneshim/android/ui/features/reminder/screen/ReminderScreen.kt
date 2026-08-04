@@ -48,6 +48,7 @@ fun ReminderScreen(
     onAddTask: () -> Unit,
     onEditTask: (ReminderTaskUiModel) -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onNavigateToMain: () -> Unit = {},
     onNavigateToReport: () -> Unit = {},
@@ -107,9 +108,12 @@ fun ReminderScreen(
                 item {
                     ReminderTaskSection(
                         tasks = state.selectedTasks,
+                        isLoading = state.isLoading,
+                        errorMessage = state.loadErrorMessage,
                         onAddTask = onAddTask,
                         onEditTask = onEditTask,
                         onMoveTask = onMoveTask,
+                        onRetry = onRetry,
                     )
                 }
             }
@@ -140,12 +144,27 @@ fun ReminderScreen(
             onToggleApp = onToggleRestrictedApp,
             onSave = onSaveTask,
             onDelete = onDeleteTask,
+            isSubmitting = state.isSubmitting,
         )
     }
 }
 
 private fun previewState(tasks: Boolean = true) =
-    ReminderUiState(tasksByDate = if (tasks) ReminderUiState().tasksByDate else emptyMap())
+    ReminderUiState(
+        todayDate = LocalDate.of(2026, 7, 11),
+        selectedDate = LocalDate.of(2026, 7, 17),
+        tasksByDate = if (tasks) previewTasks() else emptyMap(),
+    )
+
+private fun previewTasks(): Map<LocalDate, List<ReminderTaskUiModel>> {
+    val date = LocalDate.of(2026, 7, 17)
+    return mapOf(
+        date to listOf(
+            ReminderTaskUiModel("mock-1", date, "과제하기", 600, 660),
+            ReminderTaskUiModel("mock-2", date, "운동하기", 780, 840),
+        ),
+    )
+}
 
 @Preview(name = "리마인더 초기 설정 전", widthDp = 360, heightDp = 800, showBackground = true)
 @Composable
