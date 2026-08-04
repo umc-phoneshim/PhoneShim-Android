@@ -1,18 +1,19 @@
 package com.phoneshim.android.ui.features.main.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.model.DashboardSummary
 import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
+import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.UiEffect
+import com.phoneshim.android.ui.common.base.UiEvent
+import com.phoneshim.android.ui.common.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class MainUiState(
@@ -20,38 +21,73 @@ data class MainUiState(
     val usageStatus: List<UsageStatus> = emptyList(),
     val dashboardSummary: DashboardSummary? = null,
     val isLoading: Boolean = false,
-)
+) : UiState
 
+sealed interface MainUiEvent : UiEvent {
+    data object LoadDashboard : MainUiEvent
+}
+
+sealed interface MainUiEffect : UiEffect {
+    data class ShowMessage(val message: String) : MainUiEffect
+}
+
+// TODO: MainScreen UI 개편 시 loadDashboard() shim 제거하고
+//  onEvent(MainUiEvent.LoadDashboard)/effect 구독으로 정리.
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getUsageStatusUseCase: GetUsageStatusUseCase,
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
     private val getGoalUseCase: GetGoalUseCase,
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(MainUiState())
-    val uiState: StateFlow<MainUiState> = _uiState
+) : BaseViewModel<MainUiState, MainUiEvent, MainUiEffect>(MainUiState()) {
 
     init {
         loadDashboard()
     }
 
-    fun loadDashboard() {
+    /** MainScreen.kt 호환용 shim. 내부적으로 [MainUiEvent.LoadDashboard] 를 발행합니다. */
+    fun loadDashboard() = onEvent(MainUiEvent.LoadDashboard)
+
+    override fun handleEvent(event: MainUiEvent) {
+        when (event) {
+            MainUiEvent.LoadDashboard -> fetchDashboard()
+        }
+    }
+
+    /**
+     * 사용 현황/오늘 요약은 서로 독립적인 요청이라 병렬로 불러옵니다.
+     * 하나가 실패해도 다른 하나는 그대로 반영하고, 실패한 항목은 직전 값을 유지한 채
+     * [MainUiEffect.ShowMessage] 로만 알립니다 — 부분 실패로 전체 화면을 비우지 않기 위함입니다.
+     */
+    private fun fetchDashboard() {
+        if (currentState.isLoading) return
+        setState { copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
             coroutineScope {
                 // 목표 설정 여부: 오프라인에서도 로컬 캐시로 읽힘(GoalRepository.getGoal 로컬 폴백).
                 val isGoalSetDeferred = async { getGoalUseCase().getOrNull() != null }
-                val usageStatusDeferred = async { getUsageStatusUseCase().getOrDefault(emptyList()) }
-                val dashboardSummaryDeferred = async { getDashboardSummaryUseCase().getOrNull() }
+                val usageStatusDeferred = async { getUsageStatusUseCase() }
+                val dashboardSummaryDeferred = async { getDashboardSummaryUseCase() }
 
-                _uiState.value = _uiState.value.copy(
-                    isGoalSet = isGoalSetDeferred.await(),
-                    usageStatus = usageStatusDeferred.await(),
-                    dashboardSummary = dashboardSummaryDeferred.await(),
-                    isLoading = false,
-                )
+                val isGoalSet = isGoalSetDeferred.await()
+                val usageStatusResult = usageStatusDeferred.await()
+                val dashboardSummaryResult = dashboardSummaryDeferred.await()
+
+                usageStatusResult.onFailure(::reportLoadFailure)
+                dashboardSummaryResult.onFailure(::reportLoadFailure)
+
+                setState {
+                    copy(
+                        isGoalSet = isGoalSet,
+                        usageStatus = usageStatusResult.getOrDefault(usageStatus),
+                        dashboardSummary = dashboardSummaryResult.getOrNull() ?: dashboardSummary,
+                        isLoading = false,
+                    )
+                }
             }
         }
+    }
+
+    private fun reportLoadFailure(throwable: Throwable) {
+        handleError(throwable) { error -> sendEffect(MainUiEffect.ShowMessage(error.message)) }
     }
 }
