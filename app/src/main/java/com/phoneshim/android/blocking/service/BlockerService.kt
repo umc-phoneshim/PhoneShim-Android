@@ -20,6 +20,7 @@ import com.phoneshim.android.blocking.overlay.OverlayAction
 import com.phoneshim.android.blocking.policy.BlockDecision
 import com.phoneshim.android.blocking.policy.BlockPolicyEngine
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
+import com.phoneshim.android.blocking.upload.UsageUploader
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,7 @@ class BlockerService : Service() {
     @Inject lateinit var usageReader: UsageMinutesReader
     @Inject lateinit var engine: BlockPolicyEngine
     @Inject lateinit var policyProvider: BlockingPolicyProvider
+    @Inject lateinit var usageUploader: UsageUploader
 
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -78,6 +80,9 @@ class BlockerService : Service() {
                     screenOnFlow.value = false
                     // 화면 꺼지면 차단 화면도 의미 없으니 내림
                     scope.launch(Dispatchers.Main) { overlay.hide() }
+                    // 잠들기 직전 사용분을 바로 밀어준다. 화면이 꺼져 있는 동안은
+                    // 사용량이 늘지 않으므로 uploader 가 값 비교로 알아서 걸러낸다.
+                    scope.launch { uploadNow() }
                 }
             }
         }
@@ -141,6 +146,7 @@ class BlockerService : Service() {
         restoreDayState()
         startAsForeground()
         loop()
+        uploadLoop()
     }
 
     /** 재시작 전에 저장해둔 오늘치 상태를 되살린다. */
@@ -164,6 +170,29 @@ class BlockerService : Service() {
                 screenOnFlow.first { it }
             }
         }
+    }
+
+    /**
+     * 서버 업로드 루프. 판정 폴 루프와 분리돼 있고 화면 상태에 묶이지 않는다.
+     *
+     * tick() 은 화면이 꺼지면 멈추므로 여기에 업로드를 얹으면 잠든 사이의 마지막 사용분이
+     * 다음 날 화면을 켤 때까지 서버에 올라가지 않는다. 그래서 별도 루프로 둔다.
+     * 판정 경로를 건드리지 않으므로 이 변경으로 차단 동작이 달라지지 않는다.
+     */
+    private fun uploadLoop() = scope.launch {
+        while (isActive) {
+            delay(UPLOAD_INTERVAL_MS)
+            uploadNow()
+        }
+    }
+
+    private suspend fun uploadNow() {
+        runCatching {
+            usageUploader.upload(
+                blockedIntervals = currentBlockedIntervals(),
+                foregroundPackage = lastForegroundPackage,
+            )
+        }.onFailure { android.util.Log.w("BlockerService", "사용량 업로드 실패", it) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -281,6 +310,8 @@ class BlockerService : Service() {
             openBlockStartMs = 0L
             stateStore.clear()
             lastPersistedAtMs = 0L
+            // 어제 값과 비교해 오늘 첫 업로드를 건너뛰지 않도록 한다.
+            usageUploader.onDayRollover()
         }
     }
 
@@ -478,6 +509,13 @@ class BlockerService : Service() {
 
     companion object {
         const val ACTION_REEVALUATE = "com.phoneshim.android.action.REEVALUATE"
+        /**
+         * 서버 업로드 주기. tick(1초)마다 올리면 하루 수만 건이 되고,
+         * 너무 길면 메인 화면과 서버 값 차이가 커진다.
+         * 서버가 누적값 덮어쓰기라 한 번 걸러도 다음 주기가 흡수한다.
+         */
+        private const val UPLOAD_INTERVAL_MS = 5 * 60_000L
+
         private const val POLL_INTERVAL_MS = 1_000L
         private const val REASON_COOLDOWN_MS = 60_000L
         private const val KEY_PHONE = "__PHONE__"
