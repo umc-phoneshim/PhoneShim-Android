@@ -1,10 +1,7 @@
 package com.phoneshim.android.ui.features.reminder.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,12 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -40,6 +34,7 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
+import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
 import com.phoneshim.android.ui.features.reminder.viewmodel.DUPLICATE_SCHEDULE_MESSAGE
@@ -180,7 +175,7 @@ private fun PopupTimeSection(
                 color = PhoneShimTheme.colors.onBrand,
             )
         }
-        Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             EditablePopupClock(startTime.ifBlank { "00:00" }, onStartTimeChange)
             Text("-", modifier = Modifier.padding(horizontal = 8.dp), style = PhoneShimType.EngH2, color = PhoneShimTheme.colors.textPrimary)
             EditablePopupClock(endTime.ifBlank { "00:00" }, onEndTimeChange)
@@ -245,36 +240,15 @@ private fun EditablePopupClock(value: String, onValueChange: (String) -> Unit) {
 
 @Composable
 private fun EditableTimeCell(value: String, maxValue: Int, onValueChange: (String) -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    BasicTextField(
+    InteractiveTimeSegmentInput(
         value = value,
-        onValueChange = { changed ->
-            val digits = changed.filter(Char::isDigit).takeLast(2)
-            val parsed = digits.toIntOrNull()
-            if (digits.isEmpty() || parsed == null || parsed <= maxValue) {
-                onValueChange(digits.padStart(2, '0'))
-            }
-        },
-        modifier = Modifier
-            .width(40.dp)
-            .height(36.dp)
-            .onFocusChanged { focused = it.isFocused }
-            .then(
-                if (focused) Modifier
-                    .background(PhoneShimPalette.Primary100, RoundedCornerShape(6.dp))
-                    .border(1.dp, PhoneShimTheme.colors.brand, RoundedCornerShape(6.dp))
-                else Modifier,
-            ),
-        textStyle = PhoneShimType.EngH2.copy(
-            color = if (focused) PhoneShimTheme.colors.brandStrong else PhoneShimPalette.Primary400,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        ),
-        singleLine = true,
-        cursorBrush = SolidColor(Color.Transparent),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        decorationBox = { innerTextField ->
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { innerTextField() }
-        },
+        maxValue = maxValue,
+        onValueChange = onValueChange,
+        textStyle = PhoneShimType.EngH2,
+        restingWidth = 28.dp,
+        activeWidth = 44.dp,
+        restingHeight = 32.dp,
+        activeHeight = 44.dp,
     )
 }
 
