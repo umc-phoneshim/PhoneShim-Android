@@ -29,8 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.domain.model.DashboardSummary
+import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
@@ -51,6 +53,7 @@ import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
+import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import androidx.compose.material3.Text
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -69,42 +72,44 @@ private val SectionTitleStyle = PhoneShimType.KorBodyM.copy(fontWeight = FontWei
 
 /* ============================================================
  * 2. DATA MODEL
- *
- * TODO: 로컬 프로젝트에서 그대로 이식한 더미 UI 상태입니다. 실제로는
- * MainViewModel의 MainUiState(isGoalSet/todayUsage/isLoading)와 합쳐져야 하며,
- * userName/usedHour/usedMinute/remainingTime/totalTimeProgress/cautionApps/todayTodos를
- * todayUsage: List<AppUsage> 등 실제 도메인 모델로부터 매핑하는 작업이 필요합니다.
  * ============================================================ */
-data class MainUiState(
-    val userName: String = "유리",
-    val usedHour: String = "01",
-    val usedMinute: String = "30",
-    val remainingTime: String = "01h 30m",
-    val totalTimeProgress: Float = 0.5f,
-    val isSetupCompleted: Boolean = true,
-    // 가로 슬라이드 확인용 더미 4개 (임시 테스트 데이터, 추후 실제 API 데이터로 교체)
-    val cautionApps: List<MainCautionAppItem> = listOf(
-        MainCautionAppItem(R.drawable.app_facebook, "30m", 0.33f, "3회"),
-        MainCautionAppItem(R.drawable.app_kakaotalk, "1h 20m", 0.90f, "2회"),
-        MainCautionAppItem(R.drawable.app_tiktok, "50m", 0.90f, "3회"),
-        MainCautionAppItem(R.drawable.app_youtube, "1h 30m", 0.50f, "3회")
-    ),
-    // 세로 슬라이드 확인용 더미 4개
-    val todayTodos: List<MainTodoItem> = List(4) {
-        MainTodoItem("과제하기", "10:00 ~ 11:00")
-    }
-)
-
 data class MainCautionAppItem(
-    val iconRes: Int,
+    val packageName: String,
     val usedTime: String,
     val progress: Float,
     val entryCount: String
 )
 
+// 리마인더 도메인(타로 담당, 이번 범위 밖) 더미 카드 표시용. 건드리지 않음.
 data class MainTodoItem(
     val title: String,
     val timeRange: String
+)
+
+/* ============================================================
+ * 3. FORMAT / MAPPING HELPERS
+ * ============================================================ */
+// "Xh Ym" 형태로 분 단위 시간을 표시. 남은 시간 캡션과 주의 앱 사용 시간에서 공용으로 사용.
+private fun formatDuration(totalMinutes: Int): String {
+    val safeMinutes = totalMinutes.coerceAtLeast(0)
+    val hours = safeMinutes / 60
+    val minutes = safeMinutes % 60
+    return "${hours}h ${minutes}m"
+}
+
+// targetMinutes가 없거나 0 이하면 진행률 없음(0f)으로 처리.
+private fun calculateProgress(usedMinutes: Int, targetMinutes: Int?): Float =
+    if (targetMinutes != null && targetMinutes > 0) {
+        (usedMinutes.toFloat() / targetMinutes).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+private fun UsageStatus.toCautionAppItem(): MainCautionAppItem = MainCautionAppItem(
+    packageName = packageName,
+    usedTime = formatDuration(usedMinutes),
+    progress = calculateProgress(usedMinutes, targetMinutes),
+    entryCount = "${entryCount}회",
 )
 
 /* ============================================================
@@ -120,9 +125,16 @@ fun MainScreen(
     onNavigateToReport: () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
 ) {
-    // TODO: viewModel.uiState 연동 필요. 지금은 로컬 프로젝트에서 그대로 가져온
-    // 더미 상태로 UI 쉘만 확인합니다 (viewModel은 아직 사용하지 않음).
-    val uiState by remember { mutableStateOf(MainUiState()) }
+    val state by viewModel.uiState.collectAsState()
+
+    // TODO: 실제 사용자 이름 연동 필요. Auth/MyPage 도메인 담당이라 이번 범위(UsageLog/Dashboard/
+    // DeviceUsage) 밖이라 임시 고정값을 씁니다.
+    val userName = "유리"
+
+    // 리마인더 도메인(타로 담당, 이번 범위 밖) 더미 데이터. 손대지 않음.
+    val todayTodos = remember {
+        List(4) { MainTodoItem("과제하기", "10:00 ~ 11:00") }
+    }
 
     Box(
         modifier = modifier
@@ -169,8 +181,8 @@ fun MainScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                if (!uiState.isSetupCompleted) {
-                    item { GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted) }
+                if (!state.isGoalSet) {
+                    item { GreetingCard(userName = userName, isSetupCompleted = state.isGoalSet) }
 
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -186,10 +198,12 @@ fun MainScreen(
                         }
                     }
                 } else {
-                    item { GreetingCard(userName = uiState.userName, isSetupCompleted = uiState.isSetupCompleted) }
-                    item { DailyUsageSection(uiState = uiState) }
-                    item { CautionAppSection(apps = uiState.cautionApps) }
-                    item { TodoSection(todos = uiState.todayTodos) }
+                    item { GreetingCard(userName = userName, isSetupCompleted = state.isGoalSet) }
+                    item { DailyUsageSection(dashboardSummary = state.dashboardSummary) }
+                    item {
+                        CautionAppSection(apps = state.usageStatus.map { it.toCautionAppItem() })
+                    }
+                    item { TodoSection(todos = todayTodos) }
                 }
             }
         }
@@ -324,7 +338,7 @@ fun EmptySetupCard(onSettingsClick: () -> Unit) {
  * 7. 하루 사용 시간
  * ============================================================ */
 @Composable
-private fun DailyUsageSection(uiState: MainUiState) {
+private fun DailyUsageSection(dashboardSummary: DashboardSummary?) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle(title = "하루 사용 시간")
 
@@ -336,10 +350,14 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
                 .padding(12.dp)
         ) {
-            val totalMinutes = (uiState.usedHour.toIntOrNull() ?: 0) * 60 +
-                (uiState.usedMinute.toIntOrNull() ?: 0)
+            // dashboardSummary가 아직 없으면(로딩/실패) 전부 0으로 안전하게 폴백.
+            val usedMinutes = dashboardSummary?.usedMinutes ?: 0
+            val targetMinutes = dashboardSummary?.targetMinutes
+            val remainingMinutes = dashboardSummary?.remainingMinutes ?: 0
+            val totalTimeProgress = calculateProgress(usedMinutes, targetMinutes)
+
             DurationDisplay(
-                totalMinutes = totalMinutes,
+                totalMinutes = usedMinutes,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -349,7 +367,7 @@ private fun DailyUsageSection(uiState: MainUiState) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(text = "남은 시간", style = PhoneShimType.KorCaption.copy(fontWeight = FontWeight.Medium), color = PhoneShimTheme.colors.textTertiary)
-                Text(text = uiState.remainingTime, style = PhoneShimType.EngCaption.copy(fontWeight = FontWeight.Medium), color = PhoneShimTheme.colors.textSecondary)
+                Text(text = formatDuration(remainingMinutes), style = PhoneShimType.EngCaption.copy(fontWeight = FontWeight.Medium), color = PhoneShimTheme.colors.textSecondary)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -361,17 +379,26 @@ private fun DailyUsageSection(uiState: MainUiState) {
                     .clip(RoundedCornerShape(100.dp))
                     .background(PhoneShimTheme.colors.brandSubtle)
             ) {
+                // 실제 채워짐 표시 (시각적 진행률, 정확한 값 그대로 유지)
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(uiState.totalTimeProgress)
+                        .fillMaxWidth(totalTimeProgress)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(100.dp))
                         .background(PhoneShimTheme.colors.brandStrong)
+                )
+
+                // 퍼센트 라벨: 채워진 영역의 오른쪽 끝을 따라가되, 96%로 상한을 둬서
+                // 100%에 가까워져도 둥근 모서리에 끼지 않도록 함
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(totalTimeProgress.coerceAtMost(0.96f))
+                        .fillMaxHeight()
                         .padding(horizontal = 6.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     Text(
-                        text = "${(uiState.totalTimeProgress * 100).toInt()}%",
+                        text = "${(totalTimeProgress * 100).toInt()}%",
                         style = PhoneShimType.EngLabel,
                         color = PhoneShimTheme.colors.surface
                     )
@@ -435,11 +462,7 @@ private fun CautionAppItem(app: MainCautionAppItem) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Image(
-            painter = painterResource(app.iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(40.dp)
-        )
+        AppIcon(packageName = app.packageName, size = 40.dp)
 
         Text(
             text = app.usedTime,

@@ -1,12 +1,14 @@
 package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.api.AuthApi
+import com.phoneshim.android.data.api.DashboardApi
+import com.phoneshim.android.data.api.DeviceUsageApi
 import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.HealthApi
-import com.phoneshim.android.data.api.MainApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageLogApi
 import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
@@ -33,10 +35,27 @@ object GoalApiModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object MainApiModule {
+object UsageLogApiModule {
     @Provides
     @Singleton
-    fun provideMainApi(retrofit: Retrofit): MainApi = retrofit.create(MainApi::class.java)
+    fun provideUsageLogApi(retrofit: Retrofit): UsageLogApi = retrofit.create(UsageLogApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DashboardApiModule {
+    @Provides
+    @Singleton
+    fun provideDashboardApi(retrofit: Retrofit): DashboardApi = retrofit.create(DashboardApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DeviceUsageApiModule {
+    @Provides
+    @Singleton
+    fun provideDeviceUsageApi(retrofit: Retrofit): DeviceUsageApi =
+        retrofit.create(DeviceUsageApi::class.java)
 }
 
 @Module
