@@ -32,10 +32,15 @@ data class ReminderDraft(
 )
 
 data class ReminderUiState(
-    val todayDate: LocalDate = LocalDate.of(2026, 7, 11),
-    val selectedDate: LocalDate = LocalDate.of(2026, 7, 17),
-    val visibleMonth: YearMonth = YearMonth.of(2026, 7),
-    val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = defaultTasks(),
+    val todayDate: LocalDate,
+    val selectedDate: LocalDate = todayDate,
+    val visibleMonth: YearMonth = YearMonth.from(selectedDate),
+    val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = emptyMap(),
+    val isLoading: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val loadErrorMessage: String? = null,
+    val isShowingCachedData: Boolean = false,
+    val syncWarningMessage: String? = null,
     val isTaskPopupVisible: Boolean = false,
     val draft: ReminderDraft = ReminderDraft(),
 ) : UiState {
@@ -46,6 +51,7 @@ data class ReminderUiState(
 sealed interface ReminderUiEvent : UiEvent {
     data class DateSelected(val date: LocalDate) : ReminderUiEvent
     data class MonthMoved(val offset: Long) : ReminderUiEvent
+    data object RetryClicked : ReminderUiEvent
     data object AddTaskClicked : ReminderUiEvent
     data class EditTaskClicked(val task: ReminderTaskUiModel) : ReminderUiEvent
     data class TaskMoved(val fromIndex: Int, val toIndex: Int) : ReminderUiEvent
@@ -61,14 +67,4 @@ sealed interface ReminderUiEvent : UiEvent {
 
 sealed interface ReminderUiEffect : UiEffect {
     data class ShowMessage(val message: String) : ReminderUiEffect
-}
-
-private fun defaultTasks(): Map<LocalDate, List<ReminderTaskUiModel>> {
-    val date = LocalDate.of(2026, 7, 17)
-    return mapOf(
-        date to listOf(
-            ReminderTaskUiModel("mock-1", date, "과제하기", 600, 660),
-            ReminderTaskUiModel("mock-2", date, "과제하기", 780, 840),
-        ),
-    )
 }

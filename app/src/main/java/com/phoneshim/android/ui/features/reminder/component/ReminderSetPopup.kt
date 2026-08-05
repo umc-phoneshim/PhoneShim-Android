@@ -64,6 +64,7 @@ fun ReminderSetPopup(
     onToggleApp: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
+    isSubmitting: Boolean = false,
 ) {
     var isNameInputVisible by remember { mutableStateOf(false) }
     var nameInput by remember { mutableStateOf(draft.title) }
@@ -113,6 +114,7 @@ fun ReminderSetPopup(
                 onCancel = onDismiss,
                 onDelete = onDelete,
                 onSave = onSave,
+                enabled = !isSubmitting,
             )
             }
             if (draft.timeError == DUPLICATE_SCHEDULE_MESSAGE) {
@@ -270,7 +272,13 @@ private fun PopupSelectionRow(
 }
 
 @Composable
-private fun PopupActions(isEditing: Boolean, onCancel: () -> Unit, onDelete: () -> Unit, onSave: () -> Unit) {
+private fun PopupActions(
+    isEditing: Boolean,
+    onCancel: () -> Unit,
+    onDelete: () -> Unit,
+    onSave: () -> Unit,
+    enabled: Boolean,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         SecondaryButton(
             text = if (isEditing) "삭제" else "취소",
@@ -278,6 +286,7 @@ private fun PopupActions(isEditing: Boolean, onCancel: () -> Unit, onDelete: () 
             modifier = Modifier.width(76.dp),
             size = PhoneShimButtonSize.Small,
             fullWidth = false,
+            enabled = enabled,
             shape = RoundedCornerShape(8.dp),
         )
         PrimaryButton(
@@ -286,6 +295,7 @@ private fun PopupActions(isEditing: Boolean, onCancel: () -> Unit, onDelete: () 
             modifier = Modifier.weight(1f),
             size = PhoneShimButtonSize.Small,
             fullWidth = false,
+            enabled = enabled,
             shape = RoundedCornerShape(8.dp),
         )
     }

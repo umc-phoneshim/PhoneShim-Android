@@ -9,6 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
+import retrofit2.Response
 
 @Singleton
 class ApiCallExecutor @Inject constructor(
@@ -44,6 +45,24 @@ class ApiCallExecutor @Inject constructor(
         } catch (error: Throwable) {
             throw ApiException.Unexpected(error)
         }
+
+    /** 204 No Content처럼 공통 응답 envelope가 없는 성공 응답을 처리한다. */
+    suspend fun executeNoContent(apiCall: suspend () -> Response<Unit>) {
+        try {
+            val response = apiCall()
+            if (!response.isSuccessful) throw HttpException(response)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: ApiException) {
+            throw error
+        } catch (error: HttpException) {
+            throw error.toApiException()
+        } catch (error: IOException) {
+            throw ApiException.Network(error)
+        } catch (error: Throwable) {
+            throw ApiException.Unexpected(error)
+        }
+    }
 
     private fun <T : Any> ApiResponse<T>.getRequiredData(): T {
         if (success) {

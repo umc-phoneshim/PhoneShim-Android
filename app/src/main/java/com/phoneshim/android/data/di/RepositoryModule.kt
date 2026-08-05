@@ -7,7 +7,6 @@ import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
 import com.phoneshim.android.data.repository.MyPageRepositoryImpl
-import com.phoneshim.android.data.repository.ReminderRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
 import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.UsageLogRepositoryImpl
@@ -16,8 +15,6 @@ import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
-import com.phoneshim.android.domain.repository.PackageMonitoredAppResolver
-import com.phoneshim.android.domain.repository.ReminderRepository
 import com.phoneshim.android.domain.repository.ReportRepository
 import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
 import com.phoneshim.android.domain.repository.UsageLogRepository
@@ -63,10 +60,6 @@ abstract class RepositoryModule {
     abstract fun bindPackageMonitoredAppResolver(
         impl: FakePackageMonitoredAppResolver,
     ): PackageMonitoredAppResolver
-
-    @Binds
-    @Singleton
-    abstract fun bindReminderRepository(impl: ReminderRepositoryImpl): ReminderRepository
 
     @Binds
     @Singleton

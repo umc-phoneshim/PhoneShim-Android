@@ -182,6 +182,11 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
                 onNavigateToMain = { navController.navigateToTopLevel(Routes.MAIN) },
                 onNavigateToReport = { navController.navigateToTopLevel(Routes.TIMETABLE) },
+                onAuthExpired = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                },
             )
         }
 

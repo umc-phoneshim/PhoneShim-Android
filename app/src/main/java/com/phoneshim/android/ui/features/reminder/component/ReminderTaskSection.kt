@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -52,9 +54,14 @@ private val TaskCardHeight = TaskRowHeight + TaskCardPadding * 2
 @Composable
 internal fun ReminderTaskSection(
     tasks: List<ReminderTaskUiModel>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    warningMessage: String?,
+    isReadOnly: Boolean,
     onAddTask: () -> Unit,
     onEditTask: (ReminderTaskUiModel) -> Unit,
     onMoveTask: (Int, Int) -> Unit,
+    onRetry: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -66,37 +73,72 @@ internal fun ReminderTaskSection(
                 color = PhoneShimTheme.colors.textPrimary,
             )
         }
-        if (tasks.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(TaskCardHeight * tasks.size + TaskItemSpacing * (tasks.size - 1)),
-                verticalArrangement = Arrangement.spacedBy(TaskItemSpacing),
-                userScrollEnabled = false,
-            ) {
-                itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
-                    Box(
-                        modifier = Modifier
-                            .animateItem(
-                                fadeInSpec = null,
-                                placementSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                                fadeOutSpec = null,
+        when {
+            isLoading && tasks.isEmpty() -> {
+                Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PhoneShimTheme.colors.brand)
+                }
+            }
+            errorMessage != null && tasks.isEmpty() -> {
+                ReminderLoadError(errorMessage, onRetry)
+            }
+            tasks.isNotEmpty() -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(TaskCardHeight * tasks.size + TaskItemSpacing * (tasks.size - 1)),
+                    verticalArrangement = Arrangement.spacedBy(TaskItemSpacing),
+                    userScrollEnabled = false,
+                ) {
+                    itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                        Box(
+                            modifier = Modifier
+                                .animateItem(
+                                    fadeInSpec = null,
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                    fadeOutSpec = null,
+                                )
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PhoneShimTheme.colors.surface)
+                                .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
+                                .padding(TaskCardPadding),
+                        ) {
+                            ReminderTaskItem(
+                                task = task,
+                                index = index,
+                                lastIndex = tasks.lastIndex,
+                                isReadOnly = isReadOnly,
+                                onEditTask = onEditTask,
+                                onMoveTask = onMoveTask,
                             )
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(PhoneShimTheme.colors.surface)
-                            .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
-                            .padding(TaskCardPadding),
-                    ) {
-                        ReminderTaskItem(task, index, tasks.lastIndex, onEditTask, onMoveTask)
+                        }
                     }
                 }
             }
         }
-        ReminderEmptyTaskCard(onAddTask)
+        if (errorMessage != null && tasks.isNotEmpty()) {
+            ReminderLoadError(errorMessage, onRetry)
+        }
+        if (warningMessage != null) ReminderLoadError(warningMessage, onRetry)
+        if (!isLoading && errorMessage == null && !isReadOnly) ReminderEmptyTaskCard(onAddTask)
+    }
+}
+
+@Composable
+private fun ReminderLoadError(errorMessage: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(errorMessage, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textSecondary)
+        TextButton(onClick = onRetry) {
+            Text("다시 시도", color = PhoneShimTheme.colors.brand)
+        }
     }
 }
 
@@ -105,6 +147,7 @@ private fun ReminderTaskItem(
     task: ReminderTaskUiModel,
     index: Int,
     lastIndex: Int,
+    isReadOnly: Boolean,
     onEditTask: (ReminderTaskUiModel) -> Unit,
     onMoveTask: (Int, Int) -> Unit,
 ) {
@@ -126,7 +169,8 @@ private fun ReminderTaskItem(
                 tint = Color.Unspecified,
                 modifier = Modifier
                     .size(20.dp)
-                    .pointerInput(task.id, lastIndex) {
+                    .pointerInput(task.id, lastIndex, isReadOnly) {
+                        if (isReadOnly) return@pointerInput
                         detectDragGestures(
                             onDragStart = {
                                 accumulatedDrag = 0f
@@ -151,7 +195,10 @@ private fun ReminderTaskItem(
             )
         },
         trailingContent = {
-            Box(Modifier.size(40.dp).clickable { onEditTask(task) }, contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(40.dp).clickable(enabled = !isReadOnly) { onEditTask(task) },
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(painterResource(R.drawable.ic_modify), "할 일 수정", tint = Color.Unspecified, modifier = Modifier.size(20.dp))
             }
         },
