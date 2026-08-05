@@ -55,10 +55,27 @@ object AppGoalApiModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object MainApiModule {
+object UsageLogApiModule {
     @Provides
     @Singleton
-    fun provideMainApi(retrofit: Retrofit): MainApi = retrofit.create(MainApi::class.java)
+    fun provideUsageLogApi(retrofit: Retrofit): UsageLogApi = retrofit.create(UsageLogApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DashboardApiModule {
+    @Provides
+    @Singleton
+    fun provideDashboardApi(retrofit: Retrofit): DashboardApi = retrofit.create(DashboardApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DeviceUsageApiModule {
+    @Provides
+    @Singleton
+    fun provideDeviceUsageApi(retrofit: Retrofit): DeviceUsageApi =
+        retrofit.create(DeviceUsageApi::class.java)
 }
 
 @Module

@@ -1,23 +1,28 @@
 package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.repository.AuthRepositoryImpl
+import com.phoneshim.android.data.repository.DashboardRepositoryImpl
+import com.phoneshim.android.data.repository.DeviceUsageRepositoryImpl
+import com.phoneshim.android.data.repository.fake.FakePackageMonitoredAppResolver
 import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
-import com.phoneshim.android.data.repository.MainRepositoryImpl
 import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReminderRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
 import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
-import com.phoneshim.android.data.repository.mock.MockMainRepositoryImpl
+import com.phoneshim.android.data.repository.UsageLogRepositoryImpl
 import com.phoneshim.android.domain.repository.AuthRepository
+import com.phoneshim.android.domain.repository.DashboardRepository
+import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
-import com.phoneshim.android.domain.repository.MainRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
+import com.phoneshim.android.domain.repository.PackageMonitoredAppResolver
 import com.phoneshim.android.domain.repository.ReminderRepository
 import com.phoneshim.android.domain.repository.ReportRepository
 import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
+import com.phoneshim.android.domain.repository.UsageLogRepository
 import com.phoneshim.android.domain.repository.UsageReasonRepository
 import dagger.Binds
 import dagger.Module
@@ -45,7 +50,25 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindMainRepository(impl: MockMainRepositoryImpl): MainRepository
+    abstract fun bindUsageLogRepository(impl: UsageLogRepositoryImpl): UsageLogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDashboardRepository(impl: DashboardRepositoryImpl): DashboardRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDeviceUsageRepository(impl: DeviceUsageRepositoryImpl): DeviceUsageRepository
+
+    /**
+     * packageName -> monitoredAppId 매핑. 노뱅의 MonitoredApp 도메인이 develop에 아직 안 들어와서
+     * Fake로 스텁 처리합니다. 실제 도메인이 공개되면 실구현으로 교체하고 Fake를 지우세요.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindPackageMonitoredAppResolver(
+        impl: FakePackageMonitoredAppResolver,
+    ): PackageMonitoredAppResolver
 
     @Binds
     @Singleton

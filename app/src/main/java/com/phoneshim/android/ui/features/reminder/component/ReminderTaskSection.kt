@@ -1,5 +1,7 @@
 package com.phoneshim.android.ui.features.reminder.component
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -21,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +46,8 @@ import kotlin.math.abs
 
 private val TaskRowHeight = 56.dp
 private val TaskItemSpacing = 12.dp
+private val TaskCardPadding = 12.dp
+private val TaskCardHeight = TaskRowHeight + TaskCardPadding * 2
 
 @Composable
 internal fun ReminderTaskSection(
@@ -60,21 +67,36 @@ internal fun ReminderTaskSection(
             )
         }
         if (tasks.isNotEmpty()) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PhoneShimTheme.colors.surface)
-                    .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
-                    .padding(12.dp),
+                    .height(TaskCardHeight * tasks.size + TaskItemSpacing * (tasks.size - 1)),
                 verticalArrangement = Arrangement.spacedBy(TaskItemSpacing),
+                userScrollEnabled = false,
             ) {
-                tasks.forEachIndexed { index, task ->
-                    ReminderTaskItem(task, index, tasks.lastIndex, onEditTask, onMoveTask)
+                itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                    Box(
+                        modifier = Modifier
+                            .animateItem(
+                                fadeInSpec = null,
+                                placementSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                                fadeOutSpec = null,
+                            )
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PhoneShimTheme.colors.surface)
+                            .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
+                            .padding(TaskCardPadding),
+                    ) {
+                        ReminderTaskItem(task, index, tasks.lastIndex, onEditTask, onMoveTask)
+                    }
                 }
             }
         }
-        ReminderEmptyTaskCard(tasks.isNotEmpty(), onAddTask)
+        ReminderEmptyTaskCard(onAddTask)
     }
 }
 
@@ -87,10 +109,11 @@ private fun ReminderTaskItem(
     onMoveTask: (Int, Int) -> Unit,
 ) {
     val moveThreshold = with(androidx.compose.ui.platform.LocalDensity.current) {
-        (TaskRowHeight + TaskItemSpacing).toPx()
+        ((TaskRowHeight + TaskCardPadding * 2 + TaskItemSpacing) / 2).toPx()
     }
+    val latestIndex by rememberUpdatedState(index)
     var accumulatedDrag by remember(task.id) { mutableFloatStateOf(0f) }
-    var currentIndex by remember(task.id, index) { mutableFloatStateOf(index.toFloat()) }
+    var currentIndex by remember(task.id) { mutableFloatStateOf(index.toFloat()) }
 
     TodoRow(
         title = task.title,
@@ -107,7 +130,7 @@ private fun ReminderTaskItem(
                         detectDragGestures(
                             onDragStart = {
                                 accumulatedDrag = 0f
-                                currentIndex = index.toFloat()
+                                currentIndex = latestIndex.toFloat()
                             },
                             onDragEnd = { accumulatedDrag = 0f },
                             onDragCancel = { accumulatedDrag = 0f },
@@ -136,11 +159,11 @@ private fun ReminderTaskItem(
 }
 
 @Composable
-private fun ReminderEmptyTaskCard(compact: Boolean, onClick: () -> Unit) {
+private fun ReminderEmptyTaskCard(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (compact) 48.dp else 72.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(PhoneShimTheme.colors.brandSubtle)
             .clickable(onClick = onClick)

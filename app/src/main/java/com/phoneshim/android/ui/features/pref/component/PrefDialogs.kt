@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -19,12 +17,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.ui.common.TextInputDialog
 import com.phoneshim.android.ui.common.PhoneShimDialog
 import com.phoneshim.android.ui.common.Toggle
+import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditorState
 import com.phoneshim.android.ui.features.pref.viewmodel.TimeInputError
 import com.phoneshim.android.ui.theme.PhoneShimDimens
@@ -147,16 +145,17 @@ private fun TimeValueInput(
     onValueChange: (String) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        BasicTextField(
+        InteractiveTimeSegmentInput(
             value = value,
+            maxValue = if (unit == "시간") 23 else 59,
             onValueChange = onValueChange,
-            modifier = Modifier.width(PrefDialogDefaults.timeNumberWidth),
-            textStyle = PhoneShimType.EngDisplay.copy(
-                color = PhoneShimTheme.colors.brand,
-                textAlign = TextAlign.Center,
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = PhoneShimType.EngDisplay,
+            restingWidth = PrefDialogDefaults.timeNumberWidth,
+            activeWidth = 64.dp,
+            restingHeight = 39.dp,
+            activeHeight = 47.dp,
+            restingTextColor = PhoneShimTheme.colors.brand,
+            activeTextColor = PhoneShimTheme.colors.brandStrong,
         )
         Text(
             text = unit,
