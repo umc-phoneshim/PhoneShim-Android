@@ -27,7 +27,9 @@ import com.phoneshim.android.data.database.entity.UserProfileEntity
         ReminderRestrictionEntity::class,
         UserProfileEntity::class,
     ],
-    // 5: Reminder API 전체 필드, restricted app 관계, 날짜별 sync marker 추가
+    // 4: user_profile_cache 추가 (온보딩 성별·나이 저장)
+    // 5: 목표 캐시에 서버 식별자(monitoredAppId/appGoalId/serverGoalId)와 targetCount 추가
+    //    Reminder API 전체 필드, restricted app 관계, 날짜별 sync marker 추가
     version = 5,
 )
 abstract class PhoneShimDatabase : RoomDatabase() {
