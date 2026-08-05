@@ -80,8 +80,7 @@ sealed interface MyPageUiEvent : UiEvent {
 
 sealed interface MyPageUiEffect : UiEffect {
     data object NavigateToSideMenu : MyPageUiEffect
-    data object NavigateToWithdraw : MyPageUiEffect
-    data object NavigateToLogin : MyPageUiEffect
+    data class NavigateToLogin(val noticeMessage: String) : MyPageUiEffect
     data object OpenContactSupport : MyPageUiEffect
     data class ShowMessage(val message: String) : MyPageUiEffect
 }

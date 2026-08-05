@@ -32,6 +32,7 @@ import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
@@ -61,6 +62,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 @Composable
 fun ReportSummaryRoute(
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToTimetable: () -> Unit = {},
@@ -71,6 +73,7 @@ fun ReportSummaryRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(ReportUiEvent.ScreenEntered(ReportTab.SUMMARY))

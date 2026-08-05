@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.RestSuggestion
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEvent
@@ -51,11 +52,13 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 @Composable
 fun RestSuggestionRoute(
     onNavigateToSummary: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(ReportUiEvent.RestSuggestionRequested)

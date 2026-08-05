@@ -22,7 +22,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
+import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.IconButton
+import com.phoneshim.android.ui.common.ConfirmationDialog
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginViewModel
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiEvent
@@ -33,34 +36,61 @@ import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToSignUp: () -> Unit,
+fun LoginRoute(
+    onNavigateToGoalSetup: () -> Unit,
+    onNavigateToMain: () -> Unit,
+    onAuthExpired: () -> Unit,
+    noticeMessage: String? = null,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                LoginUiEffect.NavigateToGoalSetup -> onLoginSuccess()
-                is LoginUiEffect.ShowSnackbar -> Unit
+                LoginUiEffect.NavigateToGoalSetup -> onNavigateToGoalSetup()
+                LoginUiEffect.NavigateToMain -> onNavigateToMain()
             }
         }
     }
 
-    LoginContent(
+    LoginScreen(
         uiState = uiState,
-        onGoogleLogin = { viewModel.onEvent(LoginUiEvent.GoogleLoginClicked) },
-        onKakaoLogin = { viewModel.onEvent(LoginUiEvent.KakaoLoginClicked) },
+        noticeMessage = noticeMessage,
+        onGoogleLogin = {
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        },
+        onKakaoLogin = {
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        },
         modifier = modifier,
     )
+
+    if (uiState.withdrawalRecovery != null) {
+        ConfirmationDialog(
+            title = "탈퇴 유예 중인 계정입니다",
+            message = if (uiState.canRecoverWithdrawal) {
+                "탈퇴 요청 후 14일 이내에는 계정을 복구할 수 있습니다."
+            } else {
+                "계정 복구 API가 준비 중입니다. 현재 앱에서는 복구를 진행할 수 없습니다."
+            },
+            confirmText = if (uiState.canRecoverWithdrawal) "계정 복구" else "확인",
+            onConfirm = {
+                viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+            },
+            onDismiss = {
+                viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryDismissed)
+            },
+        )
+    }
 }
 
 @Composable
-private fun LoginContent(
+fun LoginScreen(
     uiState: LoginUiState,
+    noticeMessage: String? = null,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
     modifier: Modifier = Modifier,
@@ -117,23 +147,49 @@ private fun LoginContent(
                 verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
             ) {
                 IconButton(
-                    label = "구글로 계속하기",
+                    label = if (
+                        uiState.selectedProvider == SocialProvider.GOOGLE && uiState.isLoading
+                    ) "구글 로그인 중" else "구글로 계속하기",
                     icon = R.drawable.google_logo,
                     iconWidth = 16.dp,
                     backgroundColor = PhoneShimPalette.Gray100,
                     contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onGoogleLogin,
-                    enabled = !uiState.isLoading,
+                    enabled = uiState.canGoogleLogin && !uiState.isLoading,
+                    isLoading = uiState.selectedProvider == SocialProvider.GOOGLE && uiState.isLoading,
                 )
                 IconButton(
-                    label = "카카오톡으로 계속하기",
+                    label = if (
+                        uiState.selectedProvider == SocialProvider.KAKAO && uiState.isLoading
+                    ) "카카오 로그인 중" else "카카오톡으로 계속하기",
                     icon = R.drawable.kakao_logo,
                     iconWidth = 17.dp,
                     backgroundColor = PhoneShimPalette.KakaoYellow,
                     contentColor = PhoneShimPalette.LoginButtonText,
                     onClick = onKakaoLogin,
                     enabled = !uiState.isLoading,
+                    isLoading = uiState.selectedProvider == SocialProvider.KAKAO && uiState.isLoading,
                 )
+                uiState.errorMessage?.let { message ->
+                    Text(
+                        text = message,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = PhoneShimPalette.Error,
+                        style = PhoneShimType.KorLabel,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                if (uiState.errorMessage == null) {
+                    noticeMessage?.let { message ->
+                        Text(
+                            text = message,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = PhoneShimPalette.Gray700,
+                            style = PhoneShimType.KorLabel,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
 
             Text(
@@ -153,7 +209,7 @@ private fun LoginContent(
 @Composable
 private fun LoginScreenPreview() {
     PhoneShimTheme {
-        LoginContent(
+        LoginScreen(
             uiState = LoginUiState(),
             onGoogleLogin = {},
             onKakaoLogin = {},

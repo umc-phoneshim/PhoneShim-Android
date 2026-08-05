@@ -34,6 +34,7 @@ import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
@@ -58,6 +59,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 fun TimetableRoute(
     onEntryClick: (entryId: String) -> Unit,
     onNavigateToAiSuggestion: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToSummary: () -> Unit = {},
@@ -68,6 +70,7 @@ fun TimetableRoute(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(ReportUiEvent.ScreenEntered(ReportTab.TIMETABLE))
