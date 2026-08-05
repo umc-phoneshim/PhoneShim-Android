@@ -1,6 +1,5 @@
 package com.phoneshim.android.data.di
 
-import com.phoneshim.android.data.repository.AuthRepositoryImpl
 import com.phoneshim.android.data.repository.DashboardRepositoryImpl
 import com.phoneshim.android.data.repository.DeviceUsageRepositoryImpl
 import com.phoneshim.android.data.repository.fake.FakePackageMonitoredAppResolver
@@ -11,7 +10,6 @@ import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
 import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.UsageLogRepositoryImpl
-import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.DashboardRepository
 import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
@@ -30,10 +28,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
-
-    @Binds
-    @Singleton
-    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 
     @Binds
     @Singleton

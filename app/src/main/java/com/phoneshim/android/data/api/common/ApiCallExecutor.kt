@@ -15,6 +15,16 @@ import retrofit2.Response
 class ApiCallExecutor @Inject constructor(
     private val gson: Gson,
 ) {
+    suspend fun <T : Any> executeAsResult(
+        apiCall: suspend () -> ApiResponse<T>,
+    ): Result<T> = try {
+        Result.success(execute(apiCall))
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        Result.failure(error)
+    }
+
     suspend fun <T : Any> execute(apiCall: suspend () -> ApiResponse<T>): T =
         try {
             apiCall().getRequiredData()

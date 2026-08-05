@@ -1,14 +1,14 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
 import com.phoneshim.android.ui.common.base.UiState
-
-enum class LoginProvider {
-    GOOGLE,
-    KAKAO,
-}
+import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.model.SocialIdentity
 
 data class LoginUiState(
-    val selectedProvider: LoginProvider? = null,
+    val selectedProvider: SocialProvider? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val withdrawalRecovery: SocialIdentity? = null,
+    val canGoogleLogin: Boolean = true,
+    val canRecoverWithdrawal: Boolean = false,
 ) : UiState

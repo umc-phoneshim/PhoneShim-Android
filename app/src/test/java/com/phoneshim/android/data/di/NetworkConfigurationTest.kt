@@ -18,8 +18,8 @@ class NetworkConfigurationTest {
     }
 
     @Test
-    fun `body logging is enabled only for debug builds`() {
-        val expectedLevel = if (BuildConfig.DEBUG) {
+    fun `body logging is enabled only for safe debug variants`() {
+        val expectedLevel = if (BuildConfig.DEBUG && BuildConfig.ENABLE_NETWORK_BODY_LOGGING) {
             HttpLoggingInterceptor.Level.BODY
         } else {
             HttpLoggingInterceptor.Level.NONE

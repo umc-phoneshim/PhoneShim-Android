@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.features.mypage.component.WithdrawPopup
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiState
@@ -40,21 +41,23 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 @Composable
 fun MySideMenuRoute(
-    onNavigateToWithdraw: () -> Unit,
     onDismiss: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
-    onNavigateToLogin: () -> Unit = {},
+    onNavigateToLogin: (String) -> Unit = {},
     onContactSupport: () -> Unit = {},
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                MyPageUiEffect.NavigateToWithdraw -> onNavigateToWithdraw()
-                MyPageUiEffect.NavigateToLogin -> onNavigateToLogin()
+                is MyPageUiEffect.NavigateToLogin -> {
+                    onNavigateToLogin(effect.noticeMessage)
+                }
                 MyPageUiEffect.OpenContactSupport -> onContactSupport()
                 is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 사이드 메뉴에서는 발생하지 않는 이펙트입니다. (마이페이지 본체 전용)

@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
