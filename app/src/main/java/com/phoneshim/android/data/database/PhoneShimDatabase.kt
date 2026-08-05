@@ -24,7 +24,8 @@ import com.phoneshim.android.data.database.entity.UserProfileEntity
         UserProfileEntity::class,
     ],
     // 4: user_profile_cache 추가 (온보딩 성별·나이 저장)
-    version = 4,
+    // 5: 목표 캐시에 서버 식별자(monitoredAppId/appGoalId/serverGoalId)와 targetCount 추가
+    version = 5,
 )
 abstract class PhoneShimDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
