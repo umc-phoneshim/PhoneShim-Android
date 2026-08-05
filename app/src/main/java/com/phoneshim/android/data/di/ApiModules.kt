@@ -2,12 +2,15 @@ package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.api.DashboardApi
 import com.phoneshim.android.data.api.DeviceUsageApi
-import com.phoneshim.android.data.api.GoalApi
+import com.phoneshim.android.data.api.AppGoalApi
+import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.HealthApi
+import com.phoneshim.android.data.api.MainApi
+import com.phoneshim.android.data.api.MonitoredAppApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
-import com.phoneshim.android.data.api.UsageLogApi
+import com.phoneshim.android.data.api.TotalGoalApi
 import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
@@ -21,7 +24,26 @@ import retrofit2.Retrofit
 object GoalApiModule {
     @Provides
     @Singleton
-    fun provideGoalApi(retrofit: Retrofit): GoalApi = retrofit.create(GoalApi::class.java)
+    fun provideMonitoredAppApi(retrofit: Retrofit): MonitoredAppApi =
+        retrofit.create(MonitoredAppApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object TotalGoalApiModule {
+    @Provides
+    @Singleton
+    fun provideTotalGoalApi(retrofit: Retrofit): TotalGoalApi =
+        retrofit.create(TotalGoalApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppGoalApiModule {
+    @Provides
+    @Singleton
+    fun provideAppGoalApi(retrofit: Retrofit): AppGoalApi =
+        retrofit.create(AppGoalApi::class.java)
 }
 
 @Module
