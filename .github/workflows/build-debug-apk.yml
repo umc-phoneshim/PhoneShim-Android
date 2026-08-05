@@ -52,7 +52,7 @@ jobs:
       - name: Upload dev debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: phoneshim-dev-debug-${{ github.ref_name }}-${{ github.run_number }}
+          name: phoneshim-dev-debug-${{ github.run_id }}-${{ github.run_attempt }}
           path: app/build/outputs/apk/dev/debug/app-dev-debug.apk
           if-no-files-found: error
           retention-days: 7
