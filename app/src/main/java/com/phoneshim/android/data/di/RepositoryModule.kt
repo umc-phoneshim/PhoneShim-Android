@@ -1,5 +1,8 @@
 package com.phoneshim.android.data.di
 
+import com.phoneshim.android.data.repository.DashboardRepositoryImpl
+import com.phoneshim.android.data.repository.DeviceUsageRepositoryImpl
+import com.phoneshim.android.data.repository.fake.FakePackageMonitoredAppResolver
 import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
@@ -7,7 +10,9 @@ import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReminderRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
 import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
-import com.phoneshim.android.data.repository.mock.MockMainRepositoryImpl
+import com.phoneshim.android.data.repository.UsageLogRepositoryImpl
+import com.phoneshim.android.domain.repository.DashboardRepository
+import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.repository.MyPageRepository

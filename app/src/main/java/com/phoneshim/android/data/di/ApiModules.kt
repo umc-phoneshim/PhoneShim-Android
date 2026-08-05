@@ -1,5 +1,7 @@
 package com.phoneshim.android.data.di
 
+import com.phoneshim.android.data.api.DashboardApi
+import com.phoneshim.android.data.api.DeviceUsageApi
 import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.HealthApi
 import com.phoneshim.android.data.api.MyPageApi
