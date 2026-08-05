@@ -110,6 +110,8 @@ fun ReminderScreen(
                         tasks = state.selectedTasks,
                         isLoading = state.isLoading,
                         errorMessage = state.loadErrorMessage,
+                        warningMessage = state.syncWarningMessage,
+                        isReadOnly = state.isShowingCachedData,
                         onAddTask = onAddTask,
                         onEditTask = onEditTask,
                         onMoveTask = onMoveTask,

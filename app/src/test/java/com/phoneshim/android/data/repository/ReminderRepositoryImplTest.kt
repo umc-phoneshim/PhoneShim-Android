@@ -9,8 +9,13 @@ import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.api.common.ApiError
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.api.common.ApiResponse
+import com.phoneshim.android.data.database.dao.ReminderCacheEntry
+import com.phoneshim.android.data.database.dao.ReminderDao
+import com.phoneshim.android.data.database.dao.ReminderWithRestrictedApps
+import com.phoneshim.android.data.database.entity.ReminderSyncStateEntity
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
+import com.phoneshim.android.domain.model.ReminderDataSource
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -24,7 +29,8 @@ import retrofit2.Response
 
 class ReminderRepositoryImplTest {
     private val api = FakeReminderApi()
-    private val repository = ReminderRepositoryImpl(api, ApiCallExecutor(Gson()))
+    private val dao = FakeReminderDao()
+    private val repository = ReminderRepositoryImpl(api, ApiCallExecutor(Gson()), dao)
 
     @Test
     fun `비즈니스 오류 코드를 유지한다`() = runTest {
@@ -77,6 +83,51 @@ class ReminderRepositoryImplTest {
         assertTrue(error is ApiException.Serialization)
     }
 
+    @Test
+    fun `서버 조회 성공 시 날짜 캐시를 교체한다`() = runTest {
+        val date = LocalDate.of(2026, 7, 16)
+
+        val result = repository.getReminders(date).getOrThrow()
+
+        assertEquals(ReminderDataSource.REMOTE, result.source)
+        assertEquals("reminder-1", dao.getForDate(date.toEpochDay()).single().reminder.id)
+        assertTrue(dao.getSyncState(date.toEpochDay()) != null)
+    }
+
+    @Test
+    fun `네트워크 실패 시 동기화된 날짜 캐시를 반환한다`() = runTest {
+        val date = LocalDate.of(2026, 7, 16)
+        repository.getReminders(date).getOrThrow()
+        api.getRemindersError = IOException("offline")
+
+        val result = repository.getReminders(date).getOrThrow()
+
+        assertEquals(ReminderDataSource.CACHE, result.source)
+        assertEquals("reminder-1", result.reminders.single().id)
+    }
+
+    @Test
+    fun `동기화 이력이 없는 날짜는 네트워크 오류를 유지한다`() = runTest {
+        api.getRemindersError = IOException("offline")
+
+        val error = repository.getReminders(LocalDate.of(2026, 7, 17)).exceptionOrNull()
+
+        assertTrue(error is ApiException.Network)
+    }
+
+    @Test
+    fun `생성 수정 삭제 성공을 캐시에 반영한다`() = runTest {
+        val created = repository.createReminder(command()).getOrThrow()
+        assertEquals(created.id, dao.getById(created.id)?.reminder?.id)
+
+        repository.updateReminder(created.id, com.phoneshim.android.domain.model.UpdateReminderCommand(title = "수정"))
+            .getOrThrow()
+        assertEquals(created.id, dao.getById(created.id)?.reminder?.id)
+
+        repository.deleteReminder(created.id).getOrThrow()
+        assertTrue(dao.getById(created.id) == null)
+    }
+
     private fun command() = CreateReminderCommand(
         date = LocalDate.of(2026, 7, 16),
         title = "과제하기",
@@ -84,6 +135,53 @@ class ReminderRepositoryImplTest {
         endTime = Instant.parse("2026-07-16T02:00:00Z"),
         restrictionMode = ReminderRestrictionMode.NONE,
     )
+}
+
+private class FakeReminderDao : ReminderDao {
+    private val entries = linkedMapOf<String, ReminderCacheEntry>()
+    private val syncStates = mutableMapOf<Long, ReminderSyncStateEntity>()
+
+    override suspend fun getForDate(dateEpochDay: Long): List<ReminderWithRestrictedApps> =
+        entries.values
+            .filter { it.reminder.dateEpochDay == dateEpochDay }
+            .sortedBy { it.reminder.startTimeEpochMillis }
+            .map { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }
+
+    override suspend fun getById(id: String): ReminderWithRestrictedApps? =
+        entries[id]?.let { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }
+
+    override suspend fun getSyncState(dateEpochDay: Long): ReminderSyncStateEntity? = syncStates[dateEpochDay]
+
+    override suspend fun upsertReminders(reminders: List<com.phoneshim.android.data.database.entity.ReminderEntity>) {
+        reminders.forEach { reminder ->
+            val previousApps = entries[reminder.id]?.restrictedApps.orEmpty()
+            entries[reminder.id] = ReminderCacheEntry(reminder, previousApps)
+        }
+    }
+
+    override suspend fun upsertRestrictedApps(
+        apps: List<com.phoneshim.android.data.database.entity.ReminderRestrictedAppEntity>,
+    ) {
+        apps.groupBy { it.reminderId }.forEach { (id, restrictedApps) ->
+            entries[id]?.let { entries[id] = it.copy(restrictedApps = restrictedApps) }
+        }
+    }
+
+    override suspend fun upsertSyncState(state: ReminderSyncStateEntity) {
+        syncStates[state.dateEpochDay] = state
+    }
+
+    override suspend fun deleteForDate(dateEpochDay: Long) {
+        entries.entries.removeAll { it.value.reminder.dateEpochDay == dateEpochDay }
+    }
+
+    override suspend fun deleteRestrictedApps(reminderId: String) {
+        entries[reminderId]?.let { entries[reminderId] = it.copy(restrictedApps = emptyList()) }
+    }
+
+    override suspend fun deleteById(id: String) {
+        entries.remove(id)
+    }
 }
 
 private class FakeReminderApi : ReminderApi {

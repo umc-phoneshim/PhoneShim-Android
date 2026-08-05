@@ -3,8 +3,13 @@ package com.phoneshim.android.data.repository.fake
 import com.phoneshim.android.data.api.ReminderErrorCodes
 import com.phoneshim.android.data.api.common.ApiError
 import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.data.database.dao.ReminderDao
+import com.phoneshim.android.data.mapper.toCacheEntry
+import com.phoneshim.android.data.mapper.toDomain
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.Reminder
+import com.phoneshim.android.domain.model.ReminderDataSource
+import com.phoneshim.android.domain.model.ReminderListResult
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.repository.ReminderRepository
@@ -23,15 +28,26 @@ import kotlinx.coroutines.sync.withLock
  * 앱 프로세스를 종료하면 데이터가 초기화되며 prod 소스셋에는 포함되지 않는다.
  */
 @Singleton
-class FakeReminderRepositoryImpl @Inject constructor() : ReminderRepository {
+class FakeReminderRepositoryImpl @Inject constructor(
+    private val scenarioController: DevReminderScenarioController,
+    private val reminderDao: ReminderDao,
+) : ReminderRepository {
     private val mutex = Mutex()
     private val reminders = linkedMapOf<String, Reminder>()
+    private val initializedDates = mutableSetOf<LocalDate>()
 
-    override suspend fun getReminders(date: LocalDate): Result<List<Reminder>> = fakeResult {
-        mutex.withLock {
-            reminders.values
-                .filter { it.date == date }
-                .sortedWith(compareBy(Reminder::startTime, Reminder::endTime, Reminder::createdAt))
+    override suspend fun getReminders(date: LocalDate): Result<ReminderListResult> {
+        delay(FAKE_DELAY_MILLIS)
+        return try {
+            when (val failure = scenarioController.consumeFailure()) {
+                DevReminderFailure.NETWORK -> cachedDateOrThrow(date, failure.toException())
+                null -> Result.success(loadRemoteDate(date))
+                else -> Result.failure(failure.toException())
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            Result.failure(error)
         }
     }
 
@@ -55,7 +71,10 @@ class FakeReminderRepositoryImpl @Inject constructor() : ReminderRepository {
                 restrictedAppIds = command.restrictedAppIds,
                 createdAt = now,
                 updatedAt = now,
-            ).also { reminders[it.id] = it }
+            ).also {
+                reminders[it.id] = it
+                reminderDao.upsert(it.toCacheEntry())
+            }
         }
     }
 
@@ -81,13 +100,17 @@ class FakeReminderRepositoryImpl @Inject constructor() : ReminderRepository {
                 updated.restrictedAppIds,
             )
             ensureNoOverlap(updated.date, updated.startTime, updated.endTime, excludedId = id)
-            updated.also { reminders[id] = it }
+            updated.also {
+                reminders[id] = it
+                reminderDao.upsert(it.toCacheEntry())
+            }
         }
     }
 
     override suspend fun deleteReminder(id: String): Result<Unit> = fakeResult {
         mutex.withLock {
             if (reminders.remove(id) == null) throw notFound()
+            reminderDao.deleteById(id)
         }
     }
 
@@ -127,12 +150,43 @@ class FakeReminderRepositoryImpl @Inject constructor() : ReminderRepository {
     private suspend fun <T> fakeResult(block: suspend () -> T): Result<T> {
         delay(FAKE_DELAY_MILLIS)
         return try {
+            scenarioController.consumeFailure()?.let { throw it.toException() }
             Result.success(block())
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
             Result.failure(error)
         }
+    }
+
+    private suspend fun loadRemoteDate(date: LocalDate): ReminderListResult {
+        val result = mutex.withLock {
+            if (initializedDates.add(date)) {
+                reminderDao.getForDate(date.toEpochDay())
+                    .map { it.toDomain() }
+                    .forEach { reminders[it.id] = it }
+            }
+            reminders.values
+                .filter { it.date == date }
+                .sortedWith(compareBy(Reminder::startTime, Reminder::endTime, Reminder::createdAt))
+        }
+        reminderDao.replaceDate(
+            dateEpochDay = date.toEpochDay(),
+            entries = result.map(Reminder::toCacheEntry),
+            syncedAtEpochMillis = Instant.now().toEpochMilli(),
+        )
+        return ReminderListResult(result, ReminderDataSource.REMOTE)
+    }
+
+    private suspend fun cachedDateOrThrow(date: LocalDate, networkError: ApiException): Result<ReminderListResult> {
+        val epochDay = date.toEpochDay()
+        if (reminderDao.getSyncState(epochDay) == null) return Result.failure(networkError)
+        return Result.success(
+            ReminderListResult(
+                reminders = reminderDao.getForDate(epochDay).map { it.toDomain() },
+                source = ReminderDataSource.CACHE,
+            ),
+        )
     }
 
     private fun notFound() = serverError(ReminderErrorCodes.REMINDER_NOT_FOUND, "리마인더를 찾을 수 없습니다")
@@ -144,4 +198,41 @@ class FakeReminderRepositoryImpl @Inject constructor() : ReminderRepository {
         const val DEV_USER_ID = "dev-user"
         const val FAKE_DELAY_MILLIS = 350L
     }
+}
+
+enum class DevReminderFailure {
+    NETWORK,
+    UNAUTHORIZED,
+    NOT_FOUND,
+}
+
+/** 테스트가 지정한 다음 한 번의 Fake 요청만 실패시킨다. */
+@Singleton
+class DevReminderScenarioController @Inject constructor() {
+    private val mutex = Mutex()
+    private var nextFailure: DevReminderFailure? = null
+
+    suspend fun failNextWith(failure: DevReminderFailure) = mutex.withLock {
+        nextFailure = failure
+    }
+
+    suspend fun clear() = mutex.withLock {
+        nextFailure = null
+    }
+
+    suspend fun consumeFailure(): DevReminderFailure? = mutex.withLock {
+        nextFailure.also { nextFailure = null }
+    }
+}
+
+private fun DevReminderFailure.toException(): ApiException = when (this) {
+    DevReminderFailure.NETWORK -> ApiException.Network(java.io.IOException("Forced dev network failure"))
+    DevReminderFailure.UNAUTHORIZED -> ApiException.Http(
+        statusCode = 401,
+        error = ApiError(code = "UNAUTHORIZED", message = "Authentication required"),
+        cause = IllegalStateException("Forced dev unauthorized failure"),
+    )
+    DevReminderFailure.NOT_FOUND -> ApiException.Server(
+        ApiError(code = ReminderErrorCodes.REMINDER_NOT_FOUND, message = "리마인더를 찾을 수 없습니다"),
+    )
 }

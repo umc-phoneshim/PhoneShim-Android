@@ -39,6 +39,8 @@ data class ReminderUiState(
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val loadErrorMessage: String? = null,
+    val isShowingCachedData: Boolean = false,
+    val syncWarningMessage: String? = null,
     val isTaskPopupVisible: Boolean = false,
     val draft: ReminderDraft = ReminderDraft(),
 ) : UiState {

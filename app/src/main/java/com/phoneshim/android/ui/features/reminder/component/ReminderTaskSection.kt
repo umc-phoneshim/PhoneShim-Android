@@ -56,6 +56,8 @@ internal fun ReminderTaskSection(
     tasks: List<ReminderTaskUiModel>,
     isLoading: Boolean,
     errorMessage: String?,
+    warningMessage: String?,
+    isReadOnly: Boolean,
     onAddTask: () -> Unit,
     onEditTask: (ReminderTaskUiModel) -> Unit,
     onMoveTask: (Int, Int) -> Unit,
@@ -105,7 +107,14 @@ internal fun ReminderTaskSection(
                                 .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
                                 .padding(TaskCardPadding),
                         ) {
-                            ReminderTaskItem(task, index, tasks.lastIndex, onEditTask, onMoveTask)
+                            ReminderTaskItem(
+                                task = task,
+                                index = index,
+                                lastIndex = tasks.lastIndex,
+                                isReadOnly = isReadOnly,
+                                onEditTask = onEditTask,
+                                onMoveTask = onMoveTask,
+                            )
                         }
                     }
                 }
@@ -114,7 +123,8 @@ internal fun ReminderTaskSection(
         if (errorMessage != null && tasks.isNotEmpty()) {
             ReminderLoadError(errorMessage, onRetry)
         }
-        if (!isLoading && errorMessage == null) ReminderEmptyTaskCard(onAddTask)
+        if (warningMessage != null) ReminderLoadError(warningMessage, onRetry)
+        if (!isLoading && errorMessage == null && !isReadOnly) ReminderEmptyTaskCard(onAddTask)
     }
 }
 
@@ -137,6 +147,7 @@ private fun ReminderTaskItem(
     task: ReminderTaskUiModel,
     index: Int,
     lastIndex: Int,
+    isReadOnly: Boolean,
     onEditTask: (ReminderTaskUiModel) -> Unit,
     onMoveTask: (Int, Int) -> Unit,
 ) {
@@ -158,7 +169,8 @@ private fun ReminderTaskItem(
                 tint = Color.Unspecified,
                 modifier = Modifier
                     .size(20.dp)
-                    .pointerInput(task.id, lastIndex) {
+                    .pointerInput(task.id, lastIndex, isReadOnly) {
+                        if (isReadOnly) return@pointerInput
                         detectDragGestures(
                             onDragStart = {
                                 accumulatedDrag = 0f
@@ -183,7 +195,10 @@ private fun ReminderTaskItem(
             )
         },
         trailingContent = {
-            Box(Modifier.size(40.dp).clickable { onEditTask(task) }, contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(40.dp).clickable(enabled = !isReadOnly) { onEditTask(task) },
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(painterResource(R.drawable.ic_modify), "할 일 수정", tint = Color.Unspecified, modifier = Modifier.size(20.dp))
             }
         },

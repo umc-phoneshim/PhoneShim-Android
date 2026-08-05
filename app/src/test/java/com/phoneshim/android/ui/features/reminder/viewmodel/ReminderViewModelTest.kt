@@ -5,6 +5,8 @@ import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
+import com.phoneshim.android.domain.model.ReminderDataSource
+import com.phoneshim.android.domain.model.ReminderListResult
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.repository.ReminderRepository
 import com.phoneshim.android.domain.usecase.CreateReminderUseCase
@@ -161,6 +163,26 @@ class ReminderViewModelTest {
     }
 
     @Test
+    fun `캐시 조회 결과를 표시하고 편집을 제한한다`() = runTest(dispatcher) {
+        val date = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+        val cachedRepository = FakeReminderRepository().apply {
+            getResultOverride = Result.success(
+                ReminderListResult(listOf(reminder(date = date)), ReminderDataSource.CACHE),
+            )
+        }
+        viewModel = createViewModel(cachedRepository)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isShowingCachedData)
+        assertEquals(1, viewModel.uiState.value.selectedTasks.size)
+        assertTrue(viewModel.uiState.value.syncWarningMessage?.contains("저장된 일정") == true)
+
+        viewModel.onEvent(ReminderUiEvent.AddTaskClicked)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isTaskPopupVisible)
+    }
+
+    @Test
     fun `401 조회 오류는 인증 만료 공통 효과를 보낸다`() = runTest(dispatcher) {
         val unauthorizedRepository = FakeReminderRepository().apply {
             getResultOverride = Result.failure(
@@ -214,7 +236,7 @@ class ReminderViewModelTest {
 private class FakeReminderRepository : ReminderRepository {
     val remindersByDate = mutableMapOf<LocalDate, List<Reminder>>()
     val requestedDates = mutableListOf<LocalDate>()
-    var getResultOverride: Result<List<Reminder>>? = null
+    var getResultOverride: Result<ReminderListResult>? = null
     var createResult: Result<Reminder>? = null
     var updateResult: Result<Reminder>? = null
     var deleteResult: Result<Unit> = Result.success(Unit)
@@ -222,9 +244,11 @@ private class FakeReminderRepository : ReminderRepository {
     var lastUpdateId: String? = null
     var lastDeleteId: String? = null
 
-    override suspend fun getReminders(date: LocalDate): Result<List<Reminder>> {
+    override suspend fun getReminders(date: LocalDate): Result<ReminderListResult> {
         requestedDates += date
-        return getResultOverride ?: Result.success(remindersByDate[date].orEmpty())
+        return getResultOverride ?: Result.success(
+            ReminderListResult(remindersByDate[date].orEmpty(), ReminderDataSource.REMOTE),
+        )
     }
 
     override suspend fun getReminder(id: String): Result<Reminder> = error("Not used")

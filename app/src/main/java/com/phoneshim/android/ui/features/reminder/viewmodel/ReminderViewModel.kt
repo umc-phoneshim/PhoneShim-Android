@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.ReminderErrorCodes
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.Reminder
+import com.phoneshim.android.domain.model.ReminderDataSource
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.usecase.CreateReminderUseCase
@@ -68,10 +69,18 @@ class ReminderViewModel @Inject constructor(
     }
 
     private fun openAddPopup() = setState {
+        if (isShowingCachedData) {
+            sendEffect(ReminderUiEffect.ShowMessage(OFFLINE_EDIT_MESSAGE))
+            return@setState this
+        }
         copy(draft = ReminderDraft(), isTaskPopupVisible = true)
     }
 
     private fun openEditPopup(event: ReminderUiEvent.EditTaskClicked) = setState {
+        if (isShowingCachedData) {
+            sendEffect(ReminderUiEffect.ShowMessage(OFFLINE_EDIT_MESSAGE))
+            return@setState this
+        }
         copy(
             draft = ReminderDraft(
                 editingTaskId = event.task.id,
@@ -221,18 +230,28 @@ class ReminderViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             setState { copy(isLoading = true, loadErrorMessage = null) }
             getReminders(date)
-                .onSuccess { reminders ->
+                .onSuccess { result ->
+                    val isCache = result.source == ReminderDataSource.CACHE
                     setState {
                         copy(
-                            tasksByDate = tasksByDate + (date to reminders.map(Reminder::toUiModel)),
+                            tasksByDate = tasksByDate + (date to result.reminders.map(Reminder::toUiModel)),
                             isLoading = false,
                             loadErrorMessage = null,
+                            isShowingCachedData = isCache,
+                            syncWarningMessage = if (isCache) CACHE_WARNING_MESSAGE else null,
                         )
                     }
                 }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
-                        setState { copy(isLoading = false, loadErrorMessage = error.message) }
+                        setState {
+                            copy(
+                                isLoading = false,
+                                loadErrorMessage = error.message,
+                                isShowingCachedData = false,
+                                syncWarningMessage = null,
+                            )
+                        }
                     }
                 }
         }
@@ -250,6 +269,8 @@ class ReminderViewModel @Inject constructor(
         copy(
             tasksByDate = tasksByDate + (date to updated),
             isSubmitting = false,
+            isShowingCachedData = false,
+            syncWarningMessage = null,
             draft = ReminderDraft(),
             isTaskPopupVisible = false,
         )
@@ -319,6 +340,8 @@ private fun UiError.toReminderMessage(): String = when (code) {
 }
 
 private val KOREA_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
+private const val CACHE_WARNING_MESSAGE = "네트워크에 연결할 수 없어 저장된 일정을 표시하고 있어요."
+private const val OFFLINE_EDIT_MESSAGE = "네트워크 연결 후 일정을 변경해 주세요."
 
 internal fun timeRangesOverlap(newStart: Int, newEnd: Int, existingStart: Int, existingEnd: Int): Boolean =
     newStart < existingEnd && existingStart < newEnd

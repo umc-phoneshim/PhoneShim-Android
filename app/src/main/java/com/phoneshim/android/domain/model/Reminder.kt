@@ -17,6 +17,16 @@ data class Reminder(
     val updatedAt: Instant,
 )
 
+data class ReminderListResult(
+    val reminders: List<Reminder>,
+    val source: ReminderDataSource,
+)
+
+enum class ReminderDataSource {
+    REMOTE,
+    CACHE,
+}
+
 enum class ReminderRestrictionMode {
     NONE,
     FULL_PHONE,
