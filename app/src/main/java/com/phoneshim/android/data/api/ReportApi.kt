@@ -17,18 +17,18 @@ interface ReportApi {
     @GET("api/usage-logs")
     suspend fun getUsageLogs(
         @Query("date") date: String? = null,
-    ): ApiEnvelope<List<UsageLogResponse>>
+    ): ApiResponse<List<UsageLogResponse>>
 
     /** 상태: 구현완료. 오늘 사용 현황. 앱 이름/패키지명/목표가 함께 내려옵니다. */
     @GET("api/usage-logs/status")
-    suspend fun getUsageStatus(): ApiEnvelope<List<UsageStatusResponse>>
+    suspend fun getUsageStatus(): ApiResponse<List<UsageStatusResponse>>
 
     /** 상태: 예정. 주간/월간 사용 사유 요약. 데이터 부족 시 422 INSUFFICIENT_REPORT_DATA. */
     @GET("api/reports/summary")
     suspend fun getReportSummary(
         @Query("range") range: String,
         @Query("date") date: String? = null,
-    ): ApiEnvelope<ReportSummaryResponse>
+    ): ApiResponse<ReportSummaryResponse>
 
     /**
      * 상태: 예정. "쉼이의 제안".
@@ -38,7 +38,7 @@ interface ReportApi {
     @POST("api/ai/daily-feedback")
     suspend fun getDailyFeedback(
         @Body request: DailyFeedbackRequest,
-    ): ApiEnvelope<DailyFeedbackResponse>
+    ): ApiResponse<DailyFeedbackResponse>
 }
 
 data class UsageLogResponse(
