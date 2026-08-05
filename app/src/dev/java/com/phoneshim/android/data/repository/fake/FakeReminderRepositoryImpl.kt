@@ -24,8 +24,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * 인증 기반이 합쳐지기 전 devDebug에서 Reminder 화면을 검증하기 위한 메모리 저장소.
- * 앱 프로세스를 종료하면 데이터가 초기화되며 prod 소스셋에는 포함되지 않는다.
+ * 인증 기반이 합쳐지기 전 devDebug에서 Reminder 화면을 검증하기 위한 Room 기반 Fake Repository.
+ * CRUD 결과를 Room에 반영하므로 앱 프로세스를 재시작해도 일정이 유지되며 prod 소스셋에는 포함되지 않는다.
  */
 @Singleton
 class FakeReminderRepositoryImpl @Inject constructor(
