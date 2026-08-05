@@ -1,16 +1,15 @@
 package com.phoneshim.android.data.di
 
+import com.phoneshim.android.data.api.AppGoalApi
 import com.phoneshim.android.data.api.DashboardApi
 import com.phoneshim.android.data.api.DeviceUsageApi
-import com.phoneshim.android.data.api.AppGoalApi
-import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.HealthApi
-import com.phoneshim.android.data.api.MainApi
 import com.phoneshim.android.data.api.MonitoredAppApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
 import com.phoneshim.android.data.api.TotalGoalApi
+import com.phoneshim.android.data.api.UsageLogApi
 import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
