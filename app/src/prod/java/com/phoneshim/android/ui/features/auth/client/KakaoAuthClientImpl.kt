@@ -25,7 +25,7 @@ class KakaoAuthClientImpl @Inject constructor(
         }
 
         return suspendCancellableCoroutine { continuation ->
-            // Kakao 로그인과 사용자 조회 callback이 경쟁해도 coroutine은 정확히 한 번만 완료한다.
+            // Kakao SDK callback이 중복 호출되더라도 coroutine은 정확히 한 번만 완료한다.
             val completed = AtomicBoolean(false)
 
             fun resumeOnce(result: AuthClientResult) {
@@ -47,24 +47,12 @@ class KakaoAuthClientImpl @Inject constructor(
                     )
                     return
                 }
-
-                UserApiClient.instance.me { user, userError ->
-                    if (userError != null || user == null) {
-                        resumeOnce(
-                            AuthClientResult.Failure(
-                                userError ?: IllegalStateException("Kakao 사용자 정보가 없습니다."),
-                            ),
-                        )
-                    } else {
-                        resumeOnce(
-                            AuthClientResult.Success(
-                                providerToken = token.accessToken,
-                                providerUserId = user.id?.toString(),
-                                email = user.kakaoAccount?.email,
-                            ),
-                        )
-                    }
-                }
+                // 사용자 정보는 서버가 access token으로 Kakao /v2/user/me를 호출해 조회한다.
+                resumeOnce(
+                    AuthClientResult.Success(
+                        providerToken = token.accessToken,
+                    ),
+                )
             }
 
             fun loginWithKakaoAccount() {
