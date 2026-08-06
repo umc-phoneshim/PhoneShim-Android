@@ -21,6 +21,7 @@ import com.phoneshim.android.blocking.policy.BlockDecision
 import com.phoneshim.android.blocking.policy.BlockPolicyEngine
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.blocking.upload.UsageUploader
+import com.phoneshim.android.domain.schedule.ReminderScheduleCoordinator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,7 @@ class BlockerService : Service() {
     @Inject lateinit var engine: BlockPolicyEngine
     @Inject lateinit var policyProvider: BlockingPolicyProvider
     @Inject lateinit var usageUploader: UsageUploader
+    @Inject lateinit var scheduleCoordinator: ReminderScheduleCoordinator
 
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -147,6 +149,9 @@ class BlockerService : Service() {
         startAsForeground()
         loop()
         uploadLoop()
+        // 앱/서비스 재시작 시 오늘 일정 예약 복구.
+        // 알람은 프로세스가 죽어도 남지만 재설치나 강제 종료 후에는 사라질 수 있다.
+        scope.launch { scheduleCoordinator.refreshToday() }
     }
 
     /** 재시작 전에 저장해둔 오늘치 상태를 되살린다. */
@@ -312,6 +317,9 @@ class BlockerService : Service() {
             lastPersistedAtMs = 0L
             // 어제 값과 비교해 오늘 첫 업로드를 건너뛰지 않도록 한다.
             usageUploader.onDayRollover()
+            // rescheduleToday() 는 오늘치만 armed 하므로 자정마다 다시 불러야
+            // 내일 일정이 예약된다. (ReminderAlarmScheduler KDoc 의 한계 해소)
+            scope.launch { scheduleCoordinator.refreshToday() }
         }
     }
 
