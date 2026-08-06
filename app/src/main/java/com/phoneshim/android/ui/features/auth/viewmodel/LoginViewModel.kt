@@ -78,7 +78,7 @@ class LoginViewModel @Inject constructor(
         authResult: AuthClientResult.Success,
     ) {
         // provider token은 서버 JWT 교환에만 전달하며 ViewModel 상태나 로컬 저장소에 보관하지 않는다.
-        socialLoginUseCase(provider, authResult.providerAccessToken)
+        socialLoginUseCase(provider, authResult.providerToken)
             .onSuccess { result ->
                 if (result.isNewUser) {
                     finishLoading()

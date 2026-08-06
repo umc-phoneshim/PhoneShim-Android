@@ -58,7 +58,7 @@ class KakaoAuthClientImpl @Inject constructor(
                     } else {
                         resumeOnce(
                             AuthClientResult.Success(
-                                providerAccessToken = token.accessToken,
+                                providerToken = token.accessToken,
                                 providerUserId = user.id?.toString(),
                                 email = user.kakaoAccount?.email,
                             ),

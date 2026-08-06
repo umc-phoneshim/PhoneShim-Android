@@ -17,7 +17,7 @@ class MockGoogleAuthClientImpl @Inject constructor(
             IllegalStateException("dev mock 소셜 인증 실패"),
         )
         else -> AuthClientResult.Success(
-            providerAccessToken = "dev-mock-$provider-access-token",
+            providerToken = "dev-mock-$provider-id-token",
             providerUserId = "dev-mock-$provider-user",
             email = "mock@phoneshim.local",
         )

@@ -107,7 +107,7 @@ class LoginViewModelTest {
     @Test
     fun `withdrawal pending login exposes recovery state`() = runTest(dispatcher) {
         val authResult = AuthClientResult.Success(
-            providerAccessToken = "provider-token",
+            providerToken = "provider-token",
             providerUserId = "provider-user",
             email = "user@example.com",
         )
@@ -161,7 +161,7 @@ class LoginViewModelTest {
         val repository = object : AuthRepository {
             override suspend fun socialLogin(
                 provider: SocialProvider,
-                providerAccessToken: String,
+                providerToken: String,
             ): Result<SocialLoginResult> = loginFailure?.let(Result.Companion::failure)
                 ?: Result.success(loginResult)
         }

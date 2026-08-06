@@ -10,11 +10,11 @@ class SocialLoginUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         provider: SocialProvider,
-        providerAccessToken: String,
+        providerToken: String,
     ): Result<SocialLoginResult> {
-        if (providerAccessToken.isBlank()) {
+        if (providerToken.isBlank()) {
             return Result.failure(IllegalArgumentException("소셜 인증 토큰이 비어 있습니다."))
         }
-        return authRepository.socialLogin(provider, providerAccessToken)
+        return authRepository.socialLogin(provider, providerToken)
     }
 }

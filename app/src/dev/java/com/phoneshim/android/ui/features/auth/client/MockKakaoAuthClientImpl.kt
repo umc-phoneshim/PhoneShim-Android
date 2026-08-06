@@ -15,7 +15,7 @@ class MockKakaoAuthClientImpl @Inject constructor(
             IllegalStateException("dev mock 소셜 인증 실패"),
         )
         else -> AuthClientResult.Success(
-            providerAccessToken = "dev-mock-kakao-access-token",
+            providerToken = "dev-mock-kakao-access-token",
             providerUserId = "dev-mock-kakao-user",
             email = "mock@phoneshim.local",
         )

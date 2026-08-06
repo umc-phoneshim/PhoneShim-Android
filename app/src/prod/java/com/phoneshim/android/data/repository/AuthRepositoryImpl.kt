@@ -3,7 +3,8 @@ package com.phoneshim.android.data.repository
 import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.api.common.ApiException
-import com.phoneshim.android.data.api.dto.SocialLoginRequest
+import com.phoneshim.android.data.api.dto.GoogleLoginRequest
+import com.phoneshim.android.data.api.dto.KakaoLoginRequest
 import com.phoneshim.android.data.local.TokenDataSource
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthToken
@@ -22,14 +23,13 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
     override suspend fun socialLogin(
         provider: SocialProvider,
-        providerAccessToken: String,
+        providerToken: String,
     ): Result<SocialLoginResult> = try {
-        require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
-        val request = SocialLoginRequest(providerAccessToken)
+        require(providerToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         val response = apiCallExecutor.execute {
             when (provider) {
-                SocialProvider.GOOGLE -> authApi.loginWithGoogle(request)
-                SocialProvider.KAKAO -> authApi.loginWithKakao(request)
+                SocialProvider.GOOGLE -> authApi.loginWithGoogle(GoogleLoginRequest(providerToken))
+                SocialProvider.KAKAO -> authApi.loginWithKakao(KakaoLoginRequest(providerToken))
             }
         }
         // 소셜 provider token 대신 폰쉼 서버가 발급한 JWT만 장기 세션으로 저장한다.
