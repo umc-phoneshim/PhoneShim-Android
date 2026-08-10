@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiEvent
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiState
@@ -50,11 +51,13 @@ fun UsageReasonInputRoute(
     timeRangeStart: String,
     timeRangeEnd: String,
     onSubmitted: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: UsageReasonInputViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(entryId, date) {
         viewModel.onEvent(

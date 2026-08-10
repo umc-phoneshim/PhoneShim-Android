@@ -15,6 +15,9 @@ data class Goal(
 data class AppGoal(
     val packageName: String,
     val appName: String,
-    val goalMinutes: Int,        // 앱별 목표 시간(분)
-    val accessLimited: Boolean,  // 접근 제한 여부
+    val goalMinutes: Int,        // 앱별 목표 시간(분) — 서버 targetMinutes
+    val accessLimited: Boolean,  // 접근 제한 여부 — 서버 restrictAfter
+    // 앱별 목표 진입 횟수 — 서버 targetCount. 서버는 필수(1 이상)로 요구하지만
+    // 아직 이 값을 입력받는 화면이 없어(Figma 04-4 접근 횟수 팝업 미구현) 최소값을 기본으로 둔다.
+    val targetCount: Int = 1,
 )

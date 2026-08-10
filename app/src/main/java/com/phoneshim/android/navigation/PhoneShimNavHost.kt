@@ -1,7 +1,10 @@
 package com.phoneshim.android.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -11,8 +14,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
-import com.phoneshim.android.ui.features.auth.screen.LoginScreen
-import com.phoneshim.android.ui.features.auth.screen.SignUpScreen
+import com.phoneshim.android.ui.features.auth.screen.LoginRoute
+import com.phoneshim.android.ui.features.auth.viewmodel.AuthSessionEffect
+import com.phoneshim.android.ui.features.auth.viewmodel.AuthSessionViewModel
 import com.phoneshim.android.ui.features.auth.screen.SplashScreen
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.main.screen.MainScreen
@@ -36,13 +40,31 @@ import com.phoneshim.android.ui.features.setgoal.screen.UsageTimeSetScreen
 // 앱 전체 화면 이동 경로(그래프)를 정의하는 네비게이션 호스트
 @Composable
 fun PhoneShimNavHost(navController: NavHostController) {
-    // TODO: SplashScreen의 완료 callback을 구현한 뒤 시작 경로를 Routes.SPLASH로 복원합니다.
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+    val authSessionViewModel: AuthSessionViewModel = hiltViewModel()
+    val authNoticeMessage by authSessionViewModel.noticeMessage.collectAsState()
+
+    LaunchedEffect(authSessionViewModel, navController) {
+        authSessionViewModel.effect.collect { effect ->
+            when (effect) {
+                AuthSessionEffect.NavigateToLogin -> navController.navigate(Routes.LOGIN) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
         // 인증(스플래시/로그인/회원가입) 화면
         composable(Routes.SPLASH) {
             SplashScreen(
-                onSplashFinished = {
+                onAuthenticated = {
+                    navController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                },
+                onUnauthenticated = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
@@ -50,24 +72,22 @@ fun PhoneShimNavHost(navController: NavHostController) {
             )
         }
         composable(Routes.LOGIN) {
-            LoginScreen(
+            LoginRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
+                noticeMessage = authNoticeMessage,
                 // 로그인 직후 목표 설정 시작 화면으로 진입 (접근 권한 동의 팝업이 그 위에 표시됨)
-                onLoginSuccess = {
+                onNavigateToGoalSetup = {
+                    authSessionViewModel.onSessionStarted()
                     navController.navigate(Routes.SET_GOAL_GRAPH) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onNavigateToSignUp = { navController.navigate(Routes.SIGN_UP) },
-            )
-        }
-        composable(Routes.SIGN_UP) {
-            SignUpScreen(
-                onSignUpSuccess = {
+                onNavigateToMain = {
+                    authSessionViewModel.onSessionStarted()
                     navController.navigate(Routes.MAIN) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onNavigateBack = { navController.popBackStack() },
             )
         }
 
@@ -162,12 +182,18 @@ fun PhoneShimNavHost(navController: NavHostController) {
                 onNavigateToMyPage = { navController.navigate(Routes.MY_PAGE) },
                 onNavigateToMain = { navController.navigateToTopLevel(Routes.MAIN) },
                 onNavigateToReport = { navController.navigateToTopLevel(Routes.TIMETABLE) },
+                onAuthExpired = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                },
             )
         }
 
         // 리포트(타임테이블/사용이유/AI제안/요약) 화면
         composable(Routes.TIMETABLE) {
             TimetableRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
                 onEntryClick = { entryId -> navController.navigate(Routes.usageReasonInput(entryId)) },
                 onNavigateToAiSuggestion = { navController.navigate(Routes.REPORT_AI_SUGGEST) },
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
@@ -186,6 +212,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
             // TODO: 타임테이블 시간대별 조회 API가 생기면 선택 구간의 date/timeRange 를 함께 넘기세요.
             //  지금은 화면이 오늘 날짜와 빈 구간으로 시작합니다.
             UsageReasonInputRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
                 entryId = entryId,
                 date = LocalDate.now().toString(),
                 timeRangeStart = "",
@@ -194,10 +221,14 @@ fun PhoneShimNavHost(navController: NavHostController) {
             )
         }
         composable(Routes.REPORT_AI_SUGGEST) {
-            RestSuggestionRoute(onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) })
+            RestSuggestionRoute(
+                onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) },
+                onAuthExpired = authSessionViewModel::onAuthExpired,
+            )
         }
         composable(Routes.REPORT_SUMMARY) {
             ReportSummaryRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
                 onNavigateToTimetable = { navController.popBackStack(Routes.TIMETABLE, inclusive = false) },
                 onNavigateToMain = { navController.navigateToTopLevel(Routes.MAIN) },
@@ -210,19 +241,20 @@ fun PhoneShimNavHost(navController: NavHostController) {
         composable(Routes.MY_PAGE) {
             val sourceTab = navController.previousBackStackEntry?.destination?.route.toBottomBarTab()
             MyRoute(
+                onAuthExpired = authSessionViewModel::onAuthExpired,
                 onNavigateToSideMenu = { navController.navigate(Routes.MY_SIDE_MENU) },
                 selectedBottomTab = sourceTab,
                 onNavigateToMain = { navController.navigateFromTransientToTopLevel(Routes.MAIN) },
                 onNavigateToReminder = { navController.navigateFromTransientToTopLevel(Routes.REMINDER) },
                 onNavigateToReport = { navController.navigateFromTransientToTopLevel(Routes.TIMETABLE) },
                 // TODO: 로그아웃 API 연동 후 Routes.LOGIN 으로 이동하도록 연결하세요.
-                onNavigateToLogin = { },
+                onNavigateToLogin = authSessionViewModel::onSessionEnded,
             )
         }
         composable(Routes.MY_SIDE_MENU) {
             MySideMenuRoute(
-                // TODO: 탈퇴 완료 화면/로그인 화면 이동을 연결하세요.
-                onNavigateToWithdraw = { },
+                onAuthExpired = authSessionViewModel::onAuthExpired,
+                onNavigateToLogin = authSessionViewModel::onSessionEnded,
                 onDismiss = { navController.popBackStack() },
             )
         }

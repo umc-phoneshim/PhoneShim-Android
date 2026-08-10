@@ -15,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
+import retrofit2.Response
 import retrofit2.converter.gson.GsonConverterFactory
 
 class ApiCallExecutorTest {
@@ -156,6 +157,35 @@ class ApiCallExecutorTest {
         assertEquals(cancellation, error)
     }
 
+    @Test
+    fun `no content 성공 응답을 처리한다`() = runTest {
+        executor.executeNoContent { Response.success(null) }
+    }
+
+    @Test
+    fun `no content HTTP 오류도 공통 오류로 변환한다`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(404)
+                .setBody(
+                    """{"success":false,"error":{"code":"REMINDER_NOT_FOUND","message":"Not found"}}""",
+                ),
+        )
+
+        val api = Retrofit.Builder()
+            .baseUrl(server.url("/"))
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+            .create(NoContentTestApi::class.java)
+
+        val error = captureException<ApiException.Http> {
+            executor.executeNoContent { api.delete() }
+        }
+
+        assertEquals(404, error.statusCode)
+        assertEquals("REMINDER_NOT_FOUND", error.error?.code)
+    }
+
     private fun createHealthApi(mockWebServer: MockWebServer): HealthApi =
         Retrofit.Builder()
             .baseUrl(mockWebServer.url("/"))
@@ -174,4 +204,9 @@ class ApiCallExecutorTest {
         }
         throw AssertionError("Expected ${T::class.java.simpleName}, but no exception was thrown")
     }
+}
+
+private interface NoContentTestApi {
+    @retrofit2.http.DELETE("resource")
+    suspend fun delete(): Response<Unit>
 }

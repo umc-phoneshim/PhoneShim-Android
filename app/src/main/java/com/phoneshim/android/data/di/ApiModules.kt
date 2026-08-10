@@ -1,12 +1,16 @@
 package com.phoneshim.android.data.di
 
+import com.phoneshim.android.data.api.DashboardApi
+import com.phoneshim.android.data.api.DeviceUsageApi
+import com.phoneshim.android.data.api.AppGoalApi
 import com.phoneshim.android.data.api.AuthApi
-import com.phoneshim.android.data.api.GoalApi
 import com.phoneshim.android.data.api.HealthApi
 import com.phoneshim.android.data.api.MainApi
+import com.phoneshim.android.data.api.MonitoredAppApi
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.ReminderApi
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.TotalGoalApi
 import com.phoneshim.android.data.api.UsageReasonApi
 import dagger.Module
 import dagger.Provides
@@ -17,26 +21,54 @@ import retrofit2.Retrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AuthApiModule {
-    @Provides
-    @Singleton
-    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
 object GoalApiModule {
     @Provides
     @Singleton
-    fun provideGoalApi(retrofit: Retrofit): GoalApi = retrofit.create(GoalApi::class.java)
+    fun provideMonitoredAppApi(retrofit: Retrofit): MonitoredAppApi =
+        retrofit.create(MonitoredAppApi::class.java)
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-object MainApiModule {
+object TotalGoalApiModule {
     @Provides
     @Singleton
-    fun provideMainApi(retrofit: Retrofit): MainApi = retrofit.create(MainApi::class.java)
+    fun provideTotalGoalApi(retrofit: Retrofit): TotalGoalApi =
+        retrofit.create(TotalGoalApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppGoalApiModule {
+    @Provides
+    @Singleton
+    fun provideAppGoalApi(retrofit: Retrofit): AppGoalApi =
+        retrofit.create(AppGoalApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object UsageLogApiModule {
+    @Provides
+    @Singleton
+    fun provideUsageLogApi(retrofit: Retrofit): UsageLogApi = retrofit.create(UsageLogApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DashboardApiModule {
+    @Provides
+    @Singleton
+    fun provideDashboardApi(retrofit: Retrofit): DashboardApi = retrofit.create(DashboardApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DeviceUsageApiModule {
+    @Provides
+    @Singleton
+    fun provideDeviceUsageApi(retrofit: Retrofit): DeviceUsageApi =
+        retrofit.create(DeviceUsageApi::class.java)
 }
 
 @Module

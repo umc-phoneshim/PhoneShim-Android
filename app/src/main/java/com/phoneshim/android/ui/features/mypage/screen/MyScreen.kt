@@ -42,6 +42,7 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiState
@@ -57,16 +58,18 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 @Composable
 fun MyRoute(
     onNavigateToSideMenu: () -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     selectedBottomTab: BottomBarTab = BottomBarTab.REPORT,
     onNavigateToMain: () -> Unit = {},
     onNavigateToReminder: () -> Unit = {},
     onNavigateToReport: () -> Unit = {},
-    onNavigateToLogin: () -> Unit = {},
+    onNavigateToLogin: (String) -> Unit = {},
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MyPageUiEvent.ScreenEntered)
@@ -75,10 +78,9 @@ fun MyRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 MyPageUiEffect.NavigateToSideMenu -> onNavigateToSideMenu()
-                MyPageUiEffect.NavigateToLogin -> onNavigateToLogin()
+                is MyPageUiEffect.NavigateToLogin -> onNavigateToLogin(effect.noticeMessage)
                 is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 // 마이페이지 본체에서는 발생하지 않는 이펙트입니다. (사이드 메뉴 전용)
-                MyPageUiEffect.NavigateToWithdraw -> Unit
                 MyPageUiEffect.OpenContactSupport -> Unit
             }
         }

@@ -10,13 +10,17 @@ import com.phoneshim.android.data.database.dao.UserProfileDao
 import com.phoneshim.android.data.database.entity.AppGoalEntity
 import com.phoneshim.android.data.database.entity.PhoneGoalEntity
 import com.phoneshim.android.data.database.entity.ReminderEntity
+import com.phoneshim.android.data.database.entity.ReminderRestrictedAppEntity
 import com.phoneshim.android.data.database.entity.ReminderRestrictionEntity
+import com.phoneshim.android.data.database.entity.ReminderSyncStateEntity
 import com.phoneshim.android.data.database.entity.TimetableEntity
 import com.phoneshim.android.data.database.entity.UserProfileEntity
 
 @Database(
     entities = [
         ReminderEntity::class,
+        ReminderRestrictedAppEntity::class,
+        ReminderSyncStateEntity::class,
         TimetableEntity::class,
         AppGoalEntity::class,
         PhoneGoalEntity::class,
@@ -24,7 +28,9 @@ import com.phoneshim.android.data.database.entity.UserProfileEntity
         UserProfileEntity::class,
     ],
     // 4: user_profile_cache 추가 (온보딩 성별·나이 저장)
-    version = 4,
+    // 5: 목표 캐시에 서버 식별자(monitoredAppId/appGoalId/serverGoalId)와 targetCount 추가
+    //    Reminder API 전체 필드, restricted app 관계, 날짜별 sync marker 추가
+    version = 5,
 )
 abstract class PhoneShimDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
@@ -37,4 +43,3 @@ abstract class PhoneShimDatabase : RoomDatabase() {
         const val DATABASE_NAME = "phoneshim.db"
     }
 }
-
