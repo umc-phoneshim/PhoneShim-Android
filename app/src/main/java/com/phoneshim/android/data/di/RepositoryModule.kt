@@ -15,6 +15,7 @@ import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
+import com.phoneshim.android.domain.repository.PackageMonitoredAppResolver
 import com.phoneshim.android.domain.repository.ReportRepository
 import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
 import com.phoneshim.android.domain.repository.UsageLogRepository
