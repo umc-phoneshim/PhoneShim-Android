@@ -16,8 +16,6 @@ class MockKakaoAuthClientImpl @Inject constructor(
         )
         else -> AuthClientResult.Success(
             providerToken = "dev-mock-kakao-access-token",
-            providerUserId = "dev-mock-kakao-user",
-            email = "mock@phoneshim.local",
         )
     }
 }

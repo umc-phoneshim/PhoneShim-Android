@@ -32,7 +32,6 @@ abstract class ProdAuthBindingModule {
             // Credential Manager는 ID token을 반환하므로 서버 계약과 Web Client ID가 모두 준비된 경우에만 노출한다.
             canGoogleLogin = BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED &&
                 BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank(),
-            canRecoverWithdrawal = false,
             shouldLoadRemoteProfile = true,
         )
     }

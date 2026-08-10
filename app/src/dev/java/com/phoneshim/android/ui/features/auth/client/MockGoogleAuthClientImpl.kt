@@ -18,8 +18,6 @@ class MockGoogleAuthClientImpl @Inject constructor(
         )
         else -> AuthClientResult.Success(
             providerToken = "dev-mock-$provider-id-token",
-            providerUserId = "dev-mock-$provider-user",
-            email = "mock@phoneshim.local",
         )
     }
 }
