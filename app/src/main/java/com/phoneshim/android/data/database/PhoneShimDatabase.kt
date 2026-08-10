@@ -30,7 +30,8 @@ import com.phoneshim.android.data.database.entity.UserProfileEntity
     // 4: user_profile_cache 추가 (온보딩 성별·나이 저장)
     // 5: 목표 캐시에 서버 식별자(monitoredAppId/appGoalId/serverGoalId)와 targetCount 추가
     //    Reminder API 전체 필드, restricted app 관계, 날짜별 sync marker 추가
-    version = 5,
+    // 6: app_goal_cache 에 goalReason 추가 (설정 화면의 어플 목표 문구)
+    version = 6,
 )
 abstract class PhoneShimDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao

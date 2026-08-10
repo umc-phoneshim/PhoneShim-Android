@@ -103,6 +103,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = it.goalMinutes,
                     accessLimited = it.limitEnabled,
                     targetCount = it.targetCount,
+                    goalReason = it.goalReason,
                 )
             },
         )
@@ -129,6 +130,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = appGoal?.targetMinutes ?: 0,
                     accessLimited = appGoal?.restrictAfter ?: false,
                     targetCount = appGoal?.targetCount ?: 1,
+                    goalReason = appGoal?.goalReason,
                 )
             },
         )
@@ -159,6 +161,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = app.goalMinutes,
                     limitEnabled = app.accessLimited,
                     targetCount = app.targetCount,
+                    goalReason = app.goalReason,
                     monitoredAppId = previous?.monitoredAppId,
                     appGoalId = previous?.appGoalId,
                 )
@@ -218,6 +221,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = app.goalMinutes,
                     limitEnabled = app.accessLimited,
                     targetCount = app.targetCount,
+                    goalReason = app.goalReason,
                     monitoredAppId = monitored.id,
                     appGoalId = appGoal.id,
                 )
@@ -259,6 +263,7 @@ class GoalRepositoryImpl @Inject constructor(
                         monitoredAppId = monitoredAppId,
                         targetMinutes = app.goalMinutes,
                         targetCount = app.targetCount,
+                        goalReason = app.goalReason,
                         restrictAfter = app.accessLimited,
                     ),
                 )
@@ -270,6 +275,7 @@ class GoalRepositoryImpl @Inject constructor(
                     AppGoalUpdateRequest(
                         targetMinutes = app.goalMinutes,
                         targetCount = app.targetCount,
+                        goalReason = app.goalReason,
                         restrictAfter = app.accessLimited,
                     ),
                 )
@@ -301,6 +307,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = appGoal?.targetMinutes ?: 0,
                     limitEnabled = appGoal?.restrictAfter ?: false,
                     targetCount = appGoal?.targetCount ?: 1,
+                    goalReason = appGoal?.goalReason,
                     monitoredAppId = app.id,
                     appGoalId = appGoal?.id,
                 )
