@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -24,7 +25,7 @@ interface AppGoalApi {
     @POST("api/app-goals")
     suspend fun createAppGoal(
         @Body request: AppGoalCreateRequest,
-    ): ApiEnvelope<AppGoalResponse>
+    ): ApiResponse<AppGoalResponse>
 
     /**
      * 상태: 구현완료. 목록이 아니라 해당 주의 앱의 목표 '단건'을 돌려줍니다
@@ -33,14 +34,14 @@ interface AppGoalApi {
     @GET("api/app-goals")
     suspend fun getAppGoal(
         @Query("monitoredAppId") monitoredAppId: String,
-    ): ApiEnvelope<AppGoalResponse>
+    ): ApiResponse<AppGoalResponse>
 
     /** 상태: 구현완료. 넘긴 필드만 수정됩니다. */
     @PATCH("api/app-goals/{id}")
     suspend fun updateAppGoal(
         @Path("id") id: String,
         @Body request: AppGoalUpdateRequest,
-    ): ApiEnvelope<AppGoalResponse>
+    ): ApiResponse<AppGoalResponse>
 
     /** 상태: 구현완료. 성공 시 204 No Content라 본문이 비어 옵니다. */
     @DELETE("api/app-goals/{id}")

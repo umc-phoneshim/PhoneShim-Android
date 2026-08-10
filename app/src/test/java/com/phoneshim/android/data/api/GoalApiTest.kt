@@ -1,5 +1,9 @@
 package com.phoneshim.android.data.api
 
+import com.google.gson.Gson
+import com.phoneshim.android.data.api.common.ApiCallExecutor
+import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.data.api.common.ApiException
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -16,8 +20,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 /**
  * 목표 도메인 API 3종 계약 테스트. 명세서 2_System_MonitoredApp, 5_TotalGoal_AppGoal 기준.
  *
- * 경로·메서드·쿼리·요청 body가 명세와 일치하는지, envelope unwrap과 대표 오류 코드가
- * ApiException으로 올라오는지를 확인합니다.
+ * 경로·메서드·쿼리·요청 body가 명세와 일치하는지, 공통 API 실행기와 대표 오류 코드가
+ * ApiException으로 연결되는지를 확인합니다.
  */
 class GoalApiTest {
 
@@ -25,6 +29,8 @@ class GoalApiTest {
     private lateinit var monitoredAppApi: MonitoredAppApi
     private lateinit var totalGoalApi: TotalGoalApi
     private lateinit var appGoalApi: AppGoalApi
+    private val gson = Gson()
+    private val apiCallExecutor = ApiCallExecutor(gson)
 
     @Before
     fun setUp() {
@@ -32,7 +38,7 @@ class GoalApiTest {
         server.start()
         val retrofit = Retrofit.Builder()
             .baseUrl(server.url("/"))
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
         monitoredAppApi = retrofit.create(MonitoredAppApi::class.java)
         totalGoalApi = retrofit.create(TotalGoalApi::class.java)
@@ -72,13 +78,15 @@ class GoalApiTest {
             """.trimIndent(),
         )
 
-        val result = monitoredAppApi.createMonitoredApp(
-            MonitoredAppCreateRequest(
-                packageName = "com.google.android.youtube",
-                appName = "YouTube",
-                sortOrder = 0,
-            ),
-        ).unwrap()
+        val result = apiCallExecutor.execute {
+            monitoredAppApi.createMonitoredApp(
+                MonitoredAppCreateRequest(
+                    packageName = "com.google.android.youtube",
+                    appName = "YouTube",
+                    sortOrder = 0,
+                ),
+            )
+        }
 
         val request = server.takeRequest()
         assertEquals("POST", request.method)
@@ -104,7 +112,7 @@ class GoalApiTest {
             """.trimIndent(),
         )
 
-        val result = monitoredAppApi.getMonitoredApps().unwrap()
+        val result = apiCallExecutor.execute { monitoredAppApi.getMonitoredApps() }
 
         assertEquals("/api/monitored-apps", server.takeRequest().path)
         assertEquals(2, result.size)
@@ -149,10 +157,10 @@ class GoalApiTest {
     fun `주의 앱 5개 초과는 MONITORED_APP_LIMIT_EXCEEDED로 올라온다`() = runTest {
         enqueueError(400, GoalErrorCodes.MONITORED_APP_LIMIT_EXCEEDED)
 
-        val result = runCatchingApi {
+        val result = apiCallExecutor.executeAsResult {
             monitoredAppApi.createMonitoredApp(
                 MonitoredAppCreateRequest(packageName = "com.a", appName = "A"),
-            ).unwrap()
+            )
         }
 
         val error = result.exceptionOrNull() as ApiException
@@ -164,7 +172,7 @@ class GoalApiTest {
     fun `없는 주의 앱 조회는 404 MONITORED_APP_NOT_FOUND로 올라온다`() = runTest {
         enqueueError(404, GoalErrorCodes.MONITORED_APP_NOT_FOUND)
 
-        val result = runCatchingApi { monitoredAppApi.getMonitoredApp("nope").unwrap() }
+        val result = apiCallExecutor.executeAsResult { monitoredAppApi.getMonitoredApp("nope") }
 
         val error = result.exceptionOrNull() as ApiException
         assertEquals(GoalErrorCodes.MONITORED_APP_NOT_FOUND, error.code)
@@ -183,9 +191,9 @@ class GoalApiTest {
             """.trimIndent(),
         )
 
-        val result = totalGoalApi.createTotalGoal(
-            TotalGoalCreateRequest(targetMinutes = 120),
-        ).unwrap()
+        val result = apiCallExecutor.execute {
+            totalGoalApi.createTotalGoal(TotalGoalCreateRequest(targetMinutes = 120))
+        }
 
         val request = server.takeRequest()
         assertEquals("POST", request.method)
@@ -216,8 +224,8 @@ class GoalApiTest {
     fun `목표 시간 범위를 벗어나면 INVALID_TARGET_MINUTES로 올라온다`() = runTest {
         enqueueError(400, GoalErrorCodes.INVALID_TARGET_MINUTES)
 
-        val result = runCatchingApi {
-            totalGoalApi.createTotalGoal(TotalGoalCreateRequest(targetMinutes = 5)).unwrap()
+        val result = apiCallExecutor.executeAsResult {
+            totalGoalApi.createTotalGoal(TotalGoalCreateRequest(targetMinutes = 5))
         }
 
         assertEquals(
@@ -230,7 +238,7 @@ class GoalApiTest {
     fun `전체 목표가 없으면 404 TOTAL_GOAL_NOT_FOUND로 올라온다`() = runTest {
         enqueueError(404, GoalErrorCodes.TOTAL_GOAL_NOT_FOUND)
 
-        val result = runCatchingApi { totalGoalApi.getTotalGoal().unwrap() }
+        val result = apiCallExecutor.executeAsResult { totalGoalApi.getTotalGoal() }
 
         assertEquals(
             GoalErrorCodes.TOTAL_GOAL_NOT_FOUND,
@@ -252,7 +260,7 @@ class GoalApiTest {
             """.trimIndent(),
         )
 
-        val result = appGoalApi.getAppGoal("app-1").unwrap()
+        val result = apiCallExecutor.execute { appGoalApi.getAppGoal("app-1") }
 
         assertEquals("/api/app-goals?monitoredAppId=app-1", server.takeRequest().path)
         assertEquals("ag-1", result.id)
@@ -303,10 +311,10 @@ class GoalApiTest {
     fun `이미 있는 앱 목표는 409 APP_GOAL_ALREADY_EXISTS로 올라온다`() = runTest {
         enqueueError(409, GoalErrorCodes.APP_GOAL_ALREADY_EXISTS)
 
-        val result = runCatchingApi {
+        val result = apiCallExecutor.executeAsResult {
             appGoalApi.createAppGoal(
                 AppGoalCreateRequest(monitoredAppId = "app-1", targetMinutes = 60, targetCount = 5),
-            ).unwrap()
+            )
         }
 
         val error = result.exceptionOrNull() as ApiException
@@ -318,7 +326,7 @@ class GoalApiTest {
     fun `인증 만료는 401 UNAUTHORIZED로 올라오고 isUnauthorized가 참이다`() = runTest {
         enqueueError(401, ApiErrorCodes.UNAUTHORIZED)
 
-        val result = runCatchingApi { totalGoalApi.getTotalGoal().unwrap() }
+        val result = apiCallExecutor.executeAsResult { totalGoalApi.getTotalGoal() }
 
         val error = result.exceptionOrNull() as ApiException
         assertEquals(ApiErrorCodes.UNAUTHORIZED, error.code)
