@@ -3,11 +3,13 @@ package com.phoneshim.android.ui.features.report.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -44,6 +46,9 @@ import com.phoneshim.android.ui.features.report.component.ReportColorRed
 import com.phoneshim.android.ui.features.report.component.ReportColorYellow
 import com.phoneshim.android.ui.features.report.component.ReportPeriod
 import com.phoneshim.android.ui.features.report.component.ReportPeriodToggle
+import com.phoneshim.android.ui.features.report.component.ReportSideCardWidth
+import com.phoneshim.android.ui.features.report.component.RestSuggestionCard
+import com.phoneshim.android.ui.features.report.component.UsedAppsCard
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.UsageLegendDots
@@ -106,6 +111,8 @@ fun ReportSummaryRoute(
         onPickerNextMonth = { viewModel.onEvent(ReportUiEvent.PickerMonthMoved(1)) },
         onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
         onPeriodSelected = { viewModel.onEvent(ReportUiEvent.PeriodSelected(it)) },
+        onAlarmSettings = { viewModel.onEvent(ReportUiEvent.AlarmSettingsClicked) },
+        onTooltipDismiss = { viewModel.onEvent(ReportUiEvent.CalendarTooltipDismissed) },
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -133,6 +140,8 @@ fun ReportSummaryScreen(
     onDatePicked: (java.time.LocalDate) -> Unit = {},
     onPickerPreviousMonth: () -> Unit = {},
     onPickerNextMonth: () -> Unit = {},
+    onAlarmSettings: () -> Unit = {},
+    onTooltipDismiss: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -174,7 +183,22 @@ fun ReportSummaryScreen(
                     onNextDate = onNextDate,
                     nextEnabled = state.canGoNextDate,
                     onCalendarClick = onCalendarClick,
+                    onAlarmSettingsClick = onAlarmSettings,
+                    // 데일리 리포트 첫 진입 화면이라 여기에만 안내를 띄웁니다.
+                    showCalendarTooltip = state.isCalendarTooltipVisible,
+                    onTooltipDismiss = onTooltipDismiss,
                 )
+
+                state.restSuggestion?.let { suggestion ->
+                    RestSuggestionCard(
+                        suggestion = suggestion,
+                        modifier = Modifier.padding(
+                            horizontal = PhoneShimDimens.screenHorizontalPadding,
+                        ),
+                    )
+                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
+                }
+
                 ReportTabRow(selected = ReportTab.SUMMARY, onTabSelected = onTabSelected)
 
                 Column(
@@ -183,35 +207,42 @@ fun ReportSummaryScreen(
                         .padding(PhoneShimDimens.screenHorizontalPadding),
                     verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing16),
                 ) {
-                    ReportCard {
-                        Text(
-                            text = "어플 사용 분포",
-                            style = PhoneShimType.KorBodyM,
-                            color = PhoneShimTheme.colors.textSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
-                        val bubbles = state.appBubbles
-                        if (bubbles.isEmpty()) {
-                            // 422 INSUFFICIENT_* 응답도 오류가 아니라 이 안내로 표시합니다.
+                    // 사용 분포 카드와 사용 어플 카드를 가로로 나란히 둡니다.
+                    Row(horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12)) {
+                        ReportCard(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = state.insufficientDataMessage
-                                    ?: "이 날짜에는 기록된 사용량이 없어요.",
-                                style = PhoneShimType.KorCaption,
-                                color = PhoneShimTheme.colors.textTertiary,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
+                                text = "어플 사용 분포",
+                                style = PhoneShimType.KorBodyM,
+                                color = PhoneShimTheme.colors.textSecondary,
                             )
-                        } else {
-                            AppUsageBubbleChart(bubbles = bubbles)
-                            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-                            Text(
-                                text = "앱 아이콘 크기 = 사용량",
-                                style = PhoneShimType.KorMicro,
-                                color = PhoneShimTheme.colors.textTertiary,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
+                            val bubbles = state.appBubbles
+                            if (bubbles.isEmpty()) {
+                                // 데이터 부족 응답도 오류가 아니라 이 안내로 표시합니다.
+                                Text(
+                                    text = state.insufficientDataMessage
+                                        ?: "이 날짜에는 기록된 사용량이 없어요.",
+                                    style = PhoneShimType.KorCaption,
+                                    color = PhoneShimTheme.colors.textTertiary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else {
+                                AppUsageBubbleChart(bubbles = bubbles)
+                                Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+                                Text(
+                                    text = "앱 아이콘 크기 = 사용량",
+                                    style = PhoneShimType.KorMicro,
+                                    color = PhoneShimTheme.colors.textTertiary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
+                        UsedAppsCard(
+                            apps = state.usedApps,
+                            modifier = Modifier.width(ReportSideCardWidth),
+                        )
                     }
 
                     Text(

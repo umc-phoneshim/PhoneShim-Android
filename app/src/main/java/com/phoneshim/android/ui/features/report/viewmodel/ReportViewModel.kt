@@ -30,6 +30,9 @@ class ReportViewModel @Inject constructor(
                 copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date))
             }
             ReportUiEvent.DatePickerDismissed -> setState { copy(isDatePickerVisible = false) }
+            ReportUiEvent.CalendarTooltipDismissed -> setState {
+                copy(isCalendarTooltipVisible = false)
+            }
             is ReportUiEvent.DatePicked -> pickDate(event)
             is ReportUiEvent.PickerMonthMoved -> setState {
                 copy(pickerMonth = pickerMonth.plusMonths(event.offset))
@@ -118,21 +121,25 @@ class ReportViewModel @Inject constructor(
                     date = state.requestDate,
                 )
             }
+            // 쉼이의 제안은 두 화면 상단에 항상 붙어 있어 함께 불러옵니다.
+            val suggestionDeferred = async { getRestSuggestionUseCase(state.requestDate) }
 
             val report = reportDeferred.await()
             val sessions = sessionsDeferred.await()
             val summary = summaryDeferred.await()
+            val suggestion = suggestionDeferred.await()
 
             setState {
                 copy(
                     report = report.getOrNull() ?: this.report,
                     sessions = sessions.getOrNull() ?: emptyList(),
                     summary = summary.getOrNull(),
+                    restSuggestion = suggestion.getOrNull() ?: this.restSuggestion,
                     isLoading = false,
                 )
             }
 
-            listOf(report, sessions, summary)
+            listOf(report, sessions, summary, suggestion)
                 .firstNotNullOfOrNull { it.exceptionOrNull() }
                 ?.let { handleFailure(it, "리포트를 불러오지 못했습니다.") }
         }

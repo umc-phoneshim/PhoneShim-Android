@@ -370,7 +370,15 @@ private fun TimetableSegment(segment: UsageSegment, onSegmentClick: (String) -> 
     }
 }
 
-/** 타임테이블 오른쪽 액션 묶음. "제안 보기"와 "알림 설정"을 한 카드에 담습니다. */
+/** 리포트 화면 오른쪽 사이드 카드의 공통 폭. */
+val ReportSideCardWidth = 104.dp
+
+/**
+ * 타임테이블 오른쪽 액션 묶음.
+ *
+ * 알림 설정이 상단 날짜 네비게이터로 옮겨가면서 현재는 쓰이지 않습니다.
+ * TODO: 계속 안 쓰이면 제거하세요.
+ */
 @Composable
 fun ReportSideActionCard(
     onSuggestionClick: () -> Unit,

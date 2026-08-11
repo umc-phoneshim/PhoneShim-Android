@@ -35,7 +35,8 @@ import java.time.YearMonth
 data class ReportUiState(
     val date: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
-    val selectedTab: ReportTab = ReportTab.TIMETABLE,
+    /** 데일리 리포트 첫 진입은 "어플 사용 통계" 화면입니다. */
+    val selectedTab: ReportTab = ReportTab.SUMMARY,
     val period: ReportPeriod = ReportPeriod.DAY,
 
     val report: DailyReport? = null,
@@ -48,6 +49,13 @@ data class ReportUiState(
     /** 날짜 선택 달력 팝업 노출 여부와 달력에 보이는 월. */
     val isDatePickerVisible: Boolean = false,
     val pickerMonth: YearMonth = YearMonth.from(LocalDate.now()),
+
+    /**
+     * 달력 버튼 안내 툴팁 노출 여부.
+     * 첫 진입 화면(어플 사용 통계)에서만 보이고, 닫으면 이 세션 동안 다시 뜨지 않습니다.
+     * TODO: "다시 보지 않기"를 영구 저장하려면 DataStore 연동이 필요합니다.
+     */
+    val isCalendarTooltipVisible: Boolean = true,
 
     /**
      * 집계할 기록이 부족하거나 아직 준비되지 않은 상태의 안내 문구.
@@ -207,6 +215,7 @@ sealed interface ReportUiEvent : UiEvent {
     /** 상단 달력 버튼으로 여는 날짜 선택 팝업. */
     data object DatePickerOpened : ReportUiEvent
     data object DatePickerDismissed : ReportUiEvent
+    data object CalendarTooltipDismissed : ReportUiEvent
     data class DatePicked(val date: LocalDate) : ReportUiEvent
     data class PickerMonthMoved(val offset: Long) : ReportUiEvent
 
