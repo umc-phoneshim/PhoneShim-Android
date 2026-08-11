@@ -21,14 +21,22 @@ class PhoneShimMigrationTest {
     }
 
     @Test
-    fun migration4To5_replacesOnlyReminderSkeletonAndPreservesOtherTables() {
+    fun migration4To5_mergesReminderAndGoalSchemaChanges() {
         val helper = createVersionFourDatabase()
         val sqlite = helper.writableDatabase
         MIGRATION_4_5.migrate(sqlite)
 
-        assertTrue(sqlite.query("SELECT name FROM sqlite_master WHERE type='table' AND name='reminder_restricted_apps'").use { it.moveToFirst() })
-        assertTrue(sqlite.query("SELECT name FROM sqlite_master WHERE type='table' AND name='reminder_sync_state'").use { it.moveToFirst() })
-        assertEquals(1, sqlite.query("SELECT COUNT(*) FROM sentinel_table").use { cursor -> cursor.moveToFirst(); cursor.getInt(0) })
+        assertTrue(tableExists(sqlite, "reminder_restricted_apps"))
+        assertTrue(tableExists(sqlite, "reminder_sync_state"))
+        assertEquals(1, intValue(sqlite, "SELECT targetCount FROM app_goal_cache"))
+        assertTrue(
+            sqlite.query("SELECT monitoredAppId, appGoalId FROM app_goal_cache").use { cursor ->
+                cursor.moveToFirst()
+                cursor.isNull(0) && cursor.isNull(1)
+            },
+        )
+        assertTrue(sqlite.query("SELECT serverGoalId FROM phone_goal_cache").use { cursor -> cursor.moveToFirst(); cursor.isNull(0) })
+        assertEquals(1, intValue(sqlite, "SELECT COUNT(*) FROM sentinel_table"))
         helper.close()
     }
 
@@ -39,6 +47,10 @@ class PhoneShimMigrationTest {
                 object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(4) {
                     override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                         db.execSQL("CREATE TABLE reminders (id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, scheduledAt INTEGER NOT NULL)")
+                        db.execSQL("CREATE TABLE app_goal_cache (packageName TEXT NOT NULL PRIMARY KEY, appLabel TEXT NOT NULL, goalMinutes INTEGER NOT NULL, limitEnabled INTEGER NOT NULL)")
+                        db.execSQL("INSERT INTO app_goal_cache VALUES ('com.example.app', 'Example', 30, 1)")
+                        db.execSQL("CREATE TABLE phone_goal_cache (id INTEGER NOT NULL PRIMARY KEY, goalMinutes INTEGER NOT NULL, limitEnabled INTEGER NOT NULL)")
+                        db.execSQL("INSERT INTO phone_goal_cache VALUES (0, 120, 1)")
                         db.execSQL("CREATE TABLE sentinel_table (id INTEGER NOT NULL PRIMARY KEY)")
                         db.execSQL("INSERT INTO sentinel_table(id) VALUES (1)")
                     }
@@ -52,5 +64,21 @@ class PhoneShimMigrationTest {
             )
             .build()
         return FrameworkSQLiteOpenHelperFactory().create(configuration).also { it.writableDatabase }
+    }
+
+    private fun tableExists(
+        database: androidx.sqlite.db.SupportSQLiteDatabase,
+        tableName: String,
+    ): Boolean = database.query(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        arrayOf(tableName),
+    ).use { it.moveToFirst() }
+
+    private fun intValue(
+        database: androidx.sqlite.db.SupportSQLiteDatabase,
+        query: String,
+    ): Int = database.query(query).use { cursor ->
+        cursor.moveToFirst()
+        cursor.getInt(0)
     }
 }

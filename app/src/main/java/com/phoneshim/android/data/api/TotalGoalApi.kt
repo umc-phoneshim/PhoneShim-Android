@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
@@ -19,17 +20,17 @@ interface TotalGoalApi {
     @POST("api/total-goals")
     suspend fun createTotalGoal(
         @Body request: TotalGoalCreateRequest,
-    ): ApiEnvelope<TotalGoalResponse>
+    ): ApiResponse<TotalGoalResponse>
 
     /** 상태: 예정. 목표가 없으면 404 TOTAL_GOAL_NOT_FOUND. */
     @GET("api/total-goals")
-    suspend fun getTotalGoal(): ApiEnvelope<TotalGoalResponse>
+    suspend fun getTotalGoal(): ApiResponse<TotalGoalResponse>
 
     /** 상태: 예정. 수정 가능한 필드가 하나도 없으면 400 VALIDATION_ERROR. */
     @PATCH("api/total-goals")
     suspend fun updateTotalGoal(
         @Body request: TotalGoalUpdateRequest,
-    ): ApiEnvelope<TotalGoalResponse>
+    ): ApiResponse<TotalGoalResponse>
 }
 
 data class TotalGoalCreateRequest(

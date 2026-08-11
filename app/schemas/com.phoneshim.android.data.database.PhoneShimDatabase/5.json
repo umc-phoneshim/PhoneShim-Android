@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "5c7e0c286c2d3c274a32fdeb744ae65d",
+    "identityHash": "20e55667312a95ec100d9f98a47886dc",
     "entities": [
       {
         "tableName": "reminders",
@@ -203,7 +203,7 @@
       },
       {
         "tableName": "app_goal_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `appLabel` TEXT NOT NULL, `goalMinutes` INTEGER NOT NULL, `limitEnabled` INTEGER NOT NULL, PRIMARY KEY(`packageName`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `appLabel` TEXT NOT NULL, `goalMinutes` INTEGER NOT NULL, `limitEnabled` INTEGER NOT NULL, `targetCount` INTEGER NOT NULL, `monitoredAppId` TEXT, `appGoalId` TEXT, PRIMARY KEY(`packageName`))",
         "fields": [
           {
             "fieldPath": "packageName",
@@ -228,6 +228,24 @@
             "columnName": "limitEnabled",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "targetCount",
+            "columnName": "targetCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "monitoredAppId",
+            "columnName": "monitoredAppId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "appGoalId",
+            "columnName": "appGoalId",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -241,7 +259,7 @@
       },
       {
         "tableName": "phone_goal_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `goalMinutes` INTEGER NOT NULL, `limitEnabled` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `goalMinutes` INTEGER NOT NULL, `limitEnabled` INTEGER NOT NULL, `serverGoalId` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -260,6 +278,12 @@
             "columnName": "limitEnabled",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "serverGoalId",
+            "columnName": "serverGoalId",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -357,7 +381,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c7e0c286c2d3c274a32fdeb744ae65d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '20e55667312a95ec100d9f98a47886dc')"
     ]
   }
 }
