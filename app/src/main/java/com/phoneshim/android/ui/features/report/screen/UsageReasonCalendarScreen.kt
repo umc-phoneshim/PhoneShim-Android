@@ -33,56 +33,56 @@ import com.phoneshim.android.ui.common.DateNavigator
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
-import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonCalendarUiEffect
-import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonCalendarUiEvent
-import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonCalendarUiState
-import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonCalendarViewModel
+import com.phoneshim.android.ui.features.report.viewmodel.AchievementCalendarUiEffect
+import com.phoneshim.android.ui.features.report.viewmodel.AchievementCalendarUiEvent
+import com.phoneshim.android.ui.features.report.viewmodel.AchievementCalendarUiState
+import com.phoneshim.android.ui.features.report.viewmodel.AchievementCalendarViewModel
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 import java.time.LocalDate
 
 /**
- * 07. 사용 이유 입력 달력.
+ * 07. 목표 달성 달력. GET /api/usage-logs/calendar
  *
- * 어느 날짜에 사유를 적었는지 한눈에 보고, 안 적은 날을 누르면 입력 화면으로 이동합니다.
- * GET /api/usage-reasons/calendar 는 아직 서버 "예정" 상태입니다.
+ * 그 달에 전체 목표를 지킨 날짜를 보여주고, 날짜를 누르면 그날 리포트로 이동합니다.
+ * TODO: 아직 네비게이션에 연결돼 있지 않습니다. 진입점이 정해지면 라우트를 추가하세요.
  */
 @Composable
-fun UsageReasonCalendarRoute(
-    onNavigateToInput: (LocalDate) -> Unit,
+fun AchievementCalendarRoute(
+    onNavigateToReport: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: UsageReasonCalendarViewModel = hiltViewModel(),
+    viewModel: AchievementCalendarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
-        viewModel.onEvent(UsageReasonCalendarUiEvent.ScreenEntered)
+        viewModel.onEvent(AchievementCalendarUiEvent.ScreenEntered)
     }
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is UsageReasonCalendarUiEffect.NavigateToInput -> onNavigateToInput(effect.date)
-                is UsageReasonCalendarUiEffect.ShowMessage ->
+                is AchievementCalendarUiEffect.NavigateToReport -> onNavigateToReport(effect.date)
+                is AchievementCalendarUiEffect.ShowMessage ->
                     snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
 
-    UsageReasonCalendarScreen(
+    AchievementCalendarScreen(
         state = state,
         modifier = modifier,
         snackbarHostState = snackbarHostState,
-        onPreviousMonth = { viewModel.onEvent(UsageReasonCalendarUiEvent.MonthMoved(-1)) },
-        onNextMonth = { viewModel.onEvent(UsageReasonCalendarUiEvent.MonthMoved(1)) },
-        onDateSelected = { viewModel.onEvent(UsageReasonCalendarUiEvent.DateSelected(it)) },
+        onPreviousMonth = { viewModel.onEvent(AchievementCalendarUiEvent.MonthMoved(-1)) },
+        onNextMonth = { viewModel.onEvent(AchievementCalendarUiEvent.MonthMoved(1)) },
+        onDateSelected = { viewModel.onEvent(AchievementCalendarUiEvent.DateSelected(it)) },
     )
 }
 
 @Composable
-fun UsageReasonCalendarScreen(
-    state: UsageReasonCalendarUiState,
+fun AchievementCalendarScreen(
+    state: AchievementCalendarUiState,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onPreviousMonth: () -> Unit = {},
@@ -93,7 +93,7 @@ fun UsageReasonCalendarScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { TopAppBar(title = "사용 이유 기록", titleStyle = PhoneShimType.KorH3) },
+        topBar = { TopAppBar(title = "목표 달성 기록", titleStyle = PhoneShimType.KorH3) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -122,8 +122,8 @@ fun UsageReasonCalendarScreen(
                 )
             }
 
-            // TODO: CalendarGrid 는 공통 컴포넌트라 날짜별 점 표시를 지원하지 않습니다.
-            //  기록한 날을 달력 안에 직접 표시하려면 공통 컴포넌트에 슬롯 추가가 필요해
+            // TODO: CalendarGrid 는 공통 컴포넌트라 날짜별 표시를 지원하지 않습니다.
+            //  달력 안에 달성 표시를 직접 넣으려면 공통 컴포넌트에 슬롯 추가가 필요해
             //  지금은 아래 요약으로 대신합니다.
             ReportCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -137,8 +137,8 @@ fun UsageReasonCalendarScreen(
                         text = when {
                             state.isLoading -> "불러오는 중..."
                             state.emptyMessage != null -> state.emptyMessage
-                            state.writtenCount == 0 -> "이번 달에는 아직 적은 기록이 없어요."
-                            else -> "이번 달 ${state.writtenCount}일 기록했어요."
+                            state.achievedCount == 0 -> "이번 달에는 아직 목표를 달성한 날이 없어요."
+                            else -> "이번 달 ${state.achievedCount}일 목표를 지켰어요."
                         },
                         style = PhoneShimType.KorBodyM,
                         color = PhoneShimTheme.colors.textSecondary,
@@ -153,7 +153,7 @@ fun UsageReasonCalendarScreen(
                     .padding(PhoneShimDimens.spacing12),
             ) {
                 Text(
-                    text = "기록하지 않은 날짜를 누르면 사용 이유를 적을 수 있어요.",
+                    text = "날짜를 누르면 그날의 리포트를 볼 수 있어요.",
                     style = PhoneShimType.KorCaption,
                     color = PhoneShimTheme.colors.brandStrong,
                     textAlign = TextAlign.Center,
@@ -166,22 +166,22 @@ fun UsageReasonCalendarScreen(
 
 @Preview(showBackground = true)
 @Composable
-private fun UsageReasonCalendarPreview() {
+private fun AchievementCalendarPreview() {
     PhoneShimTheme {
-        UsageReasonCalendarScreen(
-            state = UsageReasonCalendarUiState(
-                daysWithReason = setOf(LocalDate.now(), LocalDate.now().minusDays(2)),
+        AchievementCalendarScreen(
+            state = AchievementCalendarUiState(
+                achievedDates = setOf(LocalDate.now(), LocalDate.now().minusDays(2)),
             ),
         )
     }
 }
 
-@Preview(name = "서버 미연동", showBackground = true)
+@Preview(name = "불러오기 실패", showBackground = true)
 @Composable
-private fun UsageReasonCalendarEmptyPreview() {
+private fun AchievementCalendarEmptyPreview() {
     PhoneShimTheme {
-        UsageReasonCalendarScreen(
-            state = UsageReasonCalendarUiState(emptyMessage = "아직 기록을 불러올 수 없어요."),
+        AchievementCalendarScreen(
+            state = AchievementCalendarUiState(emptyMessage = "기록을 불러오지 못했어요."),
         )
     }
 }

@@ -1,17 +1,21 @@
 package com.phoneshim.android.ui.features.report.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -23,10 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.R
+import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiEffect
@@ -40,29 +47,33 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 /**
  * 07. 타임테이블 - 사용 이유 입력.
  *
- * POST /api/usage-reasons (구현완료). 입력 가능 시간은 당일 22:00 ~ 익일 10:00 이고
- * 사유는 최대 100자입니다.
+ * POST /api/usage-reasons. 자유 입력이 아니라 5개 고정 선택지에서 복수 선택합니다.
+ * 입력 가능 시간은 KST 기준 당일 22:00 ~ 익일 10:00 입니다.
  */
 @Composable
 fun UsageReasonInputRoute(
-    entryId: String,
+    monitoredAppId: String,
     date: String,
     timeRangeStart: String,
     timeRangeEnd: String,
     onSubmitted: () -> Unit,
     modifier: Modifier = Modifier,
+    appName: String = "",
+    timeRangeLabel: String = "",
     viewModel: UsageReasonInputViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(entryId, date) {
+    LaunchedEffect(monitoredAppId, date, timeRangeStart) {
         viewModel.onEvent(
             UsageReasonInputUiEvent.Started(
-                entryId = entryId,
+                monitoredAppId = monitoredAppId,
+                appName = appName,
                 date = date,
                 timeRangeStart = timeRangeStart,
                 timeRangeEnd = timeRangeEnd,
+                timeRangeLabel = timeRangeLabel,
             ),
         )
     }
@@ -70,7 +81,6 @@ fun UsageReasonInputRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 // TODO: 포인트 적립 정책이 확정되면 여기서 PointRewardPopup 을 노출하세요.
-                //  현재 명세서에 포인트 관련 API가 없습니다.
                 UsageReasonInputUiEffect.Submitted -> onSubmitted()
                 is UsageReasonInputUiEffect.ShowMessage ->
                     snackbarHostState.showSnackbar(effect.message)
@@ -82,7 +92,7 @@ fun UsageReasonInputRoute(
         state = state,
         modifier = modifier,
         snackbarHostState = snackbarHostState,
-        onReasonChange = { viewModel.onEvent(UsageReasonInputUiEvent.ReasonChanged(it)) },
+        onReasonToggle = { viewModel.onEvent(UsageReasonInputUiEvent.ReasonToggled(it)) },
         onSubmit = { viewModel.onEvent(UsageReasonInputUiEvent.SubmitClicked) },
     )
 }
@@ -92,7 +102,7 @@ fun UsageReasonInputScreen(
     state: UsageReasonInputUiState,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onReasonChange: (String) -> Unit = {},
+    onReasonToggle: (UsageReasonCode) -> Unit = {},
     onSubmit: () -> Unit = {},
 ) {
     Scaffold(
@@ -109,47 +119,41 @@ fun UsageReasonInputScreen(
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
         ) {
             Text(
-                text = "이 시간에 앱을 사용한 이유를 적어 주세요.",
+                text = if (state.appName.isBlank()) {
+                    "이 시간에 앱을 사용한 이유를 골라 주세요."
+                } else {
+                    "${state.appName}을(를) 사용한 이유를 골라 주세요."
+                },
                 style = PhoneShimType.KorBodyM,
                 color = PhoneShimTheme.colors.textPrimary,
             )
-            Text(
-                text = "입력 가능 시간: 당일 ${UsageReasonEntry.INPUT_WINDOW_START_HOUR}:00 ~ " +
-                    "다음날 ${UsageReasonEntry.INPUT_WINDOW_END_HOUR}:00",
-                style = PhoneShimType.KorCaption,
-                color = PhoneShimTheme.colors.textTertiary,
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .background(PhoneShimTheme.colors.surfaceCream, RoundedCornerShape(12.dp))
-                    .padding(PhoneShimDimens.spacing16),
-            ) {
-                if (state.reason.isEmpty()) {
-                    Text(
-                        text = "예) 친구와 약속을 잡느라 확인했어요",
-                        style = PhoneShimType.KorBodyM,
-                        color = PhoneShimTheme.colors.textTertiary,
-                    )
-                }
-                BasicTextField(
-                    value = state.reason,
-                    onValueChange = onReasonChange,
-                    enabled = !state.isOutsideInputWindow,
-                    textStyle = PhoneShimType.KorBodyM.copy(color = PhoneShimTheme.colors.textPrimary),
-                    modifier = Modifier.fillMaxSize(),
+            if (state.timeRangeLabel.isNotBlank()) {
+                Text(
+                    text = state.timeRangeLabel,
+                    style = PhoneShimType.KorCaption,
+                    color = PhoneShimTheme.colors.brandStrong,
                 )
             }
-
             Text(
-                text = "${state.reason.length} / ${UsageReasonEntry.MAX_REASON_LENGTH}",
+                text = "여러 개 고를 수 있어요. 입력 가능 시간은 당일 " +
+                    "${UsageReasonEntry.INPUT_WINDOW_START_HOUR}:00 ~ 다음날 " +
+                    "${UsageReasonEntry.INPUT_WINDOW_END_HOUR}:00 입니다.",
                 style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.textTertiary,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth(),
             )
+
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
+
+            Column(verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8)) {
+                state.options.forEach { reason ->
+                    ReasonOptionRow(
+                        reason = reason,
+                        selected = reason in state.selectedReasons,
+                        enabled = !state.isOutsideInputWindow,
+                        onClick = { onReasonToggle(reason) },
+                    )
+                }
+            }
 
             state.errorMessage?.let { error ->
                 Text(text = error, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.error)
@@ -183,15 +187,75 @@ fun UsageReasonInputScreen(
     }
 }
 
+@Composable
+private fun ReasonOptionRow(
+    reason: UsageReasonCode,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = if (selected) PhoneShimTheme.colors.brandSubtle else PhoneShimTheme.colors.surface,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.divider,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = PhoneShimDimens.spacing16, vertical = PhoneShimDimens.spacing16),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = reason.label,
+            style = PhoneShimType.KorBodyM,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) {
+                PhoneShimTheme.colors.brandStrong
+            } else {
+                PhoneShimTheme.colors.textPrimary
+            },
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .background(
+                    color = if (selected) PhoneShimTheme.colors.brand else PhoneShimTheme.colors.surfaceCream,
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = null,
+                    tint = PhoneShimTheme.colors.onBrand,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun UsageReasonInputPreview() {
     PhoneShimTheme {
         UsageReasonInputScreen(
             state = UsageReasonInputUiState(
-                entryId = "app-1",
+                monitoredAppId = "app-1",
+                appName = "유튜브",
                 date = "2026-07-11",
-                reason = "친구와 약속을 잡느라 확인했어요",
+                timeRangeStart = "2026-07-11T22:00:00.000Z",
+                timeRangeEnd = "2026-07-11T22:35:00.000Z",
+                timeRangeLabel = "22:00 ~ 22:35",
+                selectedReasons = setOf(UsageReasonCode.LEISURE, UsageReasonCode.HABIT),
             ),
         )
     }
@@ -203,7 +267,7 @@ private fun UsageReasonInputOutsideWindowPreview() {
     PhoneShimTheme {
         UsageReasonInputScreen(
             state = UsageReasonInputUiState(
-                entryId = "app-1",
+                monitoredAppId = "app-1",
                 date = "2026-07-11",
                 isOutsideInputWindow = true,
                 errorMessage = "사용 이유는 당일 22시부터 다음날 10시까지만 입력할 수 있어요.",

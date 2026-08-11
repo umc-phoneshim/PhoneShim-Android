@@ -192,8 +192,16 @@ sealed interface ReportUiEvent : UiEvent {
     data object Retry : ReportUiEvent
 }
 
+/** 사용 이유 입력 화면으로 넘길 대상 구간. */
+data class UsageReasonTarget(
+    val monitoredAppId: String,
+    val date: String,
+    val timeRangeStart: String,
+    val timeRangeEnd: String,
+)
+
 sealed interface ReportUiEffect : UiEffect {
-    data class NavigateToUsageReasonInput(val entryId: String) : ReportUiEffect
+    data class NavigateToUsageReasonInput(val target: UsageReasonTarget) : ReportUiEffect
     data object NavigateToRestSuggestion : ReportUiEffect
     data object NavigateToAlarmSettings : ReportUiEffect
     data class NavigateToTab(val tab: ReportTab) : ReportUiEffect

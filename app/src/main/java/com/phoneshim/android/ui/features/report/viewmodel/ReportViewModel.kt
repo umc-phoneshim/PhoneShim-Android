@@ -36,8 +36,7 @@ class ReportViewModel @Inject constructor(
 
             is ReportUiEvent.TabSelected -> selectTab(event)
             is ReportUiEvent.PeriodSelected -> selectPeriod(event)
-            is ReportUiEvent.TimetableEntryClicked ->
-                sendEffect(ReportUiEffect.NavigateToUsageReasonInput(event.entryId))
+            is ReportUiEvent.TimetableEntryClicked -> openUsageReasonInput(event)
             ReportUiEvent.RestSuggestionClicked -> sendEffect(ReportUiEffect.NavigateToRestSuggestion)
             ReportUiEvent.RestSuggestionRequested -> showRestSuggestionUnavailable()
             ReportUiEvent.AlarmSettingsClicked -> sendEffect(ReportUiEffect.NavigateToAlarmSettings)
@@ -120,6 +119,24 @@ class ReportViewModel @Inject constructor(
                 sendEffect(ReportUiEffect.ShowMessage(throwable.toUserMessage()))
             }
         }
+    }
+
+    /**
+     * 타임테이블 막대를 누르면 그 구간의 사용 이유 입력으로 이동합니다.
+     * 서버가 monitoredAppId 와 정확한 시간 구간을 요구해서 세션 정보를 함께 넘깁니다.
+     */
+    private fun openUsageReasonInput(event: ReportUiEvent.TimetableEntryClicked) {
+        val session = currentState.sessions.firstOrNull { it.id == event.entryId } ?: return
+        sendEffect(
+            ReportUiEffect.NavigateToUsageReasonInput(
+                UsageReasonTarget(
+                    monitoredAppId = session.monitoredAppId,
+                    date = session.date,
+                    timeRangeStart = session.startTime.toString(),
+                    timeRangeEnd = session.endTime.toString(),
+                ),
+            ),
+        )
     }
 
     /** 쉼이의 제안은 백엔드에 AI 도메인이 아직 없습니다. */
