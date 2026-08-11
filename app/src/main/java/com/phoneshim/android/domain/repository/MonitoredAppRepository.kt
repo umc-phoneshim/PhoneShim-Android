@@ -1,6 +1,7 @@
 package com.phoneshim.android.domain.repository
 
 import com.phoneshim.android.domain.model.MonitoredApp
+import com.phoneshim.android.domain.model.ResolvedRestrictedApps
 
 /**
  * 주의 앱 조회와 식별자 변환.
@@ -25,7 +26,10 @@ interface MonitoredAppRepository {
     /**
      * monitoredAppId 여러 개를 한 번에 packageName 으로 변환합니다.
      * Reminder 의 restrictedAppIds 처럼 목록을 통째로 넘겨받는 쪽을 위한 함수입니다.
-     * 변환하지 못한 id 는 결과에서 빠집니다(삭제된 주의 앱).
+     *
+     * 변환하지 못한 id 는 [ResolvedRestrictedApps.unresolvedIds] 로 함께 돌려줍니다.
+     * 목록에서 그냥 빼버리면 '제한 없음'과 '전부 변환 실패'가 구분되지 않아,
+     * 제한을 걸어둔 일정이 조용히 아무것도 막지 않는 상태가 됩니다.
      */
-    suspend fun resolvePackageNames(monitoredAppIds: List<String>): Result<List<String>>
+    suspend fun resolvePackageNames(monitoredAppIds: List<String>): Result<ResolvedRestrictedApps>
 }

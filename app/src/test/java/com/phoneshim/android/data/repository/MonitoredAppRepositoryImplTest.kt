@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,9 +137,10 @@ class MonitoredAppRepositoryImplTest {
         dao.appGoals += cached("com.kakao.talk", "카카오톡", "m-1")
         dao.appGoals += cached("com.google.android.youtube", "YouTube", "m-2")
 
-        val packages = repository.resolvePackageNames(listOf("m-1", "m-2")).getOrThrow()
+        val result = repository.resolvePackageNames(listOf("m-1", "m-2")).getOrThrow()
 
-        assertEquals(listOf("com.kakao.talk", "com.google.android.youtube"), packages)
+        assertEquals(listOf("com.kakao.talk", "com.google.android.youtube"), result.packageNames)
+        assertTrue(result.unresolvedIds.isEmpty())
         assertEquals(0, api.listCallCount)
     }
 
@@ -148,9 +150,10 @@ class MonitoredAppRepositoryImplTest {
         api.apps += response("m-1", "com.kakao.talk", "카카오톡")
         api.apps += response("m-3", "com.instagram.android", "인스타그램")
 
-        val packages = repository.resolvePackageNames(listOf("m-1", "m-3")).getOrThrow()
+        val result = repository.resolvePackageNames(listOf("m-1", "m-3")).getOrThrow()
 
-        assertEquals(listOf("com.kakao.talk", "com.instagram.android"), packages)
+        assertEquals(listOf("com.kakao.talk", "com.instagram.android"), result.packageNames)
+        assertTrue(result.unresolvedIds.isEmpty())
         assertEquals(1, api.listCallCount)
     }
 
@@ -160,17 +163,36 @@ class MonitoredAppRepositoryImplTest {
         api.apps += response("m-1", "com.kakao.talk", "카카오톡")
 
         // m-9 는 서버에도 캐시에도 없다(삭제됨).
-        val packages = repository.resolvePackageNames(listOf("m-1", "m-9")).getOrThrow()
+        val result = repository.resolvePackageNames(listOf("m-1", "m-9")).getOrThrow()
 
-        assertEquals(listOf("com.kakao.talk"), packages)
+        assertEquals(listOf("com.kakao.talk"), result.packageNames)
+        // 변환 못 한 id 를 알려줘야 엔진이 판단할 수 있다.
+        assertEquals(listOf("m-9"), result.unresolvedIds)
+        assertFalse(result.isFullyUnresolved)
     }
 
     @Test
     fun `빈 목록은 서버를 부르지 않고 빈 결과를 준다`() = runTest {
-        val packages = repository.resolvePackageNames(emptyList()).getOrThrow()
+        val result = repository.resolvePackageNames(emptyList()).getOrThrow()
 
-        assertTrue(packages.isEmpty())
+        assertTrue(result.packageNames.isEmpty())
+        assertTrue(result.unresolvedIds.isEmpty())
+        // 제한 대상이 아예 없는 것과 전부 변환 실패는 다르다.
+        assertFalse(result.isFullyUnresolved)
         assertEquals(0, api.listCallCount)
+    }
+
+    @Test
+    fun `전부 변환 실패하면 빈 목록이 아니라 미해결로 알린다`() = runTest {
+        // 캐시에 다른 앱은 있지만 요청한 id 는 하나도 없는 상태.
+        // 여기서 빈 목록만 돌려주면 SPECIFIC_APP 일정이 조용히 아무것도 막지 않는다.
+        dao.appGoals += cached("com.other.app", "다른앱", "m-other")
+
+        val result = repository.resolvePackageNames(listOf("m-1", "m-2")).getOrThrow()
+
+        assertTrue(result.packageNames.isEmpty())
+        assertEquals(listOf("m-1", "m-2"), result.unresolvedIds)
+        assertTrue(result.isFullyUnresolved)
     }
 
     // ── 테스트 더블 ─────────────────────────────────────────────────

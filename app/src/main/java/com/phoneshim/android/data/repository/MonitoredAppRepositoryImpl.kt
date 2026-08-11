@@ -5,6 +5,7 @@ import com.phoneshim.android.data.api.MonitoredAppResponse
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.database.dao.GoalDao
 import com.phoneshim.android.domain.model.MonitoredApp
+import com.phoneshim.android.domain.model.ResolvedRestrictedApps
 import com.phoneshim.android.domain.repository.MonitoredAppRepository
 import javax.inject.Inject
 
@@ -53,20 +54,28 @@ class MonitoredAppRepositoryImpl @Inject constructor(
 
     override suspend fun resolvePackageNames(
         monitoredAppIds: List<String>,
-    ): Result<List<String>> {
-        if (monitoredAppIds.isEmpty()) return Result.success(emptyList())
+    ): Result<ResolvedRestrictedApps> {
+        if (monitoredAppIds.isEmpty()) {
+            return Result.success(ResolvedRestrictedApps(emptyList(), emptyList()))
+        }
 
         val fromCache = monitoredAppIds.associateWith { goalDao.findPackageName(it) }
-        val missing = fromCache.filterValues { it == null }.keys
-        if (missing.isEmpty()) {
-            return Result.success(fromCache.values.filterNotNull())
+        if (fromCache.values.none { it == null }) {
+            return Result.success(
+                ResolvedRestrictedApps(fromCache.values.filterNotNull(), emptyList()),
+            )
         }
 
         // 캐시에 없는 id 가 하나라도 있으면 서버 목록을 한 번만 받아 함께 해결합니다.
         return getMonitoredApps().map { apps ->
             val byId = apps.associate { it.id to it.packageName }
-            // 변환하지 못한 id 는 결과에서 빠집니다. 서버에서 삭제된 주의 앱이라 표시할 패키지가 없습니다.
-            monitoredAppIds.mapNotNull { id -> fromCache[id] ?: byId[id] }
+            val resolved = mutableListOf<String>()
+            val unresolved = mutableListOf<String>()
+            monitoredAppIds.forEach { id ->
+                val packageName = fromCache[id] ?: byId[id]
+                if (packageName == null) unresolved += id else resolved += packageName
+            }
+            ResolvedRestrictedApps(packageNames = resolved, unresolvedIds = unresolved)
         }
     }
 
