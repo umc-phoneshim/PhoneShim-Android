@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.phoneshim.android.domain.model.RestSuggestion
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
@@ -117,16 +116,9 @@ fun RestSuggestionScreen(
                     CircularProgressIndicator(color = PhoneShimTheme.colors.brand)
                 }
 
-                // 422 INSUFFICIENT_AI_FEEDBACK_DATA. 오류가 아니라 데이터 부족 안내입니다.
-                state.isDataInsufficient -> InsufficientDataCard(
-                    message = state.insufficientDataMessage.orEmpty(),
-                    onRetry = onRetry,
-                )
-
-                state.restSuggestion != null -> SuggestionCard(state.restSuggestion)
-
+                // 백엔드에 AI 도메인이 아직 없어 항상 이 안내가 표시됩니다.
                 else -> InsufficientDataCard(
-                    message = "아직 보여드릴 제안이 없어요.",
+                    message = state.insufficientDataMessage ?: "쉼이의 제안은 준비 중이에요.",
                     onRetry = onRetry,
                 )
             }
@@ -140,23 +132,6 @@ fun RestSuggestionScreen(
                     .padding(PhoneShimDimens.spacing12),
             )
         }
-    }
-}
-
-@Composable
-private fun SuggestionCard(suggestion: RestSuggestion, modifier: Modifier = Modifier) {
-    ReportCard(modifier = modifier) {
-        Text(
-            text = suggestion.date,
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.textTertiary,
-        )
-        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-        Text(
-            text = suggestion.message,
-            style = PhoneShimType.KorBodyM,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
     }
 }
 
@@ -200,27 +175,20 @@ private fun InsufficientDataCard(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "준비 중", showBackground = true)
 @Composable
 private fun RestSuggestionPreview() {
     PhoneShimTheme {
         RestSuggestionScreen(
-            state = ReportUiState(
-                restSuggestion = RestSuggestion(
-                    date = "2026-07-11",
-                    message = "오늘은 점심 시간대 사용이 많았습니다. 앱을 열기 전 5분 휴식을 먼저 시도해보세요.",
-                ),
-            ),
+            state = ReportUiState(insufficientDataMessage = "쉼이의 제안은 준비 중이에요."),
         )
     }
 }
 
-@Preview(name = "데이터 부족", showBackground = true)
+@Preview(name = "불러오는 중", showBackground = true)
 @Composable
-private fun RestSuggestionInsufficientPreview() {
+private fun RestSuggestionLoadingPreview() {
     PhoneShimTheme {
-        RestSuggestionScreen(
-            state = ReportUiState(insufficientDataMessage = "아직 분석할 기록이 충분하지 않아요."),
-        )
+        RestSuggestionScreen(state = ReportUiState(isLoading = true))
     }
 }

@@ -31,17 +31,22 @@ class MyPageRepositoryImpl @Inject constructor(
         WithdrawalResult(
             status = UserStatus.from(response.status).takeIf { it != UserStatus.UNKNOWN }
                 ?: UserStatus.WITHDRAWAL_PENDING,
-            recoverableUntil = response.recoverableUntil,
+            withdrawalRequestedAt = response.withdrawalRequestedAt,
         )
     }
 }
 
-/** 명세의 name 필드를 도메인 모델의 nickname 으로 매핑합니다. */
+/**
+ * 서버의 name 필드를 도메인 모델의 nickname 으로 매핑합니다.
+ *
+ * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어올 수 있어
+ * 모든 필드를 nullable 로 받고 여기서 보정합니다.
+ */
 private fun UserResponse.toDomain(): User = User(
-    id = id.orEmpty(),
-    email = email,
-    nickname = name,
+    email = email.orEmpty(),
+    nickname = name.orEmpty(),
     profileImage = profileImage,
     motivation = motivation,
-    status = UserStatus.from(status).takeIf { it != UserStatus.UNKNOWN } ?: UserStatus.ACTIVE,
+    gender = gender,
+    ageGroup = ageGroup,
 )

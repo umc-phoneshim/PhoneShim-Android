@@ -35,9 +35,14 @@ data class MyPageUiState(
 
     val isProfileReady: Boolean get() = user != null
 
-    /** 탈퇴 유예 중이면 마이페이지 상단에 복구 안내를 노출합니다. */
+    /**
+     * 탈퇴 유예 중인지.
+     *
+     * GET /api/users/me 응답에 status 가 없어서, 탈퇴를 방금 요청한 경우에만 알 수 있습니다.
+     * TODO(백엔드): 프로필 응답에 status 를 포함해 주면 앱 재실행 후에도 배너를 띄울 수 있습니다.
+     */
     val isWithdrawalPending: Boolean
-        get() = user?.status == UserStatus.WITHDRAWAL_PENDING || withdrawal != null
+        get() = withdrawal?.status == UserStatus.WITHDRAWAL_PENDING
 
     val withdrawalNoticeText: String?
         get() = if (!isWithdrawalPending) {
@@ -47,7 +52,7 @@ data class MyPageUiState(
             if (until.isNullOrBlank()) {
                 "탈퇴가 접수되었습니다. ${WithdrawalResult.GRACE_PERIOD_DAYS}일 안에는 복구할 수 있습니다."
             } else {
-                "탈퇴가 접수되었습니다. ${until.take(10)}까지 복구할 수 있습니다."
+                "탈퇴가 접수되었습니다. ${until}까지 복구할 수 있습니다."
             }
         }
 
