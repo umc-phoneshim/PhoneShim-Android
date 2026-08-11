@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.api
 
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 /**
@@ -81,9 +82,15 @@ fun <T> ApiResponse<T>.unwrap(): T {
  * Repository 에서 API 호출을 감쌀 때 사용합니다.
  * HTTP 에러 응답의 body 를 파싱해 서버 에러 코드를 [ApiException] 으로 살려 보냅니다.
  * runCatching 대신 이걸 써야 에러 코드가 보존됩니다.
+ *
+ * 코루틴 취소([CancellationException])는 잡지 않고 그대로 던집니다.
+ * 화면을 벗어나 요청이 취소된 걸 "실패"로 처리하면 이미 정리된 ViewModel 에
+ * 에러 메시지를 띄우게 됩니다.
  */
 inline fun <T> runCatchingApi(block: () -> T): Result<T> = try {
     Result.success(block())
+} catch (e: CancellationException) {
+    throw e
 } catch (e: HttpException) {
     Result.failure(e.toApiException())
 } catch (e: ApiException) {
