@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.UserStatus
+import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
@@ -331,12 +332,10 @@ private fun MyGoalField(modifier: Modifier = Modifier) {
     }
 }
 
-private fun previewUser(status: UserStatus = UserStatus.ACTIVE) = User(
-    id = "1",
+private fun previewUser() = User(
     email = "abcde123@gmail.com",
     nickname = "유리",
     motivation = "오늘은 필요한 앱만 보기",
-    status = status,
 )
 
 @Preview(showBackground = true)
@@ -369,7 +368,13 @@ private fun MyScreenEditingPreview() {
 private fun MyScreenWithdrawalPendingPreview() {
     PhoneShimTheme {
         MyScreen(
-            state = MyPageUiState(user = previewUser(UserStatus.WITHDRAWAL_PENDING)),
+            state = MyPageUiState(
+                user = previewUser(),
+                withdrawal = WithdrawalResult(
+                    status = UserStatus.WITHDRAWAL_PENDING,
+                    withdrawalRequestedAt = "2026-07-29T12:00:00.000Z",
+                ),
+            ),
             onMenuClick = {},
             onBottomNavSelected = {},
         )
