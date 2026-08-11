@@ -1,45 +1,41 @@
 package com.phoneshim.android.data.api
 
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.POST
-import retrofit2.http.Query
 
-/** UsageReason 도메인 API. 명세서 8_UsageLog_UsageReason 기준. */
+/**
+ * UsageReason 도메인 API. 백엔드 src/domains/usageReason 구현 기준입니다.
+ *
+ * 사유 입력 여부를 월 단위로 조회하는 엔드포인트는 서버에 없습니다.
+ * (/api/usage-logs/calendar 는 목표 달성일이라 용도가 다릅니다)
+ */
 interface UsageReasonApi {
 
-    /** 상태: 구현완료. 입력 가능 시간대(당일 22:00~익일 10:00)를 벗어나면 403. */
+    /**
+     * usageReasonRouter: POST / — 구현완료. 응답은 201.
+     * 고른 사유 코드마다 행이 하나씩 생성돼 배열로 돌아옵니다.
+     */
     @POST("api/usage-reasons")
     suspend fun submitUsageReason(
         @Body request: UsageReasonRequest,
-    ): ApiResponse<UsageReasonResponse>
-
-    /** 상태: 예정. 월 단위 사유 입력 여부. */
-    @GET("api/usage-reasons/calendar")
-    suspend fun getReasonCalendar(
-        @Query("month") month: String,
-    ): ApiResponse<List<ReasonCalendarResponse>>
+    ): ApiResponse<List<UsageReasonResponse>>
 }
 
+/** reasonCodes 는 LEISURE / COMMUTE / HABIT / INFO / OTHER 중 하나 이상. */
 data class UsageReasonRequest(
     val monitoredAppId: String,
     val date: String,
     val timeRangeStart: String,
     val timeRangeEnd: String,
-    val reason: String,
+    val reasonCodes: List<String>,
     val usageLogId: String? = null,
 )
 
 data class UsageReasonResponse(
-    val id: String,
-    val monitoredAppId: String,
-    val date: String,
-    val timeRangeStart: String,
-    val timeRangeEnd: String,
-    val reason: String,
-)
-
-data class ReasonCalendarResponse(
-    val date: String,
-    val hasReason: Boolean,
+    val id: String? = null,
+    val monitoredAppId: String? = null,
+    val date: String? = null,
+    val timeRangeStart: String? = null,
+    val timeRangeEnd: String? = null,
+    val reason: String? = null,
 )
