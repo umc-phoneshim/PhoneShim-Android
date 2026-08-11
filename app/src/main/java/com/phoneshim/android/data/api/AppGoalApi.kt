@@ -65,13 +65,17 @@ data class AppGoalUpdateRequest(
     val goalReason: String? = null,
 )
 
+/**
+ * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+ * 그래서 전부 nullable 로 받고 도메인 변환에서 보정합니다.
+ */
 data class AppGoalResponse(
-    val id: String,
-    val monitoredAppId: String,
-    val targetMinutes: Int,
-    val targetCount: Int,
-    val restrictAfter: Boolean,
+    val id: String? = null,
+    val monitoredAppId: String? = null,
+    val targetMinutes: Int? = null,
+    val targetCount: Int? = null,
+    val restrictAfter: Boolean? = null,
     val goalReason: String? = null,
-    val createdAt: String,
-    val updatedAt: String,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )

@@ -54,6 +54,28 @@ class MonitoredAppRepositoryImplTest {
     }
 
     @Test
+    fun `id 나 packageName 이 빠진 응답은 목록에서 제외한다`() = runTest {
+        // Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어온다.
+        api.apps += response("m-1", "com.kakao.talk", "카카오톡")
+        api.apps += MonitoredAppResponse(id = null, packageName = "com.no.id", appName = "id없음")
+        api.apps += MonitoredAppResponse(id = "m-3", packageName = null, appName = "패키지없음")
+
+        val apps = repository.getMonitoredApps().getOrThrow()
+
+        assertEquals(1, apps.size)
+        assertEquals("m-1", apps[0].id)
+    }
+
+    @Test
+    fun `앱 이름이 없으면 패키지명으로 대신 보여준다`() = runTest {
+        api.apps += MonitoredAppResponse(id = "m-1", packageName = "com.kakao.talk", appName = null)
+
+        val apps = repository.getMonitoredApps().getOrThrow()
+
+        assertEquals("com.kakao.talk", apps[0].appName)
+    }
+
+    @Test
     fun `서버 조회가 실패하면 캐시로 답한다`() = runTest {
         api.failWith = IllegalStateException("network")
         dao.appGoals += cached("com.kakao.talk", "카카오톡", "m-1")

@@ -69,13 +69,17 @@ data class MonitoredAppUpdateRequest(
     val sortOrder: Int? = null,
 )
 
+/**
+ * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+ * 그래서 전부 nullable 로 받고 도메인 변환에서 보정합니다.
+ */
 data class MonitoredAppResponse(
-    val id: String,
-    val userId: String,
-    val packageName: String,
-    val appName: String,
+    val id: String? = null,
+    val userId: String? = null,
+    val packageName: String? = null,
+    val appName: String? = null,
     val appIcon: String? = null,
-    val sortOrder: Int,
-    val createdAt: String,
-    val updatedAt: String,
+    val sortOrder: Int? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )

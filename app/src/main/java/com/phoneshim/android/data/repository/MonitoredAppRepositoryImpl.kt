@@ -30,7 +30,7 @@ class MonitoredAppRepositoryImpl @Inject constructor(
 
     override suspend fun getMonitoredApps(): Result<List<MonitoredApp>> {
         val remote = apiCallExecutor.executeAsResult { monitoredAppApi.getMonitoredApps() }
-        return remote.map { apps -> apps.map { it.toDomain() } }
+        return remote.map { apps -> apps.mapNotNull { it.toDomain() } }
             .recoverCatching { cause ->
                 // 서버를 못 읽으면 캐시로 답합니다. 캐시에도 없으면 그때는 원래 오류를 올립니다.
                 cachedMonitoredApps().ifEmpty { throw cause }
@@ -80,10 +80,19 @@ class MonitoredAppRepositoryImpl @Inject constructor(
             )
         }
 
-    private fun MonitoredAppResponse.toDomain(): MonitoredApp = MonitoredApp(
-        id = id,
-        packageName = packageName,
-        appName = appName,
-        appIcon = appIcon,
-    )
+    /**
+     * id 나 packageName 이 없으면 식별도 차단도 할 수 없어 목록에서 뺍니다.
+     * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+     */
+    private fun MonitoredAppResponse.toDomain(): MonitoredApp? {
+        val id = id ?: return null
+        val packageName = packageName ?: return null
+        return MonitoredApp(
+            id = id,
+            packageName = packageName,
+            // 앱 이름이 없으면 패키지명이라도 보여줍니다.
+            appName = appName ?: packageName,
+            appIcon = appIcon,
+        )
+    }
 }
