@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.phoneshim.android.domain.model.DailyReport
 import com.phoneshim.android.domain.model.ReportRange
 import com.phoneshim.android.domain.model.ReportSummary
+import com.phoneshim.android.domain.model.RestSuggestion
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageSession
 import com.phoneshim.android.ui.common.base.UiEffect
@@ -29,8 +30,7 @@ import java.time.YearMonth
  * - 앱별 사용량: GET /api/usage-logs, /api/usage-logs/status
  * - 사용 구간: GET /api/usage-sessions  → 타임테이블 차트
  * - 사유 요약: GET /api/reports/summary → 어플 사용 요약 막대
- *
- * "쉼이의 제안"은 백엔드에 AI 도메인이 없어 아직 받아올 수 없습니다.
+ * - 쉼이의 제안: GET /api/reports/suggestion (AI 아님, 목표 대비 사용량 기반 문구)
  */
 data class ReportUiState(
     val date: LocalDate = LocalDate.now(),
@@ -41,6 +41,7 @@ data class ReportUiState(
     val report: DailyReport? = null,
     val sessions: List<UsageSession> = emptyList(),
     val summary: ReportSummary? = null,
+    val restSuggestion: RestSuggestion? = null,
 
     val isLoading: Boolean = false,
 

@@ -6,9 +6,6 @@ import retrofit2.http.Query
 
 /**
  * 리포트 화면이 사용하는 API. 백엔드 src/domains/{usageLog,usageSession,report} 구현을 직접 확인해 맞췄습니다.
- *
- * "쉼이의 제안"(AI 피드백)은 백엔드에 AI 도메인 자체가 없어 호출할 엔드포인트가 없습니다.
- * 서버에 생기면 여기에 추가하세요.
  */
 interface ReportApi {
 
@@ -47,6 +44,15 @@ interface ReportApi {
         @Query("range") range: String,
         @Query("date") date: String? = null,
     ): ApiResponse<ReportSummaryResponse>
+
+    /**
+     * reportRouter: GET /suggestion — "쉼이의 제안".
+     * AI가 아니라 목표 대비 사용량으로 정해진 문구 템플릿을 골라 내려줍니다.
+     */
+    @GET("api/reports/suggestion")
+    suspend fun getReportSuggestion(
+        @Query("date") date: String? = null,
+    ): ApiResponse<ReportSuggestionResponse>
 }
 
 // Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
@@ -105,4 +111,12 @@ data class ReasonAppUsageResponse(
     val monitoredAppId: String? = null,
     val appName: String? = null,
     val minutes: Int? = null,
+)
+
+/** suggestionType 은 TOTAL_EXCEEDED / APP_EXCEEDED / ACHIEVED / NO_GOAL 중 하나입니다. */
+data class ReportSuggestionResponse(
+    val suggestionType: String? = null,
+    val message: String? = null,
+    val excessMinutes: Int? = null,
+    val appName: String? = null,
 )

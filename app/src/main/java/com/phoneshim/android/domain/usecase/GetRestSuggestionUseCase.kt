@@ -1,8 +1,17 @@
-/*
- * 이 파일은 삭제 대상입니다. (샌드박스에서 파일 삭제 권한이 없어 내용만 비워 둡니다)
- *
- * "쉼이의 제안"은 백엔드에 AI 도메인 자체가 없어 호출할 엔드포인트가 없습니다.
- * (src/domains 에 ai 디렉터리 없음, daily-feedback 라우트 없음)
- * 서버에 생기면 응답 형태에 맞춰 다시 만드세요.
- */
 package com.phoneshim.android.domain.usecase
+
+import com.phoneshim.android.domain.model.RestSuggestion
+import com.phoneshim.android.domain.repository.ReportRepository
+import javax.inject.Inject
+
+/**
+ * 쉼이의 제안. GET /api/reports/suggestion?date=
+ *
+ * AI가 아니라 백엔드가 목표 대비 사용량을 보고 정해진 문구를 골라 줍니다.
+ */
+class GetRestSuggestionUseCase @Inject constructor(
+    private val reportRepository: ReportRepository,
+) {
+    suspend operator fun invoke(date: String? = null): Result<RestSuggestion> =
+        reportRepository.getRestSuggestion(date)
+}

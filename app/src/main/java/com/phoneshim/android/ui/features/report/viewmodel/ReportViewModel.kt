@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
+import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
 import com.phoneshim.android.domain.usecase.GetUsageSessionsUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,7 @@ class ReportViewModel @Inject constructor(
     private val getDailyReportUseCase: GetDailyReportUseCase,
     private val getUsageSessionsUseCase: GetUsageSessionsUseCase,
     private val getReportSummaryUseCase: GetReportSummaryUseCase,
+    private val getRestSuggestionUseCase: GetRestSuggestionUseCase,
 ) : BaseViewModel<ReportUiState, ReportUiEvent, ReportUiEffect>(ReportUiState()) {
 
     override fun handleEvent(event: ReportUiEvent) {
@@ -36,7 +38,7 @@ class ReportViewModel @Inject constructor(
             is ReportUiEvent.PeriodSelected -> selectPeriod(event)
             is ReportUiEvent.TimetableEntryClicked -> openUsageReasonInput(event)
             ReportUiEvent.RestSuggestionClicked -> sendEffect(ReportUiEffect.NavigateToRestSuggestion)
-            ReportUiEvent.RestSuggestionRequested -> showRestSuggestionUnavailable()
+            ReportUiEvent.RestSuggestionRequested -> loadRestSuggestion()
             ReportUiEvent.AlarmSettingsClicked -> sendEffect(ReportUiEffect.NavigateToAlarmSettings)
             ReportUiEvent.Retry -> load()
         }
@@ -136,10 +138,22 @@ class ReportViewModel @Inject constructor(
         }
     }
 
-    /** 쉼이의 제안은 백엔드에 AI 도메인이 아직 없습니다. */
-    private fun showRestSuggestionUnavailable() {
-        // TODO: 서버에 daily-feedback 류 엔드포인트가 생기면 실제 조회로 교체하세요.
-        setState { copy(isLoading = false, insufficientDataMessage = "쉼이의 제안은 준비 중이에요.") }
+    /**
+     * 쉼이의 제안. AI가 아니라 서버가 목표 대비 사용량을 보고 고른 문구를 그대로 받습니다.
+     */
+    private fun loadRestSuggestion() {
+        if (currentState.isLoading) return
+        val date = currentState.requestDate
+        setState { copy(isLoading = true, insufficientDataMessage = null) }
+        viewModelScope.launch {
+            getRestSuggestionUseCase(date)
+                .onSuccess { suggestion ->
+                    setState { copy(restSuggestion = suggestion, isLoading = false) }
+                }
+                .onFailure { throwable ->
+                    handleFailure(throwable, "쉼이의 제안을 불러오지 못했습니다.")
+                }
+        }
     }
 
     /**

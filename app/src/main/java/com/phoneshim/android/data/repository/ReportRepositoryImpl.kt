@@ -8,6 +8,8 @@ import com.phoneshim.android.domain.model.ReasonSummary
 import com.phoneshim.android.domain.model.ReportAppUsage
 import com.phoneshim.android.domain.model.ReportRange
 import com.phoneshim.android.domain.model.ReportSummary
+import com.phoneshim.android.domain.model.RestSuggestion
+import com.phoneshim.android.domain.model.SuggestionType
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageSession
 import com.phoneshim.android.domain.repository.ReportRepository
@@ -99,6 +101,16 @@ class ReportRepositoryImpl @Inject constructor(
     override suspend fun getAchievedDates(month: String): Result<List<String>> =
         apiCallExecutor.executeAsResult { reportApi.getUsageCalendar(month) }
             .map { it.achievedDates.orEmpty() }
+
+    override suspend fun getRestSuggestion(date: String?): Result<RestSuggestion> =
+        apiCallExecutor.executeAsResult { reportApi.getReportSuggestion(date) }.map { response ->
+            RestSuggestion(
+                suggestionType = SuggestionType.from(response.suggestionType),
+                message = response.message.orEmpty(),
+                excessMinutes = response.excessMinutes ?: 0,
+                appName = response.appName,
+            )
+        }
 }
 
 /**
