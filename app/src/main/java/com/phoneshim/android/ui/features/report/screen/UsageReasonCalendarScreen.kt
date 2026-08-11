@@ -31,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.CalendarGrid
 import com.phoneshim.android.ui.common.DateNavigator
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonCalendarUiEffect
@@ -51,11 +52,13 @@ import java.time.LocalDate
 @Composable
 fun UsageReasonCalendarRoute(
     onNavigateToInput: (LocalDate) -> Unit,
+    onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: UsageReasonCalendarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(UsageReasonCalendarUiEvent.ScreenEntered)

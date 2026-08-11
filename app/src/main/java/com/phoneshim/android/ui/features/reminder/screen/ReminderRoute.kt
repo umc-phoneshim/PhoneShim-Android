@@ -11,6 +11,7 @@ import androidx.compose.material3.SnackbarHostState
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEffect
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEvent
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderViewModel
+import com.phoneshim.android.ui.common.base.CollectCommonEffect
 
 @Composable
 fun ReminderRoute(
@@ -19,10 +20,13 @@ fun ReminderRoute(
     modifier: Modifier = Modifier,
     onNavigateToMain: () -> Unit = {},
     onNavigateToReport: () -> Unit = {},
+    onAuthExpired: () -> Unit = {},
     viewModel: ReminderViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
@@ -42,6 +46,7 @@ fun ReminderRoute(
         onSelectDate = { viewModel.onEvent(ReminderUiEvent.DateSelected(it)) },
         onPreviousMonth = { viewModel.onEvent(ReminderUiEvent.MonthMoved(-1)) },
         onNextMonth = { viewModel.onEvent(ReminderUiEvent.MonthMoved(1)) },
+        onRetry = { viewModel.onEvent(ReminderUiEvent.RetryClicked) },
         onAddTask = { viewModel.onEvent(ReminderUiEvent.AddTaskClicked) },
         onEditTask = { viewModel.onEvent(ReminderUiEvent.EditTaskClicked(it)) },
         onMoveTask = { from, to -> viewModel.onEvent(ReminderUiEvent.TaskMoved(from, to)) },

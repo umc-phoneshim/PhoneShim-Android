@@ -21,4 +21,9 @@ data class AppGoalEntity(
     val appLabel: String,
     val goalMinutes: Int,   // 서버 targetMinutes
     val limitEnabled: Boolean, // 서버 restrictAfter
+    val targetCount: Int = 1, // 서버 targetCount (진입 횟수, 최소 1)
+    // 서버 식별자. 다음 저장 때 POST 대신 PATCH 로 보내 409 중복을 피하고,
+    // 선택에서 빠진 앱을 DELETE 할 때 쓴다. 서버 동기화 전이면 null.
+    val monitoredAppId: String? = null,
+    val appGoalId: String? = null,
 )

@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -12,13 +13,13 @@ interface UsageReasonApi {
     @POST("api/usage-reasons")
     suspend fun submitUsageReason(
         @Body request: UsageReasonRequest,
-    ): ApiEnvelope<UsageReasonResponse>
+    ): ApiResponse<UsageReasonResponse>
 
     /** 상태: 예정. 월 단위 사유 입력 여부. */
     @GET("api/usage-reasons/calendar")
     suspend fun getReasonCalendar(
         @Query("month") month: String,
-    ): ApiEnvelope<List<ReasonCalendarResponse>>
+    ): ApiResponse<List<ReasonCalendarResponse>>
 }
 
 data class UsageReasonRequest(
