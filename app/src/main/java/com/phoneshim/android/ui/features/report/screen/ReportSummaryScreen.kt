@@ -44,7 +44,6 @@ import com.phoneshim.android.ui.features.report.component.ReportColorRed
 import com.phoneshim.android.ui.features.report.component.ReportColorYellow
 import com.phoneshim.android.ui.features.report.component.ReportPeriod
 import com.phoneshim.android.ui.features.report.component.ReportPeriodToggle
-import com.phoneshim.android.ui.features.report.component.ReasonKeywordSummary
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.UsageLegendDots
@@ -225,21 +224,30 @@ fun ReportSummaryScreen(
                         ReportPeriodToggle(selected = state.period, onSelect = onPeriodSelected)
                         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
 
-                        if (state.period == ReportPeriod.DAY) {
+                        if (state.summaryPeriodLabel.isNotBlank()) {
+                            Text(
+                                text = state.summaryPeriodLabel,
+                                style = PhoneShimType.KorMicro,
+                                color = PhoneShimTheme.colors.textTertiary,
+                            )
+                            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+                        }
+
+                        // GET /api/reports/summary 의 사유별 집계를 그대로 막대로 그립니다.
+                        if (state.hasSummaryData) {
                             UsageLegendDots(
                                 colors = listOf(ReportColorYellow, ReportColorRed, ReportColorGreen),
                             )
                             Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
                             CategoryUsageBarChart(rows = state.categoryRows)
                         } else {
-                            // 주간/월간은 GET /api/reports/summary 결과(키워드 + 요약문)를 보여줍니다.
-                            ReasonKeywordSummary(
-                                periodLabel = state.summaryPeriodLabel,
-                                keywords = state.summaryKeywords,
-                                summaryText = state.summaryText,
-                                emptyMessage = state.insufficientDataMessage
-                                    ?: "아직 이 기간의 요약을 만들 만큼 기록이 쌓이지 않았어요.",
-                                isLoading = state.isLoading,
+                            Text(
+                                text = state.insufficientDataMessage
+                                    ?: "아직 이 기간에 기록한 사용 이유가 없어요.",
+                                style = PhoneShimType.KorCaption,
+                                color = PhoneShimTheme.colors.textTertiary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }

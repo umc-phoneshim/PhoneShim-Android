@@ -1,8 +1,7 @@
 package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import com.phoneshim.android.domain.model.ReasonCalendarDay
-import com.phoneshim.android.domain.usecase.GetUsageReasonCalendarUseCase
+import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -15,15 +14,16 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 /**
- * 사용 이유 입력 달력. GET /api/usage-reasons/calendar?month=YYYY-MM
+ * 목표 달성 달력. GET /api/usage-logs/calendar?month=YYYY-MM
  *
- * 서버가 아직 "예정" 상태라 실패하면 빈 달력과 안내 문구를 보여줍니다.
+ * 그 달에 전체 목표를 지킨 날짜 목록을 받아 표시합니다.
+ * (사용 이유 입력 여부를 조회하는 엔드포인트는 서버에 없습니다)
  */
 data class UsageReasonCalendarUiState(
     val visibleMonth: YearMonth = YearMonth.now(),
     val today: LocalDate = LocalDate.now(),
     val selectedDate: LocalDate = LocalDate.now(),
-    val daysWithReason: Set<LocalDate> = emptySet(),
+    val achievedDates: Set<LocalDate> = emptySet(),
     val isLoading: Boolean = false,
     val emptyMessage: String? = null,
 ) : UiState {
@@ -34,7 +34,7 @@ data class UsageReasonCalendarUiState(
 
     val canGoNextMonth: Boolean get() = visibleMonth < YearMonth.from(today)
 
-    val writtenCount: Int get() = daysWithReason.size
+    val achievedCount: Int get() = achievedDates.size
 }
 
 sealed interface UsageReasonCalendarUiEvent : UiEvent {
@@ -44,14 +44,14 @@ sealed interface UsageReasonCalendarUiEvent : UiEvent {
 }
 
 sealed interface UsageReasonCalendarUiEffect : UiEffect {
-    /** 사유가 없는 날을 고르면 입력 화면으로 보냅니다. */
-    data class NavigateToInput(val date: LocalDate) : UsageReasonCalendarUiEffect
+    /** 날짜를 고르면 그날의 리포트로 이동합니다. */
+    data class NavigateToReport(val date: LocalDate) : UsageReasonCalendarUiEffect
     data class ShowMessage(val message: String) : UsageReasonCalendarUiEffect
 }
 
 @HiltViewModel
 class UsageReasonCalendarViewModel @Inject constructor(
-    private val getUsageReasonCalendarUseCase: GetUsageReasonCalendarUseCase,
+    private val getAchievedDatesUseCase: GetAchievedDatesUseCase,
 ) : BaseViewModel<UsageReasonCalendarUiState, UsageReasonCalendarUiEvent, UsageReasonCalendarUiEffect>(
     UsageReasonCalendarUiState(),
 ) {
@@ -65,8 +65,7 @@ class UsageReasonCalendarViewModel @Inject constructor(
     }
 
     private fun moveMonth(event: UsageReasonCalendarUiEvent.MonthMoved) {
-        val state = currentState
-        if (event.offset > 0 && !state.canGoNextMonth) return
+        if (event.offset > 0 && !currentState.canGoNextMonth) return
         setState { copy(visibleMonth = visibleMonth.plusMonths(event.offset), emptyMessage = null) }
         loadMonth()
     }
@@ -74,9 +73,7 @@ class UsageReasonCalendarViewModel @Inject constructor(
     private fun selectDate(event: UsageReasonCalendarUiEvent.DateSelected) {
         if (event.date.isAfter(currentState.today)) return
         setState { copy(selectedDate = event.date) }
-        if (event.date !in currentState.daysWithReason) {
-            sendEffect(UsageReasonCalendarUiEffect.NavigateToInput(event.date))
-        }
+        sendEffect(UsageReasonCalendarUiEffect.NavigateToReport(event.date))
     }
 
     private fun loadMonth() {
@@ -84,13 +81,17 @@ class UsageReasonCalendarViewModel @Inject constructor(
         val month = currentState.requestMonth
         setState { copy(isLoading = true) }
         viewModelScope.launch {
-            getUsageReasonCalendarUseCase(month)
-                .onSuccess { days -> setState { copy(daysWithReason = days.toDateSet(), isLoading = false, emptyMessage = null) } }
+            getAchievedDatesUseCase(month)
+                .onSuccess { dates ->
+                    setState {
+                        copy(achievedDates = dates.toDateSet(), isLoading = false, emptyMessage = null)
+                    }
+                }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState {
                             copy(
-                                daysWithReason = emptySet(),
+                                achievedDates = emptySet(),
                                 isLoading = false,
                                 emptyMessage = error.message,
                             )
@@ -101,7 +102,5 @@ class UsageReasonCalendarViewModel @Inject constructor(
     }
 }
 
-private fun List<ReasonCalendarDay>.toDateSet(): Set<LocalDate> =
-    filter { it.hasReason }
-        .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }
-        .toSet()
+private fun List<String>.toDateSet(): Set<LocalDate> =
+    mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()

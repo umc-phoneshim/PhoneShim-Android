@@ -47,6 +47,7 @@ import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEvent
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiState
 import com.phoneshim.android.ui.features.report.viewmodel.ReportViewModel
+import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonTarget
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -57,7 +58,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 @Composable
 fun TimetableRoute(
-    onEntryClick: (entryId: String) -> Unit,
+    onEntryClick: (UsageReasonTarget) -> Unit,
     onNavigateToAiSuggestion: () -> Unit,
     onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
@@ -78,7 +79,7 @@ fun TimetableRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ReportUiEffect.NavigateToUsageReasonInput -> onEntryClick(effect.entryId)
+                is ReportUiEffect.NavigateToUsageReasonInput -> onEntryClick(effect.target)
                 ReportUiEffect.NavigateToRestSuggestion -> onNavigateToAiSuggestion()
                 is ReportUiEffect.NavigateToTab ->
                     if (effect.tab == ReportTab.SUMMARY) onNavigateToSummary()
@@ -249,7 +250,7 @@ private fun TimetableScreenPreview() {
 private fun TimetableEmptyPreview() {
     PhoneShimTheme {
         TimetableScreen(
-            state = ReportUiState(hourUsages = ReportUiState().hourUsages.map { it.copy(segments = emptyList()) }),
+            state = ReportUiState(),
             onTabSelected = {},
             onBottomNavSelected = {},
         )

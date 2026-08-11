@@ -44,14 +44,15 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 import java.time.LocalDate
 
 /**
- * 07. 사용 이유 입력 달력.
+ * 07. 목표 달성 달력. GET /api/usage-logs/calendar
  *
- * 어느 날짜에 사유를 적었는지 한눈에 보고, 안 적은 날을 누르면 입력 화면으로 이동합니다.
- * GET /api/usage-reasons/calendar 는 아직 서버 "예정" 상태입니다.
+ * 그 달에 전체 목표를 지킨 날짜를 보여주고, 날짜를 누르면 그날 리포트로 이동합니다.
+ * (사용 이유 입력 여부를 조회하는 엔드포인트는 서버에 없습니다)
+ * TODO: 아직 네비게이션에 연결돼 있지 않습니다. 진입점이 정해지면 라우트를 추가하세요.
  */
 @Composable
 fun UsageReasonCalendarRoute(
-    onNavigateToInput: (LocalDate) -> Unit,
+    onNavigateToReport: (LocalDate) -> Unit,
     onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: UsageReasonCalendarViewModel = hiltViewModel(),
@@ -66,7 +67,7 @@ fun UsageReasonCalendarRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is UsageReasonCalendarUiEffect.NavigateToInput -> onNavigateToInput(effect.date)
+                is UsageReasonCalendarUiEffect.NavigateToReport -> onNavigateToReport(effect.date)
                 is UsageReasonCalendarUiEffect.ShowMessage ->
                     snackbarHostState.showSnackbar(effect.message)
             }
@@ -96,7 +97,7 @@ fun UsageReasonCalendarScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { TopAppBar(title = "사용 이유 기록", titleStyle = PhoneShimType.KorH3) },
+        topBar = { TopAppBar(title = "목표 달성 기록", titleStyle = PhoneShimType.KorH3) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -125,8 +126,8 @@ fun UsageReasonCalendarScreen(
                 )
             }
 
-            // TODO: CalendarGrid 는 공통 컴포넌트라 날짜별 점 표시를 지원하지 않습니다.
-            //  기록한 날을 달력 안에 직접 표시하려면 공통 컴포넌트에 슬롯 추가가 필요해
+            // TODO: CalendarGrid 는 공통 컴포넌트라 날짜별 표시를 지원하지 않습니다.
+            //  달성한 날을 달력 안에 직접 표시하려면 공통 컴포넌트에 슬롯 추가가 필요해
             //  지금은 아래 요약으로 대신합니다.
             ReportCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,8 +141,8 @@ fun UsageReasonCalendarScreen(
                         text = when {
                             state.isLoading -> "불러오는 중..."
                             state.emptyMessage != null -> state.emptyMessage
-                            state.writtenCount == 0 -> "이번 달에는 아직 적은 기록이 없어요."
-                            else -> "이번 달 ${state.writtenCount}일 기록했어요."
+                            state.achievedCount == 0 -> "이번 달에는 아직 적은 기록이 없어요."
+                            else -> "이번 달 ${state.achievedCount}일 기록했어요."
                         },
                         style = PhoneShimType.KorBodyM,
                         color = PhoneShimTheme.colors.textSecondary,
@@ -173,7 +174,7 @@ private fun UsageReasonCalendarPreview() {
     PhoneShimTheme {
         UsageReasonCalendarScreen(
             state = UsageReasonCalendarUiState(
-                daysWithReason = setOf(LocalDate.now(), LocalDate.now().minusDays(2)),
+                achievedDates = setOf(LocalDate.now(), LocalDate.now().minusDays(2)),
             ),
         )
     }

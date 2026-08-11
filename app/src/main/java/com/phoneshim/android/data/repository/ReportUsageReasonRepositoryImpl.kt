@@ -3,7 +3,6 @@ package com.phoneshim.android.data.repository
 import com.phoneshim.android.data.api.UsageReasonApi
 import com.phoneshim.android.data.api.UsageReasonRequest
 import com.phoneshim.android.data.api.common.ApiCallExecutor
-import com.phoneshim.android.domain.model.ReasonCalendarDay
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
 import javax.inject.Inject
@@ -21,16 +20,9 @@ class ReportUsageReasonRepositoryImpl @Inject constructor(
                     date = entry.date,
                     timeRangeStart = entry.timeRangeStart,
                     timeRangeEnd = entry.timeRangeEnd,
-                    reason = entry.reason,
+                    reasonCodes = entry.reasonCodes.map { it.name },
                     usageLogId = entry.usageLogId,
                 ),
             )
-        }.map { Unit }
-
-    override suspend fun getReasonCalendar(month: String): Result<List<ReasonCalendarDay>> =
-        apiCallExecutor.executeAsResult { usageReasonApi.getReasonCalendar(month) }.map { responses ->
-            responses.map {
-                ReasonCalendarDay(date = it.date, hasReason = it.hasReason)
-            }
-        }
+        }.map { }
 }
