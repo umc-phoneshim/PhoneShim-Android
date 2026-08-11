@@ -6,6 +6,7 @@ import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.data.local.TokenProvider
 import com.phoneshim.android.domain.usecase.UploadDeviceUsageUseCase
 import com.phoneshim.android.domain.usecase.UploadUsageLogUseCase
 import java.time.LocalDate
@@ -38,6 +39,7 @@ class UsageUploader @Inject constructor(
     private val uploadUsageLog: UploadUsageLogUseCase,
     private val uploadDeviceUsage: UploadDeviceUsageUseCase,
     private val pendingStore: PendingUsageUploadStore,
+    private val tokenProvider: TokenProvider,
 ) {
     // 주기 루프와 SCREEN_OFF 밀어주기가 겹칠 수 있다.
     private val mutex = Mutex()
@@ -56,6 +58,10 @@ class UsageUploader @Inject constructor(
         blockedIntervals: List<BlockedInterval>,
         foregroundPackage: String?,
     ) = mutex.withLock {
+        // 로그인 전에는 서버에 올릴 수 없다. 401 을 5분마다 반복하지 않도록 여기서 끊는다.
+        // 보존된 스냅샷은 지우지 않는다. 로그인 후 다음 주기에 date 를 명시해 올라간다.
+        if (tokenProvider.getAccessToken() == null) return@withLock
+
         val today = LocalDate.now().toString()
 
         // 지난 날짜 보전 전송 먼저. 오늘치는 아래에서 어차피 다시 보낸다.
