@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.api
 
 import com.phoneshim.android.data.api.common.ApiResponse
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -43,11 +44,15 @@ interface AppGoalApi {
         @Body request: AppGoalUpdateRequest,
     ): ApiResponse<AppGoalResponse>
 
-    /** 상태: 구현완료. 성공 시 204 No Content라 본문이 비어 옵니다. */
+    /**
+     * 상태: 구현완료. 성공 시 204 No Content라 본문이 비어 옵니다.
+     * 실패 응답을 ApiException 으로 살리려면 공통 executeNoContent 로 감싸야 하므로
+     * Response<Unit> 으로 받습니다.
+     */
     @DELETE("api/app-goals/{id}")
     suspend fun deleteAppGoal(
         @Path("id") id: String,
-    )
+    ): Response<Unit>
 }
 
 data class AppGoalCreateRequest(
@@ -65,13 +70,17 @@ data class AppGoalUpdateRequest(
     val goalReason: String? = null,
 )
 
+/**
+ * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+ * 그래서 전부 nullable 로 받고 도메인 변환에서 보정합니다.
+ */
 data class AppGoalResponse(
-    val id: String,
-    val monitoredAppId: String,
-    val targetMinutes: Int,
-    val targetCount: Int,
-    val restrictAfter: Boolean,
+    val id: String? = null,
+    val monitoredAppId: String? = null,
+    val targetMinutes: Int? = null,
+    val targetCount: Int? = null,
+    val restrictAfter: Boolean? = null,
     val goalReason: String? = null,
-    val createdAt: String,
-    val updatedAt: String,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )

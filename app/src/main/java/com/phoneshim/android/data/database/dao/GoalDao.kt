@@ -38,6 +38,15 @@ interface GoalDao {
     @Query("DELETE FROM app_goal_cache WHERE packageName = :packageName")
     suspend fun deleteAppGoal(packageName: String)
 
+    // --- packageName <-> monitoredAppId 변환 ---
+    // 차단 판정·사용량 업로드가 오프라인에서도 돌아야 해서 캐시에서 바로 찾습니다.
+
+    @Query("SELECT monitoredAppId FROM app_goal_cache WHERE packageName = :packageName")
+    suspend fun findMonitoredAppId(packageName: String): String?
+
+    @Query("SELECT packageName FROM app_goal_cache WHERE monitoredAppId = :monitoredAppId")
+    suspend fun findPackageName(monitoredAppId: String): String?
+
     @Query("DELETE FROM app_goal_cache")
     suspend fun clearAppGoals()
 }

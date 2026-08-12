@@ -20,4 +20,8 @@ data class AppGoal(
     // 앱별 목표 진입 횟수 — 서버 targetCount. 서버는 필수(1 이상)로 요구하지만
     // 아직 이 값을 입력받는 화면이 없어(Figma 04-4 접근 횟수 팝업 미구현) 최소값을 기본으로 둔다.
     val targetCount: Int = 1,
+    // 이 앱의 목표를 세운 이유 — 서버 goalReason. 공백 포함 최대 100자, 선택 입력.
+    // 설정(PREF)의 '어플 목표 설정' 문구가 이 값이다.
+    // User 의 motivation(메인 화면 다짐 문구)과는 다른 값이므로 섞어 쓰지 않는다.
+    val goalReason: String? = null,
 )

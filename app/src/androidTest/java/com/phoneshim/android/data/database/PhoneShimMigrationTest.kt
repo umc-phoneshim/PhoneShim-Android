@@ -40,6 +40,25 @@ class PhoneShimMigrationTest {
         helper.close()
     }
 
+    @Test
+    fun migration5To6_addsGoalReasonKeepingExistingRows() {
+        val helper = createVersionFourDatabase()
+        val sqlite = helper.writableDatabase
+        MIGRATION_4_5.migrate(sqlite)
+        MIGRATION_5_6.migrate(sqlite)
+
+        // 기존 행은 유지되고 새 컬럼만 NULL 로 붙는다.
+        assertEquals(1, intValue(sqlite, "SELECT COUNT(*) FROM app_goal_cache"))
+        assertTrue(
+            sqlite.query("SELECT goalReason FROM app_goal_cache").use { cursor ->
+                cursor.moveToFirst()
+                cursor.isNull(0)
+            },
+        )
+        assertEquals(30, intValue(sqlite, "SELECT goalMinutes FROM app_goal_cache"))
+        helper.close()
+    }
+
     private fun createVersionFourDatabase(): androidx.sqlite.db.SupportSQLiteOpenHelper {
         val configuration = androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
             .name(databaseName)

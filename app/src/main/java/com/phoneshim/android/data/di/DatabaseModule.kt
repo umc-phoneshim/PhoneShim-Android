@@ -3,6 +3,7 @@ import android.content.Context
 import androidx.room.Room
 import com.phoneshim.android.data.database.PhoneShimDatabase
 import com.phoneshim.android.data.database.MIGRATION_4_5
+import com.phoneshim.android.data.database.MIGRATION_5_6
 import com.phoneshim.android.data.database.dao.GoalDao
 import com.phoneshim.android.data.database.dao.ReminderDao
 import com.phoneshim.android.data.database.dao.ReminderRestrictionDao
@@ -23,7 +24,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PhoneShimDatabase =
         Room.databaseBuilder(context, PhoneShimDatabase::class.java, PhoneShimDatabase.DATABASE_NAME)
-            .addMigrations(MIGRATION_4_5)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
             // 1~3 버전의 기존 migration은 아직 제공되지 않아 해당 구버전에만 fallback을 유지한다.
             .fallbackToDestructiveMigration()
             .build()
