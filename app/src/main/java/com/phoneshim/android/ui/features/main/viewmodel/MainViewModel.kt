@@ -32,6 +32,9 @@ data class MainUiState(
 
 sealed interface MainUiEvent : UiEvent {
     data object LoadDashboard : MainUiEvent
+
+    /** 리마인더 화면에서 일정을 추가/수정하고 메인 탭으로 돌아왔을 때 오늘 리마인더만 다시 부른다. */
+    data object RefreshTodayReminders : MainUiEvent
 }
 
 sealed interface MainUiEffect : UiEffect {
@@ -54,6 +57,7 @@ class MainViewModel @Inject constructor(
     override fun handleEvent(event: MainUiEvent) {
         when (event) {
             MainUiEvent.LoadDashboard -> fetchDashboard()
+            MainUiEvent.RefreshTodayReminders -> refreshTodayReminders()
         }
     }
 
@@ -96,6 +100,19 @@ class MainViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * 대시보드 전체([fetchDashboard])는 use case 4개를 병렬로 다시 부르는 무거운 경로라,
+     * 오늘 리마인더만 바뀐 상황(리마인더 탭에서 일정 추가 후 복귀)엔 과합니다.
+     * usageStatus/dashboardSummary/userName/isLoading은 건드리지 않고 todayReminders만 갱신합니다.
+     */
+    private fun refreshTodayReminders() {
+        viewModelScope.launch {
+            getRemindersUseCase(LocalDate.now(KOREA_ZONE_ID))
+                .onSuccess { result -> setState { copy(todayReminders = result.reminders) } }
+                .onFailure(::reportLoadFailure)
         }
     }
 
