@@ -4,8 +4,6 @@ import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.DashboardSummary
 import com.phoneshim.android.domain.model.Goal
 import com.phoneshim.android.domain.model.Reminder
-import com.phoneshim.android.domain.model.ReminderDataSource
-import com.phoneshim.android.domain.model.ReminderListResult
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.model.UsageStatus
@@ -19,15 +17,14 @@ import com.phoneshim.android.domain.repository.UsageLogRepository
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
-import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
-import java.io.IOException
+import com.phoneshim.android.domain.usecase.ObserveRemindersUseCase
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -66,50 +63,43 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `RefreshTodayReminders 이벤트가 오면 오늘 리마인더만 다시 조회하고 usageStatus,dashboardSummary,userName은 그대로 유지한다`() = runTest(dispatcher) {
+    fun `리마인더 캐시가 갱신되면 MainViewModel의 todayReminders도 자동으로 갱신된다`() = runTest(dispatcher) {
         advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.todayReminders.isEmpty())
         val usageStatusBefore = viewModel.uiState.value.usageStatus
         val dashboardSummaryBefore = viewModel.uiState.value.dashboardSummary
         val userNameBefore = viewModel.uiState.value.userName
-        assertEquals(1, usageLogRepository.getUsageStatusCallCount)
-        assertEquals(1, dashboardRepository.getDailySummaryCallCount)
-        assertEquals(1, myPageRepository.getMyInfoCallCount)
 
-        // 리마인더 탭에서 새 일정을 추가한 상황을 흉내낸다.
-        reminderRepository.remindersResult = Result.success(
-            ReminderListResult(listOf(reminder(id = "new-1", title = "새 일정")), ReminderDataSource.REMOTE),
-        )
-
-        viewModel.onEvent(MainUiEvent.RefreshTodayReminders)
+        // 리마인더 화면에서 일정을 추가해 Room 캐시가 갱신된 상황을 흉내낸다.
+        // GetRemindersUseCase 같은 재조회 호출 없이, 캐시 Flow가 새 값을 emit하는 것만으로 반영돼야 한다.
+        reminderRepository.remindersFlow.value = listOf(reminder(id = "new-1", title = "새 일정"))
         advanceUntilIdle()
 
         assertEquals(listOf("새 일정"), viewModel.uiState.value.todayReminders.map { it.title })
-        // usageStatus/dashboardSummary/userName은 손대지 않았으므로 값도, 호출 횟수도 그대로다.
+        // 오늘 리마인더 캐시 갱신은 usageStatus/dashboardSummary/userName과 완전히 분리된 경로다.
         assertEquals(usageStatusBefore, viewModel.uiState.value.usageStatus)
         assertEquals(dashboardSummaryBefore, viewModel.uiState.value.dashboardSummary)
         assertEquals(userNameBefore, viewModel.uiState.value.userName)
-        assertEquals(1, usageLogRepository.getUsageStatusCallCount)
-        assertEquals(1, dashboardRepository.getDailySummaryCallCount)
-        assertEquals(1, myPageRepository.getMyInfoCallCount)
     }
 
     @Test
-    fun `RefreshTodayReminders 조회가 실패하면 기존 todayReminders를 유지하고 ShowMessage effect를 보낸다`() = runTest(dispatcher) {
-        reminderRepository.remindersResult = Result.success(
-            ReminderListResult(listOf(reminder(id = "old-1", title = "기존 일정")), ReminderDataSource.REMOTE),
+    fun `리마인더 캐시가 여러 번 갱신되면 그때마다 todayReminders가 최신값을 따라간다`() = runTest(dispatcher) {
+        advanceUntilIdle()
+
+        reminderRepository.remindersFlow.value = listOf(reminder(id = "r-1", title = "첫 번째"))
+        advanceUntilIdle()
+        assertEquals(listOf("첫 번째"), viewModel.uiState.value.todayReminders.map { it.title })
+
+        reminderRepository.remindersFlow.value = listOf(
+            reminder(id = "r-1", title = "첫 번째"),
+            reminder(id = "r-2", title = "두 번째"),
         )
-        viewModel = createViewModel()
         advanceUntilIdle()
-        val todayRemindersBefore = viewModel.uiState.value.todayReminders
+        assertEquals(listOf("첫 번째", "두 번째"), viewModel.uiState.value.todayReminders.map { it.title })
 
-        reminderRepository.remindersResult = Result.failure(IOException("network"))
-        val effect = async { viewModel.effect.first() }
-
-        viewModel.onEvent(MainUiEvent.RefreshTodayReminders)
+        reminderRepository.remindersFlow.value = emptyList()
         advanceUntilIdle()
-
-        assertTrue(effect.await() is MainUiEffect.ShowMessage)
-        assertEquals(todayRemindersBefore, viewModel.uiState.value.todayReminders)
+        assertTrue(viewModel.uiState.value.todayReminders.isEmpty())
     }
 
     private fun createViewModel(): MainViewModel = MainViewModel(
@@ -117,7 +107,7 @@ class MainViewModelTest {
         getDashboardSummaryUseCase = GetDashboardSummaryUseCase(dashboardRepository),
         getGoalUseCase = GetGoalUseCase(goalRepository),
         getMyInfoUseCase = GetMyInfoUseCase(myPageRepository),
-        getRemindersUseCase = GetRemindersUseCase(reminderRepository),
+        observeRemindersUseCase = ObserveRemindersUseCase(reminderRepository),
     )
 
     private fun reminder(
@@ -143,14 +133,10 @@ class MainViewModelTest {
         var statusResult: Result<List<UsageStatus>> = Result.success(
             listOf(UsageStatus(monitoredAppId = "m-1", appName = "카카오톡", packageName = "com.kakao.talk", usedMinutes = 10, entryCount = 1)),
         )
-        var getUsageStatusCallCount = 0
 
         override suspend fun getUsageLogs(date: String?) = throw UnsupportedOperationException()
 
-        override suspend fun getUsageStatus(): Result<List<UsageStatus>> {
-            getUsageStatusCallCount++
-            return statusResult
-        }
+        override suspend fun getUsageStatus(): Result<List<UsageStatus>> = statusResult
 
         override suspend fun uploadUsageLog(
             monitoredAppId: String,
@@ -164,12 +150,8 @@ class MainViewModelTest {
         var summaryResult: Result<DashboardSummary> = Result.success(
             DashboardSummary(date = "2026-08-13", targetMinutes = 210, usedMinutes = 90, remainingMinutes = 120, isExceeded = false),
         )
-        var getDailySummaryCallCount = 0
 
-        override suspend fun getDailySummary(): Result<DashboardSummary> {
-            getDailySummaryCallCount++
-            return summaryResult
-        }
+        override suspend fun getDailySummary(): Result<DashboardSummary> = summaryResult
     }
 
     private class FakeGoalRepository : GoalRepository {
@@ -182,12 +164,8 @@ class MainViewModelTest {
 
     private class FakeMyPageRepository : MyPageRepository {
         var infoResult: Result<User> = Result.success(User(email = "user@phoneshim.com", nickname = "유리"))
-        var getMyInfoCallCount = 0
 
-        override suspend fun getMyInfo(): Result<User> {
-            getMyInfoCallCount++
-            return infoResult
-        }
+        override suspend fun getMyInfo(): Result<User> = infoResult
 
         override suspend fun updateMyInfo(name: String?, motivation: String?) = throw UnsupportedOperationException()
 
@@ -195,15 +173,10 @@ class MainViewModelTest {
     }
 
     private class FakeReminderRepository : ReminderRepository {
-        var remindersResult: Result<ReminderListResult> = Result.success(
-            ReminderListResult(emptyList(), ReminderDataSource.REMOTE),
-        )
-        val requestedDates = mutableListOf<LocalDate>()
+        val remindersFlow = MutableStateFlow<List<Reminder>>(emptyList())
+        val observedDates = mutableListOf<LocalDate>()
 
-        override suspend fun getReminders(date: LocalDate): Result<ReminderListResult> {
-            requestedDates += date
-            return remindersResult
-        }
+        override suspend fun getReminders(date: LocalDate) = throw UnsupportedOperationException()
 
         override suspend fun getReminder(id: String): Result<Reminder> = throw UnsupportedOperationException()
 
@@ -214,6 +187,11 @@ class MainViewModelTest {
             throw UnsupportedOperationException()
 
         override suspend fun deleteReminder(id: String): Result<Unit> = throw UnsupportedOperationException()
+
+        override fun observeReminders(date: LocalDate): Flow<List<Reminder>> {
+            observedDates += date
+            return remindersFlow
+        }
     }
 }
 

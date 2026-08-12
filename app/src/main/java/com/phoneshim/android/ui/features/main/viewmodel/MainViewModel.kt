@@ -7,8 +7,8 @@ import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
-import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
+import com.phoneshim.android.domain.usecase.ObserveRemindersUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -19,6 +19,7 @@ import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 data class MainUiState(
@@ -32,9 +33,6 @@ data class MainUiState(
 
 sealed interface MainUiEvent : UiEvent {
     data object LoadDashboard : MainUiEvent
-
-    /** 리마인더 화면에서 일정을 추가/수정하고 메인 탭으로 돌아왔을 때 오늘 리마인더만 다시 부른다. */
-    data object RefreshTodayReminders : MainUiEvent
 }
 
 sealed interface MainUiEffect : UiEffect {
@@ -47,17 +45,17 @@ class MainViewModel @Inject constructor(
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
     private val getGoalUseCase: GetGoalUseCase,
     private val getMyInfoUseCase: GetMyInfoUseCase,
-    private val getRemindersUseCase: GetRemindersUseCase,
+    private val observeRemindersUseCase: ObserveRemindersUseCase,
 ) : BaseViewModel<MainUiState, MainUiEvent, MainUiEffect>(MainUiState()) {
 
     init {
         onEvent(MainUiEvent.LoadDashboard)
+        observeTodayReminders()
     }
 
     override fun handleEvent(event: MainUiEvent) {
         when (event) {
             MainUiEvent.LoadDashboard -> fetchDashboard()
-            MainUiEvent.RefreshTodayReminders -> refreshTodayReminders()
         }
     }
 
@@ -76,18 +74,15 @@ class MainViewModel @Inject constructor(
                 val usageStatusDeferred = async { getUsageStatusUseCase() }
                 val dashboardSummaryDeferred = async { getDashboardSummaryUseCase() }
                 val userNameDeferred = async { getMyInfoUseCase().map { it.nickname } }
-                val todayRemindersDeferred = async { getRemindersUseCase(LocalDate.now(KOREA_ZONE_ID)) }
 
                 val isGoalSet = isGoalSetDeferred.await()
                 val usageStatusResult = usageStatusDeferred.await()
                 val dashboardSummaryResult = dashboardSummaryDeferred.await()
                 val userNameResult = userNameDeferred.await()
-                val todayRemindersResult = todayRemindersDeferred.await()
 
                 usageStatusResult.onFailure(::reportLoadFailure)
                 dashboardSummaryResult.onFailure(::reportLoadFailure)
                 userNameResult.onFailure(::reportLoadFailure)
-                todayRemindersResult.onFailure(::reportLoadFailure)
 
                 setState {
                     copy(
@@ -96,7 +91,6 @@ class MainViewModel @Inject constructor(
                         dashboardSummary = dashboardSummaryResult.getOrNull() ?: dashboardSummary,
                         isLoading = false,
                         userName = userNameResult.getOrDefault(userName),
-                        todayReminders = todayRemindersResult.map { it.reminders }.getOrDefault(todayReminders),
                     )
                 }
             }
@@ -104,15 +98,16 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * 대시보드 전체([fetchDashboard])는 use case 4개를 병렬로 다시 부르는 무거운 경로라,
-     * 오늘 리마인더만 바뀐 상황(리마인더 탭에서 일정 추가 후 복귀)엔 과합니다.
-     * usageStatus/dashboardSummary/userName/isLoading은 건드리지 않고 todayReminders만 갱신합니다.
+     * 오늘 리마인더는 서버를 직접 조회하지 않고 Room 캐시([ObserveRemindersUseCase])를 그대로
+     * 관찰합니다. 리마인더 화면의 CRUD가 성공하면 캐시가 즉시 갱신되므로, 메인 화면이
+     * 살아있는 동안 계속 최신 상태를 반영합니다 — ON_RESUME 트리거나 별도 재조회 이벤트가
+     * 필요 없고, 이미 최신인 캐시를 다시 서버에 묻는 불필요한 요청도 없습니다(#74 리뷰 반영).
      */
-    private fun refreshTodayReminders() {
+    private fun observeTodayReminders() {
         viewModelScope.launch {
-            getRemindersUseCase(LocalDate.now(KOREA_ZONE_ID))
-                .onSuccess { result -> setState { copy(todayReminders = result.reminders) } }
-                .onFailure(::reportLoadFailure)
+            observeRemindersUseCase(LocalDate.now(KOREA_ZONE_ID)).collect { reminders ->
+                setState { copy(todayReminders = reminders) }
+            }
         }
     }
 

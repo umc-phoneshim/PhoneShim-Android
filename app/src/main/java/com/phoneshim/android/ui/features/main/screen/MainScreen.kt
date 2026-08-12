@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,14 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.phoneshim.android.R
@@ -60,7 +56,6 @@ import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
-import com.phoneshim.android.ui.features.main.viewmodel.MainUiEvent
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -150,28 +145,6 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-
-    // 리마인더 화면에서 일정을 추가/수정하고 메인 탭으로 돌아와도 MainViewModel이 살아있는
-    // 채로 재사용돼 init 조회 결과를 그대로 들고 있어(#72 리뷰) 재진입(ON_RESUME)마다
-    // 오늘 리마인더만 다시 부른다. 이 프로젝트엔 lifecycle-runtime-compose 의존성이 없어
-    // LifecycleResumeEffect 대신 LocalLifecycleOwner + DisposableEffect로 구현.
-    // 최초 진입 시 첫 ON_RESUME은 init { onEvent(LoadDashboard) }가 이미 오늘 리마인더까지
-    // 불러온 직후라 건너뛴다(중복 네트워크 호출 방지).
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, viewModel) {
-        var isFirstResume = true
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                if (isFirstResume) {
-                    isFirstResume = false
-                } else {
-                    viewModel.onEvent(MainUiEvent.RefreshTodayReminders)
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     Box(
         modifier = modifier

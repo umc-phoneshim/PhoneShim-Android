@@ -19,6 +19,8 @@ import com.phoneshim.android.domain.model.ReminderDataSource
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -146,6 +148,10 @@ private class FakeReminderDao : ReminderDao {
             .filter { it.reminder.dateEpochDay == dateEpochDay }
             .sortedBy { it.reminder.startTimeEpochMillis }
             .map { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }
+
+    // 이 테스트는 suspend 조회 경로만 검증하므로, 현재 스냅샷을 한 번 emit하는 것으로 충분하다.
+    override fun observeForDate(dateEpochDay: Long): Flow<List<ReminderWithRestrictedApps>> =
+        flow { emit(getForDate(dateEpochDay)) }
 
     override suspend fun getById(id: String): ReminderWithRestrictedApps? =
         entries[id]?.let { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }

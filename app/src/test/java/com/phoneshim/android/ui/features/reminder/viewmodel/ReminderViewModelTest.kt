@@ -20,7 +20,9 @@ import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -267,6 +269,9 @@ private class FakeReminderRepository : ReminderRepository {
         lastDeleteId = id
         return deleteResult
     }
+
+    // 이 화면은 MainViewModel의 캐시 관찰 경로를 쓰지 않으므로, 현재 스냅샷만 흘려보내면 충분하다.
+    override fun observeReminders(date: LocalDate): Flow<List<Reminder>> = flowOf(remindersByDate[date].orEmpty())
 }
 
 private fun reminder(
