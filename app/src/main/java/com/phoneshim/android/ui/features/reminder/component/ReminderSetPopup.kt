@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,6 +36,11 @@ import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
+import com.phoneshim.android.ui.common.PhoneShimTooltip
+import com.phoneshim.android.ui.common.TooltipTailAlignment
+import kotlinx.coroutines.delay
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.layout.offset
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
 import com.phoneshim.android.ui.features.reminder.viewmodel.DUPLICATE_SCHEDULE_MESSAGE
@@ -69,6 +75,11 @@ fun ReminderSetPopup(
     var isNameInputVisible by remember { mutableStateOf(false) }
     var nameInput by remember { mutableStateOf(draft.title) }
     var isRestrictionPopupVisible by remember { mutableStateOf(false) }
+    var showRestrictionTooltip by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(4_000L)
+        showRestrictionTooltip = false
+    }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(modifier = Modifier.width(PopupWidth).height(PopupHeight)) {
             Column(
@@ -105,7 +116,10 @@ fun ReminderSetPopup(
             PopupSelectionRow(
                 label = "제한 선택",
                 labelColor = PhoneShimTheme.colors.error,
-                onClick = { isRestrictionPopupVisible = true },
+                onClick = {
+                    showRestrictionTooltip = false
+                    isRestrictionPopupVisible = true
+                },
             ) {
                 RestrictionSelection(draft)
             }
@@ -117,8 +131,15 @@ fun ReminderSetPopup(
                 enabled = !isSubmitting,
             )
             }
-            if (draft.timeError == DUPLICATE_SCHEDULE_MESSAGE) {
-                DuplicateScheduleErrorBanner(modifier = Modifier.align(Alignment.Center))
+            if (showRestrictionTooltip) {
+                PhoneShimTooltip(
+                    text = "선택 시 설정한 시간동안 사용이 제한됩니다.",
+                    tailAlignment = TooltipTailAlignment.End,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(y = (-20).dp)
+                        .zIndex(2f),
+                )
             }
             if (isRestrictionPopupVisible) {
                 ReminderRestrictionPopup(

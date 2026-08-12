@@ -58,6 +58,7 @@ internal fun ReminderCalendar(
     onDateSelected: (LocalDate) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    markedDates: Set<LocalDate>,
 ) {
     Column(
         modifier = Modifier
@@ -77,6 +78,12 @@ internal fun ReminderCalendar(
             labelStyle = PhoneShimType.KorH3,
             labelColor = PhoneShimTheme.colors.brandStrong,
         )
-        CalendarGrid(visibleMonth, selectedDate, todayDate, onDateSelected)
+        CalendarGrid(
+            visibleMonth = visibleMonth,
+            selectedDate = selectedDate,
+            todayDate = todayDate,
+            onDateSelected = onDateSelected,
+            markedDates = markedDates,
+        )
     }
 }

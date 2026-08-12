@@ -76,22 +76,6 @@ internal fun ReminderRestrictionPopup(
                     onToggleApp(app.id)
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(PhoneShimTheme.colors.background, CircleShape)
-                        .border(1.dp, PhoneShimPalette.Gray300, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("+", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textTertiary)
-                }
-                Text("기타 어플 추가", style = PhoneShimType.KorLabel, color = PhoneShimTheme.colors.textTertiary)
-            }
         }
     }
 }
