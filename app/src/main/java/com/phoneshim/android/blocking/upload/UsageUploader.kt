@@ -7,6 +7,7 @@ import com.phoneshim.android.blocking.detection.UsageMinutesReader
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.local.TokenProvider
+import com.phoneshim.android.domain.usecase.RestoreAuthSessionUseCase
 import com.phoneshim.android.domain.usecase.UploadDeviceUsageUseCase
 import com.phoneshim.android.domain.usecase.UploadUsageLogUseCase
 import java.time.LocalDate
@@ -40,6 +41,7 @@ class UsageUploader @Inject constructor(
     private val uploadDeviceUsage: UploadDeviceUsageUseCase,
     private val pendingStore: PendingUsageUploadStore,
     private val tokenProvider: TokenProvider,
+    private val restoreAuthSession: RestoreAuthSessionUseCase,
 ) {
     // 주기 루프와 SCREEN_OFF 밀어주기가 겹칠 수 있다.
     private val mutex = Mutex()
@@ -59,8 +61,16 @@ class UsageUploader @Inject constructor(
         foregroundPackage: String?,
     ) = mutex.withLock {
         // 로그인 전에는 서버에 올릴 수 없다. 401 을 5분마다 반복하지 않도록 여기서 끊는다.
+        //
+        // 메모리 토큰이 비어 있어도 바로 포기하지 않고 한 번 복원한다.
+        // 세션 복원은 SplashViewModel 에서만 하는데, 재부팅 후에는 BootReceiver 가
+        // 화면 없이 서비스를 시작하므로 사용자가 앱을 열기 전까지 토큰이 계속 null 이다.
+        // 그대로 두면 그 사이 사용량이 영영 올라가지 않는다.
+        //
+        // 토큰이 로컬에 있다는 것과 서버 세션이 유효하다는 것은 다르므로,
+        // 만료 판단은 여기가 아니라 401 응답으로 한다.
         // 보존된 스냅샷은 지우지 않는다. 로그인 후 다음 주기에 date 를 명시해 올라간다.
-        if (tokenProvider.getAccessToken() == null) return@withLock
+        if (tokenProvider.getAccessToken() == null && !restoreAuthSession()) return@withLock
 
         val today = LocalDate.now().toString()
 
