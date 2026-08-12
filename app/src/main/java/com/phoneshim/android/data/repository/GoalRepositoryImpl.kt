@@ -192,7 +192,7 @@ class GoalRepositoryImpl @Inject constructor(
             .filter { it.packageName !in selectedPackages }
             // id 가 없으면 삭제 요청을 만들 수 없다. 서버 응답이 온전치 않은 경우라 건너뛴다.
             .mapNotNull { it.id }
-            .forEach { monitoredAppApi.deleteMonitoredApp(it) }
+            .forEach { id -> apiCallExecutor.executeNoContent { monitoredAppApi.deleteMonitoredApp(id) } }
 
         val totalGoal = upsertTotalGoal(goal)
 

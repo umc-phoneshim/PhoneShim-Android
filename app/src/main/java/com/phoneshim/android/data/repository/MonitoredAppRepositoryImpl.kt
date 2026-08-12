@@ -38,6 +38,10 @@ class MonitoredAppRepositoryImpl @Inject constructor(
             }
     }
 
+    override suspend fun refreshMonitoredApps(): Result<List<MonitoredApp>> =
+        apiCallExecutor.executeAsResult { monitoredAppApi.getMonitoredApps() }
+            .map { apps -> apps.mapNotNull { it.toDomain() } }
+
     override suspend fun resolveMonitoredAppId(packageName: String): Result<String?> {
         goalDao.findMonitoredAppId(packageName)?.let { return Result.success(it) }
         return getMonitoredApps().map { apps ->

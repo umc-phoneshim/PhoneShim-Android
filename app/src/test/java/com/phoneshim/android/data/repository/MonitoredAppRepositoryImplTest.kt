@@ -18,6 +18,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Response
 
 /**
  * 주의 앱 조회와 packageName <-> monitoredAppId 변환 검증.
@@ -85,6 +86,29 @@ class MonitoredAppRepositoryImplTest {
 
         assertEquals(1, apps.size)
         assertEquals("m-1", apps[0].id)
+    }
+
+    @Test
+    fun `재조회는 캐시로 폴백하지 않고 실패를 올린다`() = runTest {
+        // 정합성을 맞추려고 부르는 경로라, 캐시로 답하면 같은 오류가 반복된다.
+        dao.appGoals += cached("com.kakao.talk", "카카오톡", "m-1")
+        api.failWith = IllegalStateException("network")
+
+        assertTrue(repository.refreshMonitoredApps().isFailure)
+        // 같은 상황에서 일반 조회는 캐시로 답한다.
+        api.failWith = IllegalStateException("network")
+        assertTrue(repository.getMonitoredApps().isSuccess)
+    }
+
+    @Test
+    fun `재조회는 서버 목록을 그대로 돌려준다`() = runTest {
+        dao.appGoals += cached("com.old.app", "옛날앱", "m-old")
+        api.apps += response("m-1", "com.kakao.talk", "카카오톡")
+
+        val apps = repository.refreshMonitoredApps().getOrThrow()
+
+        // 캐시에 남아 있던 m-old 는 서버에 없으므로 결과에 없다.
+        assertEquals(listOf("m-1"), apps.map { it.id })
     }
 
     @Test
@@ -220,7 +244,8 @@ class MonitoredAppRepositoryImplTest {
             request: MonitoredAppUpdateRequest,
         ): ApiResponse<MonitoredAppResponse> = throw UnsupportedOperationException()
 
-        override suspend fun deleteMonitoredApp(id: String) = throw UnsupportedOperationException()
+        override suspend fun deleteMonitoredApp(id: String): Response<Unit> =
+            throw UnsupportedOperationException()
     }
 
     private class FakeGoalDao : GoalDao {

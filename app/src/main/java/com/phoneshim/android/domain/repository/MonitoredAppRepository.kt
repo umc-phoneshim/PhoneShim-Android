@@ -17,6 +17,15 @@ interface MonitoredAppRepository {
     /** 등록된 주의 앱 목록. 서버 우선, 실패하면 로컬 캐시. */
     suspend fun getMonitoredApps(): Result<List<MonitoredApp>>
 
+    /**
+     * 서버 목록만으로 다시 읽습니다. 캐시로 폴백하지 않습니다.
+     *
+     * 서버가 INVALID_RESTRICTED_APP_IDS 를 돌려줬거나 삭제된 주의 앱이 의심될 때 씁니다.
+     * 그 상황에서 [getMonitoredApps] 를 쓰면 서버를 못 읽었을 때 어긋난 캐시로 답해
+     * 같은 오류가 반복되므로, 정합성을 맞추는 경로는 캐시를 보지 않습니다.
+     */
+    suspend fun refreshMonitoredApps(): Result<List<MonitoredApp>>
+
     /** packageName -> monitoredAppId. 등록되지 않은 앱이면 null. */
     suspend fun resolveMonitoredAppId(packageName: String): Result<String?>
 

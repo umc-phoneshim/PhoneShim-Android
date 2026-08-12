@@ -270,10 +270,11 @@ class GoalRepositoryImplTest {
             return ApiResponse(success = true, data = apps.first { it.id == id })
         }
 
-        override suspend fun deleteMonitoredApp(id: String) {
+        override suspend fun deleteMonitoredApp(id: String): Response<Unit> {
             failWith?.let { throw it }
             deletedIds += id
             apps.removeAll { it.id == id }
+            return Response.success(null)
         }
     }
 
@@ -353,8 +354,9 @@ class GoalRepositoryImplTest {
             return ApiResponse(success = true, data = updated)
         }
 
-        override suspend fun deleteAppGoal(id: String) {
+        override suspend fun deleteAppGoal(id: String): Response<Unit> {
             goals.entries.removeAll { it.value.id == id }
+            return Response.success(null)
         }
     }
 
