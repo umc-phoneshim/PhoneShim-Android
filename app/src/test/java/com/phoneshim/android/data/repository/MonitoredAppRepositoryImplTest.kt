@@ -150,9 +150,9 @@ class MonitoredAppRepositoryImplTest {
     fun `monitoredAppId 를 packageName 으로 되돌린다`() = runTest {
         dao.appGoals += cached("com.kakao.talk", "카카오톡", "m-1")
 
-        val pkg = repository.resolvePackageName("m-1").getOrThrow()
+        val result = repository.resolvePackageNames(listOf("m-1")).getOrThrow()
 
-        assertEquals("com.kakao.talk", pkg)
+        assertEquals(listOf("com.kakao.talk"), result.packageNames)
         assertEquals(0, api.listCallCount)
     }
 

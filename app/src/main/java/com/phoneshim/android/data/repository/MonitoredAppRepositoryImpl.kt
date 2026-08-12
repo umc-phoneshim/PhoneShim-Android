@@ -49,13 +49,6 @@ class MonitoredAppRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun resolvePackageName(monitoredAppId: String): Result<String?> {
-        goalDao.findPackageName(monitoredAppId)?.let { return Result.success(it) }
-        return getMonitoredApps().map { apps ->
-            apps.firstOrNull { it.id == monitoredAppId }?.packageName
-        }
-    }
-
     override suspend fun resolvePackageNames(
         monitoredAppIds: List<String>,
     ): Result<ResolvedRestrictedApps> {
