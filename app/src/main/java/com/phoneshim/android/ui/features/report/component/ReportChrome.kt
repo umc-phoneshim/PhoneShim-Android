@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -45,7 +44,9 @@ import java.time.format.DateTimeFormatter
 /**
  * 리포트 상단 날짜 네비게이터.
  *
- * 날짜 좌우 이동, 달력 버튼, 알림 설정 버튼을 한 줄에 둡니다.
+ * 날짜는 화면 가운데에 두고, 그 오른쪽(화면 우측 끝)에 달력 버튼과 알림 설정 버튼을 나란히 둡니다.
+ * 왼쪽 여백과 오른쪽 버튼 묶음에 같은 weight 를 줘서 날짜가 가운데에 오면서도
+ * 버튼과 겹치지 않도록 했습니다.
  * 알림 설정은 원래 타임테이블 사이드에 있었는데 두 화면 공통이라 상단으로 올렸습니다.
  *
  * @param showCalendarTooltip 달력 버튼 아래에 안내 툴팁을 띄울지. 첫 진입 화면에서만 사용합니다.
@@ -71,22 +72,32 @@ fun ReportDateNavigator(
                     end = PhoneShimDimens.screenHorizontalPadding,
                     top = PhoneShimDimens.spacing16,
                 ),
-            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // 왼쪽 여백과 오른쪽 버튼 묶음에 같은 weight 를 줘서 날짜가 화면 가운데에 오도록 합니다.
+            Spacer(modifier = Modifier.weight(1f))
+
             DateNavigator(
                 label = dateLabel,
                 onPrevious = onPrevDate,
                 onNext = onNextDate,
                 nextEnabled = nextEnabled,
             )
-            if (onCalendarClick != null) {
-                Spacer(modifier = Modifier.width(PhoneShimDimens.spacing8))
-                CalendarOpenButton(onClick = onCalendarClick)
-            }
-            if (onAlarmSettingsClick != null) {
-                Spacer(modifier = Modifier.width(PhoneShimDimens.spacing8))
-                AlarmSettingsButton(onClick = onAlarmSettingsClick)
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(
+                    space = PhoneShimDimens.spacing8,
+                    alignment = Alignment.End,
+                ),
+            ) {
+                if (onCalendarClick != null) {
+                    CalendarOpenButton(onClick = onCalendarClick)
+                }
+                if (onAlarmSettingsClick != null) {
+                    AlarmSettingsButton(onClick = onAlarmSettingsClick)
+                }
             }
         }
 
