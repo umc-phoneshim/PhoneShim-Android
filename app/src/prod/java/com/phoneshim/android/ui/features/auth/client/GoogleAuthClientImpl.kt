@@ -4,9 +4,11 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.phoneshim.android.BuildConfig
+import com.phoneshim.android.domain.model.AuthException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,6 +56,8 @@ class GoogleAuthClientImpl @Inject constructor(
             }
         } catch (_: GetCredentialCancellationException) {
             AuthClientResult.Cancelled
+        } catch (_: NoCredentialException) {
+            AuthClientResult.Failure(AuthException.GoogleCredentialUnavailable)
         } catch (error: Throwable) {
             AuthClientResult.Failure(error)
         }
