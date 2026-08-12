@@ -7,16 +7,21 @@ import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.ReminderDataSource
 import com.phoneshim.android.domain.model.ReminderListResult
+import com.phoneshim.android.domain.model.MonitoredApp
+import com.phoneshim.android.domain.model.ResolvedRestrictedApps
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.repository.ReminderRepository
+import com.phoneshim.android.domain.repository.MonitoredAppRepository
 import com.phoneshim.android.domain.usecase.CreateReminderUseCase
 import com.phoneshim.android.domain.usecase.DeleteReminderUseCase
 import com.phoneshim.android.domain.usecase.GetRemindersUseCase
+import com.phoneshim.android.domain.usecase.GetMonitoredAppsUseCase
 import com.phoneshim.android.domain.usecase.UpdateReminderUseCase
 import com.phoneshim.android.ui.common.base.CommonUiEffect
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -56,7 +61,9 @@ class ReminderViewModelTest {
     fun `화면 진입 시 오늘 리마인더를 조회한다`() = runTest(dispatcher) {
         advanceUntilIdle()
 
-        assertEquals(listOf(viewModel.uiState.value.todayDate), repository.requestedDates)
+        val today = viewModel.uiState.value.todayDate
+        assertEquals(YearMonth.from(today).lengthOfMonth(), repository.requestedDates.size)
+        assertTrue(today in repository.requestedDates)
         assertFalse(viewModel.uiState.value.isLoading)
         assertTrue(viewModel.uiState.value.selectedTasks.isEmpty())
     }
@@ -73,6 +80,33 @@ class ReminderViewModelTest {
         assertEquals(date, viewModel.uiState.value.selectedDate)
         assertEquals("운동", viewModel.uiState.value.selectedTasks.single().title)
         assertEquals(600, viewModel.uiState.value.selectedTasks.single().startMinutes)
+    }
+
+    @Test
+    fun `화면 진입 시 현재 월 전체를 조회해 일정 날짜를 미리 표시한다`() = runTest(dispatcher) {
+        val configuredRepository = FakeReminderRepository()
+        val today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+        val markedDate = today.withDayOfMonth(if (today.dayOfMonth == 1) 2 else 1)
+        configuredRepository.remindersByDate[markedDate] = listOf(reminder(date = markedDate))
+
+        viewModel = createViewModel(configuredRepository)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.tasksByDate[markedDate].orEmpty().isNotEmpty())
+    }
+
+    @Test
+    fun `특정 앱 저장은 MonitoredApp UUID를 요청에 전달한다`() = runTest(dispatcher) {
+        advanceUntilIdle()
+        prepareNewTask("유튜브 제한", "10:00", "11:00")
+        viewModel.onEvent(ReminderUiEvent.RestrictionModeChanged(RestrictionMode.SPECIFIC_APPS))
+        viewModel.onEvent(ReminderUiEvent.RestrictedAppToggled("youtube-id"))
+
+        viewModel.onEvent(ReminderUiEvent.SaveTaskClicked)
+        advanceUntilIdle()
+
+        assertEquals(setOf("youtube-id"), repository.lastCreateCommand?.restrictedAppIds)
+        assertTrue(viewModel.uiState.value.monitoredApps.any { it.id == "youtube-id" })
     }
 
     @Test
@@ -159,7 +193,7 @@ class ReminderViewModelTest {
         advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.loadErrorMessage)
-        assertEquals(2, failingRepository.requestedDates.size)
+        assertEquals(YearMonth.now(java.time.Clock.system(java.time.ZoneId.of("Asia/Seoul"))).lengthOfMonth() * 2, failingRepository.requestedDates.size)
     }
 
     @Test
@@ -220,6 +254,7 @@ class ReminderViewModelTest {
 
     private fun createViewModel(repository: ReminderRepository) = ReminderViewModel(
         GetRemindersUseCase(repository),
+        GetMonitoredAppsUseCase(FakeMonitoredAppRepository()),
         CreateReminderUseCase(repository),
         UpdateReminderUseCase(repository),
         DeleteReminderUseCase(repository),
@@ -231,6 +266,25 @@ class ReminderViewModelTest {
         viewModel.onEvent(ReminderUiEvent.StartTimeChanged(start))
         viewModel.onEvent(ReminderUiEvent.EndTimeChanged(end))
     }
+}
+
+private class FakeMonitoredAppRepository : MonitoredAppRepository {
+    private val apps = listOf(
+        MonitoredApp("youtube-id", "com.google.android.youtube", "유튜브"),
+    )
+
+    override suspend fun getMonitoredApps() = Result.success(apps)
+    override suspend fun refreshMonitoredApps() = Result.success(apps)
+    override suspend fun resolveMonitoredAppId(packageName: String) =
+        Result.success(apps.firstOrNull { it.packageName == packageName }?.id)
+    override suspend fun resolvePackageName(monitoredAppId: String) =
+        Result.success(apps.firstOrNull { it.id == monitoredAppId }?.packageName)
+    override suspend fun resolvePackageNames(monitoredAppIds: List<String>) = Result.success(
+        ResolvedRestrictedApps(
+            packageNames = apps.filter { it.id in monitoredAppIds }.map(MonitoredApp::packageName),
+            unresolvedIds = monitoredAppIds.filterNot { id -> apps.any { it.id == id } },
+        ),
+    )
 }
 
 private class FakeReminderRepository : ReminderRepository {
