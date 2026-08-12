@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -16,12 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
@@ -37,18 +36,20 @@ fun PhoneShimSnackbar(
     modifier: Modifier = Modifier,
     type: PhoneShimSnackbarType = PhoneShimSnackbarType.Default,
 ) {
+    val colors = PhoneShimTheme.colors
     val contentColor = when (type) {
-        PhoneShimSnackbarType.Default -> PhoneShimPalette.Gray700
-        PhoneShimSnackbarType.Info -> SnackbarInfoColor
-        PhoneShimSnackbarType.Error -> PhoneShimPalette.Error
+        PhoneShimSnackbarType.Default -> colors.textSecondary
+        PhoneShimSnackbarType.Info -> colors.snackbarInfo
+        PhoneShimSnackbarType.Error -> colors.error
     }
 
     Box(
         modifier = modifier
+            .widthIn(max = SnackbarMaxWidth)
             .fillMaxWidth()
             .height(SnackbarHeight)
             .background(
-                color = PhoneShimPalette.Gray100,
+                color = colors.divider,
                 shape = SnackbarShape,
             )
             .padding(SnackbarContentPadding),
@@ -76,10 +77,15 @@ fun PhoneShimSnackbarHost(
     ) { data ->
         val type = (data.visuals as? PhoneShimSnackbarVisuals)?.type
             ?: PhoneShimSnackbarType.Default
-        PhoneShimSnackbar(
-            message = data.visuals.message,
-            type = type,
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            PhoneShimSnackbar(
+                message = data.visuals.message,
+                type = type,
+            )
+        }
     }
 }
 
@@ -131,11 +137,11 @@ private data class PhoneShimSnackbarVisuals(
 }
 
 private val SnackbarHeight = 43.dp
+private val SnackbarMaxWidth = 328.dp
 private val SnackbarHorizontalPadding = 16.dp
 private val SnackbarContentPadding = 12.dp
 private val SnackbarBottomPadding = 16.dp
 private val SnackbarShape = RoundedCornerShape(8.dp)
-private val SnackbarInfoColor = Color(0xFF3183FF)
 
 @Preview(showBackground = true, widthDp = 360)
 @Composable

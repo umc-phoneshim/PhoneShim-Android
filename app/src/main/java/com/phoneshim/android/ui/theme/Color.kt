@@ -37,6 +37,7 @@ object PhoneShimPalette {
     val Success = Color(0xFF7DAA64)
     val Warning = Color(0xFFFFD5CE)
     val Info = Color(0xFFB7D4FF)
+    val SnackbarInfo = Color(0xFF3183FF)
     val Error = Color(0xFFE56767)
 }
 
@@ -61,6 +62,7 @@ data class PhoneShimColors(
     val success: Color = PhoneShimPalette.Success,
     val warning: Color = PhoneShimPalette.Warning,
     val info: Color = PhoneShimPalette.Info,
+    val snackbarInfo: Color = PhoneShimPalette.SnackbarInfo,
     val error: Color = PhoneShimPalette.Error,
     val onBrand: Color = PhoneShimPalette.White,
 )
