@@ -3,6 +3,7 @@ package com.phoneshim.android.ui.features.mypage.viewmodel
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.UserStatus
 import com.phoneshim.android.domain.model.WithdrawalResult
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
@@ -84,5 +85,8 @@ sealed interface MyPageUiEffect : UiEffect {
     data object NavigateToSideMenu : MyPageUiEffect
     data class NavigateToLogin(val noticeMessage: String) : MyPageUiEffect
     data object OpenContactSupport : MyPageUiEffect
-    data class ShowMessage(val message: String) : MyPageUiEffect
+    data class ShowMessage(
+        val message: String,
+        val type: PhoneShimSnackbarType = PhoneShimSnackbarType.Error,
+    ) : MyPageUiEffect
 }

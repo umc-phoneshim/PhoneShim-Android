@@ -25,7 +25,7 @@ import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.BottomBarTab
-import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
+import com.phoneshim.android.ui.common.PhoneShimBottomBarSnackbarHost
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.features.reminder.component.ReminderCalendar
 import com.phoneshim.android.ui.features.reminder.component.ReminderDateHeader
@@ -134,12 +134,9 @@ fun ReminderScreen(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-        PhoneShimSnackbarHost(
+        PhoneShimBottomBarSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = BottomBarDefaults.ContentBottomPadding + 16.dp),
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 

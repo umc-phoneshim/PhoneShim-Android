@@ -7,6 +7,7 @@ import com.phoneshim.android.domain.model.ReportSummary
 import com.phoneshim.android.domain.model.RestSuggestion
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageSession
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
@@ -241,7 +242,10 @@ sealed interface ReportUiEffect : UiEffect {
     data object NavigateToRestSuggestion : ReportUiEffect
     data object NavigateToAlarmSettings : ReportUiEffect
     data class NavigateToTab(val tab: ReportTab) : ReportUiEffect
-    data class ShowMessage(val message: String) : ReportUiEffect
+    data class ShowMessage(
+        val message: String,
+        val type: PhoneShimSnackbarType = PhoneShimSnackbarType.Error,
+    ) : ReportUiEffect
 }
 
 /** 화면의 기간 토글 → 서버 range 파라미터. 서버는 day 도 지원합니다. */

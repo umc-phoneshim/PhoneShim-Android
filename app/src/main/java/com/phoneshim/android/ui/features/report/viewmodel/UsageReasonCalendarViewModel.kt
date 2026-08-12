@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -46,7 +47,10 @@ sealed interface UsageReasonCalendarUiEvent : UiEvent {
 sealed interface UsageReasonCalendarUiEffect : UiEffect {
     /** 날짜를 고르면 그날의 리포트로 이동합니다. */
     data class NavigateToReport(val date: LocalDate) : UsageReasonCalendarUiEffect
-    data class ShowMessage(val message: String) : UsageReasonCalendarUiEffect
+    data class ShowMessage(
+        val message: String,
+        val type: PhoneShimSnackbarType = PhoneShimSnackbarType.Error,
+    ) : UsageReasonCalendarUiEffect
 }
 
 @HiltViewModel

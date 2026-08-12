@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +32,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.PhoneShimBottomBarSnackbarHost
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
@@ -87,7 +88,10 @@ fun ReportSummaryRoute(
             when (effect) {
                 is ReportUiEffect.NavigateToTab ->
                     if (effect.tab == ReportTab.TIMETABLE) onNavigateToTimetable()
-                is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is ReportUiEffect.ShowMessage -> snackbarHostState.showPhoneShimSnackbar(
+                    message = effect.message,
+                    type = effect.type,
+                )
                 // 요약 화면에서는 발생하지 않는 이펙트입니다. (타임테이블 전용)
                 is ReportUiEffect.NavigateToUsageReasonInput -> Unit
                 ReportUiEffect.NavigateToRestSuggestion -> Unit
@@ -147,7 +151,6 @@ fun ReportSummaryScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = PhoneShimTheme.colors.background,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -288,6 +291,10 @@ fun ReportSummaryScreen(
         BottomBar(
             selectedTab = BottomBarTab.REPORT,
             onTabSelected = onBottomNavSelected,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+        PhoneShimBottomBarSnackbarHost(
+            hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }

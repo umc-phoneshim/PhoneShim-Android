@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.RestSuggestion
 import com.phoneshim.android.domain.model.SuggestionType
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
@@ -67,7 +68,10 @@ fun RestSuggestionRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is ReportUiEffect.ShowMessage -> snackbarHostState.showPhoneShimSnackbar(
+                    message = effect.message,
+                    type = effect.type,
+                )
                 // 이 화면에서는 발생하지 않는 이펙트입니다.
                 is ReportUiEffect.NavigateToUsageReasonInput -> Unit
                 is ReportUiEffect.NavigateToTab -> Unit
@@ -97,7 +101,7 @@ fun RestSuggestionScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { PhoneShimSnackbarHost(snackbarHostState) },
         topBar = { TopAppBar(title = "쉼이의 제안", titleStyle = PhoneShimType.KorH3) },
     ) { innerPadding ->
         Column(

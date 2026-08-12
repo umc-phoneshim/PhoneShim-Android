@@ -36,6 +36,14 @@ data class UiError(
     val isRetryable: Boolean get() = kind == Kind.NETWORK
 }
 
+/** Figma 한 줄 Snackbar 규격에 맞춘 짧은 공통 오류 문구. */
+fun UiError.toSnackbarMessage(): String = when (kind) {
+    UiError.Kind.AUTH -> "로그인이 만료됐어요. 다시 로그인해 주세요."
+    UiError.Kind.NETWORK -> "네트워크 연결을 확인해 주세요."
+    UiError.Kind.SERVER -> "요청을 처리하지 못했어요. 다시 시도해 주세요."
+    UiError.Kind.UNKNOWN -> "문제가 발생했어요. 잠시 후 다시 시도해 주세요."
+}
+
 /**
  * 기능과 무관하게 처리가 같은 효과.
  *

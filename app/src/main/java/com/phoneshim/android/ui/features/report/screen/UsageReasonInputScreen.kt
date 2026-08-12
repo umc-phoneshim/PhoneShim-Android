@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +34,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageReasonEntry
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonInputUiEvent
@@ -87,7 +88,10 @@ fun UsageReasonInputRoute(
                 //  백엔드에 포인트 관련 API가 아직 없습니다.
                 UsageReasonInputUiEffect.Submitted -> onSubmitted()
                 is UsageReasonInputUiEffect.ShowMessage ->
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showPhoneShimSnackbar(
+                        message = effect.message,
+                        type = effect.type,
+                    )
             }
         }
     }
@@ -112,7 +116,7 @@ fun UsageReasonInputScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { PhoneShimSnackbarHost(snackbarHostState) },
         topBar = { TopAppBar(title = "사용 이유", titleStyle = PhoneShimType.KorH3) },
     ) { innerPadding ->
         Column(

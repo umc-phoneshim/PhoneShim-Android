@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.SnackbarDuration
@@ -80,6 +81,19 @@ fun PhoneShimSnackbarHost(
             type = type,
         )
     }
+}
+
+@Composable
+fun PhoneShimBottomBarSnackbarHost(
+    hostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
+    PhoneShimSnackbarHost(
+        hostState = hostState,
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(bottom = BottomBarDefaults.ContentBottomPadding),
+    )
 }
 
 suspend fun SnackbarHostState.showPhoneShimSnackbar(
