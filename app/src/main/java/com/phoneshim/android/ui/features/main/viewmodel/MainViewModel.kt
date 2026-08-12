@@ -2,15 +2,20 @@ package com.phoneshim.android.ui.features.main.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.model.DashboardSummary
+import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -21,6 +26,8 @@ data class MainUiState(
     val usageStatus: List<UsageStatus> = emptyList(),
     val dashboardSummary: DashboardSummary? = null,
     val isLoading: Boolean = false,
+    val userName: String = "",
+    val todayReminders: List<Reminder> = emptyList(),
 ) : UiState
 
 sealed interface MainUiEvent : UiEvent {
@@ -31,21 +38,18 @@ sealed interface MainUiEffect : UiEffect {
     data class ShowMessage(val message: String) : MainUiEffect
 }
 
-// TODO: MainScreen UI 개편 시 loadDashboard() shim 제거하고
-//  onEvent(MainUiEvent.LoadDashboard)/effect 구독으로 정리.
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getUsageStatusUseCase: GetUsageStatusUseCase,
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
     private val getGoalUseCase: GetGoalUseCase,
+    private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val getRemindersUseCase: GetRemindersUseCase,
 ) : BaseViewModel<MainUiState, MainUiEvent, MainUiEffect>(MainUiState()) {
 
     init {
-        loadDashboard()
+        onEvent(MainUiEvent.LoadDashboard)
     }
-
-    /** MainScreen.kt 호환용 shim. 내부적으로 [MainUiEvent.LoadDashboard] 를 발행합니다. */
-    fun loadDashboard() = onEvent(MainUiEvent.LoadDashboard)
 
     override fun handleEvent(event: MainUiEvent) {
         when (event) {
@@ -67,13 +71,19 @@ class MainViewModel @Inject constructor(
                 val isGoalSetDeferred = async { getGoalUseCase().getOrNull() != null }
                 val usageStatusDeferred = async { getUsageStatusUseCase() }
                 val dashboardSummaryDeferred = async { getDashboardSummaryUseCase() }
+                val userNameDeferred = async { getMyInfoUseCase().map { it.nickname } }
+                val todayRemindersDeferred = async { getRemindersUseCase(LocalDate.now(KOREA_ZONE_ID)) }
 
                 val isGoalSet = isGoalSetDeferred.await()
                 val usageStatusResult = usageStatusDeferred.await()
                 val dashboardSummaryResult = dashboardSummaryDeferred.await()
+                val userNameResult = userNameDeferred.await()
+                val todayRemindersResult = todayRemindersDeferred.await()
 
                 usageStatusResult.onFailure(::reportLoadFailure)
                 dashboardSummaryResult.onFailure(::reportLoadFailure)
+                userNameResult.onFailure(::reportLoadFailure)
+                todayRemindersResult.onFailure(::reportLoadFailure)
 
                 setState {
                     copy(
@@ -81,6 +91,8 @@ class MainViewModel @Inject constructor(
                         usageStatus = usageStatusResult.getOrDefault(usageStatus),
                         dashboardSummary = dashboardSummaryResult.getOrNull() ?: dashboardSummary,
                         isLoading = false,
+                        userName = userNameResult.getOrDefault(userName),
+                        todayReminders = todayRemindersResult.map { it.reminders }.getOrDefault(todayReminders),
                     )
                 }
             }
@@ -91,3 +103,5 @@ class MainViewModel @Inject constructor(
         handleError(throwable) { error -> sendEffect(MainUiEffect.ShowMessage(error.message)) }
     }
 }
+
+private val KOREA_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
