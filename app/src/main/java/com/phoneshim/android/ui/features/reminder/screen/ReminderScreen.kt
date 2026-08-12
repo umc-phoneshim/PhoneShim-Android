@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,6 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarDefaults
@@ -66,7 +74,6 @@ fun ReminderScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = PhoneShimTheme.colors.background,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = "REMINDER",
@@ -103,6 +110,7 @@ fun ReminderScreen(
                         onSelectDate,
                         onPreviousMonth,
                         onNextMonth,
+                        markedDates = state.tasksByDate.filterValues { it.isNotEmpty() }.keys,
                     )
                 }
                 item {
@@ -131,6 +139,7 @@ fun ReminderScreen(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+        ReminderMessageHost(hostState = snackbarHostState)
     }
 
     if (state.isTaskPopupVisible) {
@@ -148,6 +157,53 @@ fun ReminderScreen(
             onDelete = onDeleteTask,
             isSubmitting = state.isSubmitting,
         )
+    }
+}
+
+@Composable
+private fun ReminderMessageHost(
+    hostState: SnackbarHostState,
+) {
+    if (hostState.currentSnackbarData != null) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                SnackbarHost(
+                    hostState = hostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(
+                            start = PhoneShimDimens.screenHorizontalPadding,
+                            end = PhoneShimDimens.screenHorizontalPadding,
+                            bottom = 16.dp,
+                        ),
+                ) { data ->
+                    val isError = data.visuals.message == "삭제되었습니다." ||
+                        data.visuals.message == com.phoneshim.android.ui.features.reminder.viewmodel.DUPLICATE_SCHEDULE_MESSAGE
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(43.dp)
+                            .background(PhoneShimPalette.Gray100, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = data.visuals.message,
+                            style = PhoneShimType.KorCaption,
+                            color = if (isError) PhoneShimTheme.colors.error else androidx.compose.ui.graphics.Color(0xFF3183FF),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

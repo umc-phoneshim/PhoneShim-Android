@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,10 +50,11 @@ fun TodoRow(
     }
     val contentPadding = when (variant) {
         TodoRowVariant.Plain -> androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
-        TodoRowVariant.Card -> androidx.compose.foundation.layout.PaddingValues(12.dp)
+        TodoRowVariant.Card -> androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     }
     Row(
         modifier = containerModifier
+            .then(if (variant == TodoRowVariant.Card) Modifier.heightIn(min = 56.dp) else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,
@@ -61,18 +63,18 @@ fun TodoRow(
         leadingContent?.invoke()
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(if (variant == TodoRowVariant.Card) 4.dp else 8.dp),
         ) {
             Text(
                 text = title,
-                style = if (variant == TodoRowVariant.Card) PhoneShimType.KorBodyM else PhoneShimType.KorCaption,
+                style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = timeRange,
-                style = PhoneShimType.KorBodyM,
+                style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.textTertiary,
             )
         }

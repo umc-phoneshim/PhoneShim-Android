@@ -92,6 +92,7 @@ fun CalendarGrid(
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    markedDates: Set<LocalDate> = emptySet(),
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         CalendarWeekHeader()
@@ -103,6 +104,7 @@ fun CalendarGrid(
                         visibleMonth = visibleMonth,
                         selected = date == selectedDate,
                         today = date == todayDate,
+                        marked = date in markedDates,
                         enabled = enabled,
                         onClick = { onDateSelected(date) },
                     )
@@ -118,6 +120,7 @@ fun CalendarDayCell(
     visibleMonth: YearMonth,
     selected: Boolean,
     today: Boolean,
+    marked: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -147,6 +150,15 @@ fun CalendarDayCell(
             contentAlignment = Alignment.Center,
         ) {
             Text(date.dayOfMonth.toString(), style = PhoneShimType.EngBodyM, color = foreground)
+            if (marked && !selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 3.dp)
+                        .size(4.dp)
+                        .background(PhoneShimTheme.colors.brand, CircleShape),
+                )
+            }
         }
     }
 }
