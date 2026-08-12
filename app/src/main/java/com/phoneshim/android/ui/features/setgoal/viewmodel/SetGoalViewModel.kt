@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.setgoal.viewmodel
 
 import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.domain.model.GoalLimits
 import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
@@ -12,11 +13,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// 화면 검증 기준은 서버 계약(GoalLimits)과 같은 값을 쓴다.
+// 숫자를 여기 따로 적어두면 서버 범위가 바뀔 때 한쪽만 고쳐진다.
+
 // 선택 가능한 앱 최대 개수
-const val MAX_SELECTABLE_APPS = 5
+const val MAX_SELECTABLE_APPS = GoalLimits.MAX_MONITORED_APPS
 
 // 허용되는 최소 목표 사용 시간 (분)
-const val MIN_GOAL_MINUTES = 10
+const val MIN_GOAL_MINUTES = GoalLimits.MIN_TARGET_MINUTES
 
 // 목표 사용 시간 입력값 (시/분 문자열)
 data class AppTimeInput(

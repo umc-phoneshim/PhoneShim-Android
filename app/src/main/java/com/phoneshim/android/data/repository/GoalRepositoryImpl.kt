@@ -36,7 +36,10 @@ import kotlinx.coroutines.CancellationException
  * [저장 순서]
  *   로컬 우선. 차단 엔진 판정의 실제 소스가 로컬 캐시라, 네트워크 실패가 온보딩 완료와
  *   엔진 동작을 막지 않아야 한다. 서버 동기화는 best-effort 로 뒤따른다.
- *   (인증 토큰 연결 전까지는 서버 호출이 401 로 끝나므로 사실상 로컬만 동작한다.)
+ *
+ *   동기화 실패는 삼켜지므로 호출부에 드러나지 않는다. 서버가 거절할 값(목표 시간
+ *   범위 등)은 [com.phoneshim.android.domain.model.GoalLimits] 기준으로 화면에서
+ *   미리 걸러야, 로컬에만 저장되고 서버에는 없는 상태가 조용히 생기지 않는다.
  */
 class GoalRepositoryImpl @Inject constructor(
     private val monitoredAppApi: MonitoredAppApi,
