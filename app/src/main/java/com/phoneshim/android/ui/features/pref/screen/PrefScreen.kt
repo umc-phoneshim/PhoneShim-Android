@@ -21,6 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -48,6 +53,7 @@ import com.phoneshim.android.ui.features.pref.viewmodel.TimeEditTarget
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
+import kotlinx.coroutines.delay
 
 private object PrefScreenDefaults {
     val topBarHeight = 56.dp
@@ -55,6 +61,7 @@ private object PrefScreenDefaults {
     val userToGoalSpacing = 20.dp
     val contentBottomPadding = 32.dp
     val actionToBottomBarSpacing = 8.dp
+    const val restrictionTooltipDurationMillis = 4_000L
 }
 
 @Suppress("UNUSED_PARAMETER")
@@ -84,6 +91,12 @@ fun PrefScreen(
     onAppGoalSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showRestrictionTooltip by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(PrefScreenDefaults.restrictionTooltipDurationMillis)
+        showRestrictionTooltip = false
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -100,7 +113,11 @@ fun PrefScreen(
                 onSelectionDismissed = onSelectionDismissed,
                 onTotalGoalClick = onTotalGoalClick,
                 onEditAppTime = onEditAppTime,
-                onToggleLimit = onToggleLimit,
+                onToggleLimit = {
+                    showRestrictionTooltip = false
+                    onToggleLimit(it)
+                },
+                showRestrictionTooltip = showRestrictionTooltip,
             )
         }
         if (uiState.hasUnsavedChanges) {
@@ -198,6 +215,7 @@ private fun PrefContent(
     onTotalGoalClick: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
+    showRestrictionTooltip: Boolean,
 ) {
     val actionButtonsReservedSpace = if (uiState.hasUnsavedChanges) {
         PhoneShimButtonSize.Medium.height + PrefScreenDefaults.actionToBottomBarSpacing
@@ -236,6 +254,7 @@ private fun PrefContent(
             onTotalGoalClick = onTotalGoalClick,
             onEditAppTime = onEditAppTime,
             onToggleLimit = onToggleLimit,
+            showRestrictionTooltip = showRestrictionTooltip,
         )
     }
 }

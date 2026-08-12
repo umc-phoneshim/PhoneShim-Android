@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,13 +36,16 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.GoalTimeCard
+import com.phoneshim.android.ui.common.PhoneShimTooltip
 import com.phoneshim.android.ui.common.SelectableChip
 import com.phoneshim.android.ui.common.SelectableChipVariant
+import com.phoneshim.android.ui.common.TooltipTailAlignment
 import com.phoneshim.android.ui.features.pref.viewmodel.AgeGroup
 import com.phoneshim.android.ui.features.pref.viewmodel.AppGoal
 import com.phoneshim.android.ui.features.pref.viewmodel.Gender
@@ -252,6 +256,7 @@ fun PrefGoalSection(
     onTotalGoalClick: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
+    showRestrictionTooltip: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -269,32 +274,44 @@ fun PrefGoalSection(
             color = PhoneShimTheme.colors.brand,
         )
         Spacer(Modifier.height(PhoneShimDimens.spacing8))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = PhoneShimTheme.colors.surface),
-            border = BorderStroke(1.dp, PhoneShimPalette.Primary300),
-        ) {
-            Column(
-                modifier = Modifier.padding(PhoneShimDimens.spacing12),
-                verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = PhoneShimTheme.colors.surface),
+                border = BorderStroke(1.dp, PhoneShimPalette.Primary300),
             ) {
-                appGoals.forEachIndexed { index, goal ->
-                    AppGoalItem(
-                        appGoal = goal,
-                        isError = goal.id in validation.invalidAppGoalIds,
-                        onTimeClick = { onEditAppTime(goal.id) },
-                        onToggleLimit = { onToggleLimit(goal.id) },
-                    )
-                    if (index != appGoals.lastIndex) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(PrefSectionDefaults.listDividerThickness)
-                                .background(PhoneShimTheme.colors.divider),
+                Column(
+                    modifier = Modifier.padding(PhoneShimDimens.spacing12),
+                    verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
+                ) {
+                    appGoals.forEachIndexed { index, goal ->
+                        AppGoalItem(
+                            appGoal = goal,
+                            isError = goal.id in validation.invalidAppGoalIds,
+                            onTimeClick = { onEditAppTime(goal.id) },
+                            onToggleLimit = { onToggleLimit(goal.id) },
                         )
+                        if (index != appGoals.lastIndex) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(PrefSectionDefaults.listDividerThickness)
+                                    .background(PhoneShimTheme.colors.divider),
+                            )
+                        }
                     }
                 }
+            }
+            if (showRestrictionTooltip) {
+                PhoneShimTooltip(
+                    text = "목표 시간 이후 어플 제한을 표시해줍니다.",
+                    tailAlignment = TooltipTailAlignment.End,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(y = 33.dp)
+                        .zIndex(1f),
+                )
             }
         }
     }
