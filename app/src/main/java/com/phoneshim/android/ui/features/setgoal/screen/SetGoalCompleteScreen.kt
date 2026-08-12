@@ -62,7 +62,8 @@ fun SetGoalCompleteScreen(
             val time = uiState.appSettings[app.packageName]?.timeInput ?: AppTimeInput()
             CompleteAppRow(app.packageName, app.label, time.hour, time.minute)
         },
-        totalMinutes = uiState.totalMinutes,
+        // '총 목표 시간' 카드는 전체 폰 목표가 아니라 앱별 목표의 합계다(Figma 04-6).
+        totalMinutes = uiState.appGoalTotalMinutes,
         onFinish = onFinish,
         modifier = modifier,
     )
@@ -103,7 +104,7 @@ private fun SetGoalCompleteContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(R.drawable.setgoal_mascot),
+                    painter = painterResource(R.drawable.setgoal_mascot_complete),
                     contentDescription = null,
                     modifier = Modifier.size(176.dp),
                 )

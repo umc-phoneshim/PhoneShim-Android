@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -25,11 +26,60 @@ class SetGoalViewModelTest {
     private val kakao = InstalledApp("com.kakao.talk", "카카오톡")
 
     @Test
-    fun `프로토타입 기본 상태는 전체 폰 제한이 켜져 있다`() = runTest {
+    fun `기본 상태는 전체 폰 제한이 꺼져 있다`() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.blockAfterGoal)
+        // Figma 04-2 기본 프레임의 토글은 꺼진 상태다. 켜져 있으면 사용자가 안내를 한 번도
+        // 보지 못한 채 폰 전체 차단이 걸린 상태로 온보딩이 끝난다.
+        assertFalse(viewModel.uiState.value.blockAfterGoal)
+    }
+
+    @Test
+    fun `전체 폰 목표가 10분 미만이면 다음 단계로 이동하지 않는다`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // 미입력과 하한 미달은 문구가 다르다.
+        assertEquals(
+            SetGoalEffect.ShowMessage("목표 시간을 입력해주세요."),
+            effectFor(viewModel, SetGoalEvent.SubmitTimeSet),
+        )
+
+        viewModel.onEvent(SetGoalEvent.SetGoalTime(AppTimeInput("00", "09")))
+        assertEquals(
+            SetGoalEffect.ShowMessage("목표 사용 시간을 10분 이상 입력하세요."),
+            effectFor(viewModel, SetGoalEvent.SubmitTimeSet),
+        )
+
+        viewModel.onEvent(SetGoalEvent.SetGoalTime(AppTimeInput("00", "10")))
+        assertEquals(
+            SetGoalEffect.NavigateNext,
+            effectFor(viewModel, SetGoalEvent.SubmitTimeSet),
+        )
+    }
+
+    @Test
+    fun `총 목표 시간은 앱별 목표의 합계이고 전체 폰 목표와 별개다`() = runTest {
+        val youtube = InstalledApp("com.google.android.youtube", "유튜브")
+        val viewModel = createViewModel(installedApps = listOf(kakao, youtube))
+        advanceUntilIdle()
+
+        // 전체 폰 목표(04-2)를 5시간으로 두어도 카드 값은 따라가면 안 된다.
+        viewModel.onEvent(SetGoalEvent.SetGoalTime(AppTimeInput("05", "00")))
+        viewModel.onEvent(SetGoalEvent.ToggleApp(kakao))
+        viewModel.onEvent(SetGoalEvent.ToggleApp(youtube))
+        viewModel.onEvent(
+            SetGoalEvent.SetAppTime(kakao.packageName, AppTimeInput("01", "00")),
+        )
+        viewModel.onEvent(
+            SetGoalEvent.SetAppTime(youtube.packageName, AppTimeInput("01", "30")),
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(150, state.appGoalTotalMinutes)
+        assertEquals(300, state.totalMinutes)
     }
 
     @Test

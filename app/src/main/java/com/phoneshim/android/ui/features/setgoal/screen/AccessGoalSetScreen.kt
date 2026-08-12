@@ -85,7 +85,8 @@ fun AccessGoalSetScreen(
         AccessGoalSetContent(
             apps = uiState.selectedApps,
             settings = uiState.appSettings,
-            totalMinutes = uiState.totalMinutes,
+            // '총 목표 시간' 카드는 전체 폰 목표가 아니라 앱별 목표의 합계다(Figma 04-4).
+            totalMinutes = uiState.appGoalTotalMinutes,
             onTimeChange = { app, input -> viewModel.onEvent(SetGoalEvent.SetAppTime(app, input)) },
             onToggleAccessLimit = { viewModel.onEvent(SetGoalEvent.ToggleAccessLimit(it)) },
             onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppGoals) },

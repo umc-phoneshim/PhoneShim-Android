@@ -39,15 +39,30 @@ data class SetGoalUiState(
     val gender: String? = null,
     val ageGroup: String? = null,
     val goalTime: AppTimeInput = AppTimeInput(),
-    val blockAfterGoal: Boolean = true,
+    // Figma 04-2 기본 프레임의 토글은 꺼진 상태다. 켜면 전화·문자만 남기고 폰 전체를 막는
+    // 강한 설정이라, 사용자가 직접 켜면서 안내를 보게 두고 기본값으로 켜두지 않는다.
+    val blockAfterGoal: Boolean = false,
     val installedApps: List<InstalledApp> = emptyList(),
     val selectedApps: List<InstalledApp> = emptyList(),
     val appSettings: Map<String, AppGoalSetting> = emptyMap(), // key = packageName
     val isLoading: Boolean = false,
 ) : UiState {
-    // 하루 목표 사용 시간 합계 (분)
+    // 04-2 에서 입력한 '전체 폰' 하루 목표 사용 시간(분). 서버 TotalGoal.targetMinutes 로 간다.
     val totalMinutes: Int
         get() = goalTime.totalMinutes
+
+    // 04-4·04-5·04-6 '총 목표 시간' 카드 값 = 선택한 주의 앱들의 목표 시간 합계(분).
+    //
+    // 전체 폰 목표([totalMinutes])와는 다른 값이다. Figma 04-6 이 이 카드와 어플별 목표
+    // 리스트를 한 화면에 같이 보여주는데(01:00 + 01:30 + 01:00 = 3시간 30분), 여기에
+    // 전체 폰 목표를 넣으면 앱 목표를 고쳐도 숫자가 따라 움직이지 않는다.
+    //
+    // 설정이 없는 앱에 AppGoalSetting() 기본값을 쓰는 건 화면이 그 앱의 행을 그릴 때와
+    // 같은 규칙이다(04-4 는 기본 01:00 으로 표시). 카드와 행의 값이 어긋나면 안 된다.
+    val appGoalTotalMinutes: Int
+        get() = selectedApps.sumOf { app ->
+            (appSettings[app.packageName] ?: AppGoalSetting()).timeInput.totalMinutes
+        }
 }
 
 // 목표 설정 화면에서 발생하는 사용자 이벤트
@@ -156,12 +171,21 @@ class SetGoalViewModel @Inject constructor(
         }
     }
 
-    // 04-2. 전체 폰 목표 시간 입력 여부 검증
+    // 04-2. 전체 폰 목표 시간 검증.
+    //
+    // 서버 TotalGoal 은 targetMinutes 를 10분 이상으로만 받는다. 저장 경로가 로컬 우선이라
+    // 범위를 벗어난 값은 로컬에는 들어가고 서버 동기화만 조용히 400 으로 실패해서,
+    // 사용자는 목표를 세웠다고 믿는데 서버에는 아무것도 없는 상태가 된다.
+    // 04-4 앱별 목표에는 이미 같은 하한이 걸려 있어 여기만 비워두면 규칙도 갈린다.
     private fun submitTimeSet() {
-        if (currentState.totalMinutes <= 0) {
-            sendEffect(SetGoalEffect.ShowMessage("목표 시간을 입력해주세요."))
-        } else {
-            sendEffect(SetGoalEffect.NavigateNext)
+        val minutes = currentState.totalMinutes
+        when {
+            // 아직 입력 자체를 안 한 상태. 하한 미달과 문구를 나눠 안내한다.
+            minutes <= 0 ->
+                sendEffect(SetGoalEffect.ShowMessage("목표 시간을 입력해주세요."))
+            minutes < MIN_GOAL_MINUTES ->
+                sendEffect(SetGoalEffect.ShowMessage("목표 사용 시간을 10분 이상 입력하세요."))
+            else -> sendEffect(SetGoalEffect.NavigateNext)
         }
     }
 
