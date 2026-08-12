@@ -28,7 +28,8 @@ import com.phoneshim.android.ui.features.report.screen.ReportSummaryRoute
 import com.phoneshim.android.ui.features.report.screen.RestSuggestionRoute
 import com.phoneshim.android.ui.features.report.screen.TimetableRoute
 import com.phoneshim.android.ui.features.report.screen.UsageReasonInputRoute
-import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import com.phoneshim.android.ui.features.setgoal.screen.AccessGoalSetScreen
 import com.phoneshim.android.ui.features.setgoal.screen.AppSelectScreen
 import com.phoneshim.android.ui.features.setgoal.screen.GenderAgeSelectScreen
@@ -194,7 +195,16 @@ fun PhoneShimNavHost(navController: NavHostController) {
         composable(Routes.TIMETABLE) {
             TimetableRoute(
                 onAuthExpired = authSessionViewModel::onAuthExpired,
-                onEntryClick = { entryId -> navController.navigate(Routes.usageReasonInput(entryId)) },
+                onEntryClick = { target ->
+                    navController.navigate(
+                        Routes.usageReasonInput(
+                            monitoredAppId = target.monitoredAppId,
+                            date = target.date,
+                            start = target.timeRangeStart,
+                            end = target.timeRangeEnd,
+                        ),
+                    )
+                },
                 onNavigateToAiSuggestion = { navController.navigate(Routes.REPORT_AI_SUGGEST) },
                 onNavigateToSettings = { navController.navigate(Routes.PREF) },
                 onNavigateToSummary = { navController.navigate(Routes.REPORT_SUMMARY) },
@@ -205,18 +215,24 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
         composable(
             route = Routes.USAGE_REASON_INPUT,
-            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument("monitoredAppId") { type = NavType.StringType },
+                navArgument("date") { type = NavType.StringType; defaultValue = "" },
+                navArgument("start") { type = NavType.StringType; defaultValue = "" },
+                navArgument("end") { type = NavType.StringType; defaultValue = "" },
+            ),
         ) { backStackEntry ->
-            // 경로 인자로 전달된 사용 기록 id를 꺼내 다음 화면에 전달
-            val entryId = backStackEntry.arguments?.getString("entryId").orEmpty()
-            // TODO: 타임테이블 시간대별 조회 API가 생기면 선택 구간의 date/timeRange 를 함께 넘기세요.
-            //  지금은 화면이 오늘 날짜와 빈 구간으로 시작합니다.
+            // 선택한 사용 구간의 주의 앱과 시간 범위를 그대로 전달합니다.
+            val args = backStackEntry.arguments
+            val start = args?.getString("start").orEmpty()
+            val end = args?.getString("end").orEmpty()
             UsageReasonInputRoute(
                 onAuthExpired = authSessionViewModel::onAuthExpired,
-                entryId = entryId,
-                date = LocalDate.now().toString(),
-                timeRangeStart = "",
-                timeRangeEnd = "",
+                monitoredAppId = args?.getString("monitoredAppId").orEmpty(),
+                date = args?.getString("date").orEmpty(),
+                timeRangeStart = start,
+                timeRangeEnd = end,
+                timeRangeLabel = formatTimeRangeLabel(start, end),
                 onSubmitted = { navController.popBackStack() },
             )
         }
@@ -260,6 +276,17 @@ fun PhoneShimNavHost(navController: NavHostController) {
         }
     }
 }
+
+/** ISO 8601 시간 문자열 두 개를 "22:00 ~ 22:35" 형태로 만듭니다. */
+private fun formatTimeRangeLabel(start: String, end: String): String {
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    val from = start.toLocalDateTimeOrNull()?.format(formatter) ?: return ""
+    val to = end.toLocalDateTimeOrNull()?.format(formatter) ?: return ""
+    return "$from ~ $to"
+}
+
+private fun String.toLocalDateTimeOrNull(): LocalDateTime? =
+    runCatching { LocalDateTime.parse(this) }.getOrNull()
 
 private fun String?.toBottomBarTab(): BottomBarTab = when (this) {
     Routes.MAIN -> BottomBarTab.MAIN

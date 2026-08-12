@@ -4,6 +4,7 @@ import com.phoneshim.android.domain.model.DailyReport
 import com.phoneshim.android.domain.model.ReportRange
 import com.phoneshim.android.domain.model.ReportSummary
 import com.phoneshim.android.domain.model.RestSuggestion
+import com.phoneshim.android.domain.model.UsageSession
 
 interface ReportRepository {
 
@@ -13,9 +14,15 @@ interface ReportRepository {
      */
     suspend fun getDailyReport(date: String, isToday: Boolean): Result<DailyReport>
 
-    /** 주간/월간 요약. 데이터 부족은 공통 API 오류 코드로 구분됩니다. */
+    /** 타임테이블용 사용 구간 목록. */
+    suspend fun getUsageSessions(date: String): Result<List<UsageSession>>
+
+    /** 기간별 사용 사유 요약. day/week/month. 데이터 부족은 공통 API 오류 코드로 구분됩니다. */
     suspend fun getReportSummary(range: ReportRange, date: String?): Result<ReportSummary>
 
-    /** 쉼이의 제안. 백엔드 분석 결과 문구를 그대로 받습니다. */
+    /** 그 달에 전체 목표를 달성한 날짜 목록. @param month YYYY-MM */
+    suspend fun getAchievedDates(month: String): Result<List<String>>
+
+    /** 쉼이의 제안. 목표 대비 사용량으로 서버가 고른 문구입니다. */
     suspend fun getRestSuggestion(date: String?): Result<RestSuggestion>
 }

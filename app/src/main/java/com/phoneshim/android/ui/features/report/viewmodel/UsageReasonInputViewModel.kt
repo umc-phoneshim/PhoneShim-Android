@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.domain.usecase.SubmitUsageReasonUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -12,33 +13,43 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * 사용 이유 입력. 자유 입력이 아니라 5개 고정 선택지에서 복수 선택합니다.
+ * (백엔드 prisma enum UsageReasonCode 기준)
+ */
 data class UsageReasonInputUiState(
-    /** 타임테이블에서 선택한 사용 구간 식별자. 현재는 monitoredAppId 로 사용합니다. */
-    val entryId: String = "",
+    /** 타임테이블에서 고른 구간이 속한 주의 앱 ID. */
+    val monitoredAppId: String = "",
+    val appName: String = "",
     val date: String = "",
     val timeRangeStart: String = "",
     val timeRangeEnd: String = "",
-    val reason: String = "",
+    /** 화면에 보여줄 시간 라벨. 예) "22:00 ~ 22:35" */
+    val timeRangeLabel: String = "",
+    val selectedReasons: Set<UsageReasonCode> = emptySet(),
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
-    /** 입력 가능 시간대(당일 22:00~익일 10:00)를 벗어난 경우. */
+    /** 입력 가능 시간대(당일 22시 ~ 익일 10시)를 벗어난 경우. */
     val isOutsideInputWindow: Boolean = false,
 ) : UiState {
-    val remainingChars: Int get() = UsageReasonEntry.MAX_REASON_LENGTH - reason.length
+    val options: List<UsageReasonCode> get() = UsageReasonCode.entries
+
     val canSubmit: Boolean
-        get() = !isSubmitting && !isOutsideInputWindow &&
-            reason.isNotBlank() && reason.length <= UsageReasonEntry.MAX_REASON_LENGTH
+        get() = !isSubmitting && !isOutsideInputWindow && selectedReasons.isNotEmpty() &&
+            monitoredAppId.isNotBlank() && timeRangeStart.isNotBlank() && timeRangeEnd.isNotBlank()
 }
 
 sealed interface UsageReasonInputUiEvent : UiEvent {
     data class Started(
-        val entryId: String,
+        val monitoredAppId: String,
+        val appName: String,
         val date: String,
         val timeRangeStart: String,
         val timeRangeEnd: String,
+        val timeRangeLabel: String,
     ) : UsageReasonInputUiEvent
 
-    data class ReasonChanged(val value: String) : UsageReasonInputUiEvent
+    data class ReasonToggled(val reason: UsageReasonCode) : UsageReasonInputUiEvent
     data object SubmitClicked : UsageReasonInputUiEvent
 }
 
@@ -58,23 +69,29 @@ class UsageReasonInputViewModel @Inject constructor(
     override fun handleEvent(event: UsageReasonInputUiEvent) {
         when (event) {
             is UsageReasonInputUiEvent.Started -> start(event)
-            is UsageReasonInputUiEvent.ReasonChanged -> changeReason(event)
+            is UsageReasonInputUiEvent.ReasonToggled -> toggleReason(event)
             UsageReasonInputUiEvent.SubmitClicked -> submit()
         }
     }
 
     private fun start(event: UsageReasonInputUiEvent.Started) = setState {
         copy(
-            entryId = event.entryId,
+            monitoredAppId = event.monitoredAppId,
+            appName = event.appName,
             date = event.date,
             timeRangeStart = event.timeRangeStart,
             timeRangeEnd = event.timeRangeEnd,
+            timeRangeLabel = event.timeRangeLabel,
         )
     }
 
-    private fun changeReason(event: UsageReasonInputUiEvent.ReasonChanged) = setState {
+    private fun toggleReason(event: UsageReasonInputUiEvent.ReasonToggled) = setState {
         copy(
-            reason = event.value.take(UsageReasonEntry.MAX_REASON_LENGTH),
+            selectedReasons = if (event.reason in selectedReasons) {
+                selectedReasons - event.reason
+            } else {
+                selectedReasons + event.reason
+            },
             errorMessage = null,
         )
     }
@@ -82,13 +99,14 @@ class UsageReasonInputViewModel @Inject constructor(
     private fun submit() {
         val state = currentState
         if (!state.canSubmit) return
+
         val entry = runCatching {
             UsageReasonEntry(
-                monitoredAppId = state.entryId,
+                monitoredAppId = state.monitoredAppId,
                 date = state.date,
                 timeRangeStart = state.timeRangeStart,
                 timeRangeEnd = state.timeRangeEnd,
-                reason = state.reason.trim(),
+                reasonCodes = state.selectedReasons.toList(),
             )
         }.getOrElse { throwable ->
             setState { copy(errorMessage = throwable.message) }

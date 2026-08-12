@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.report.screen
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
@@ -38,15 +36,17 @@ import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
-import com.phoneshim.android.ui.features.report.component.ReportSideActionCard
 import com.phoneshim.android.ui.features.report.component.ReportTab
 import com.phoneshim.android.ui.features.report.component.ReportTabRow
 import com.phoneshim.android.ui.features.report.component.TimetableChart
+import com.phoneshim.android.ui.features.report.component.ReportSideCardWidth
+import com.phoneshim.android.ui.features.report.component.RestSuggestionCard
 import com.phoneshim.android.ui.features.report.component.UsedAppsCard
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEffect
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiEvent
 import com.phoneshim.android.ui.features.report.viewmodel.ReportUiState
 import com.phoneshim.android.ui.features.report.viewmodel.ReportViewModel
+import com.phoneshim.android.ui.features.report.viewmodel.UsageReasonTarget
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
@@ -57,7 +57,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
  */
 @Composable
 fun TimetableRoute(
-    onEntryClick: (entryId: String) -> Unit,
+    onEntryClick: (UsageReasonTarget) -> Unit,
     onNavigateToAiSuggestion: () -> Unit,
     onAuthExpired: () -> Unit,
     modifier: Modifier = Modifier,
@@ -78,7 +78,7 @@ fun TimetableRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ReportUiEffect.NavigateToUsageReasonInput -> onEntryClick(effect.entryId)
+                is ReportUiEffect.NavigateToUsageReasonInput -> onEntryClick(effect.target)
                 ReportUiEffect.NavigateToRestSuggestion -> onNavigateToAiSuggestion()
                 is ReportUiEffect.NavigateToTab ->
                     if (effect.tab == ReportTab.SUMMARY) onNavigateToSummary()
@@ -176,7 +176,20 @@ fun TimetableScreen(
                     onNextDate = onNextDate,
                     nextEnabled = state.canGoNextDate,
                     onCalendarClick = onCalendarClick,
+                    onAlarmSettingsClick = onAlarmSettings,
+                    // 툴팁은 첫 진입 화면(어플 사용 통계)에만 띄웁니다.
                 )
+
+                state.restSuggestion?.let { suggestion ->
+                    RestSuggestionCard(
+                        suggestion = suggestion,
+                        modifier = Modifier.padding(
+                            horizontal = PhoneShimDimens.screenHorizontalPadding,
+                        ),
+                    )
+                    Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
+                }
+
                 ReportTabRow(selected = ReportTab.TIMETABLE, onTabSelected = onTabSelected)
 
                 Column(
@@ -198,16 +211,11 @@ fun TimetableScreen(
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
-                        Column(
-                            modifier = Modifier.width(104.dp),
-                            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
-                        ) {
-                            ReportSideActionCard(
-                                onSuggestionClick = onEditView,
-                                onAlarmSettingsClick = onAlarmSettings,
-                            )
-                            UsedAppsCard(apps = state.usedApps)
-                        }
+                        // 알림 설정은 상단으로 올라가서 사이드에는 사용 어플 카드만 남깁니다.
+                        UsedAppsCard(
+                            apps = state.usedApps,
+                            modifier = Modifier.width(ReportSideCardWidth),
+                        )
                     }
                 }
             }
@@ -249,7 +257,7 @@ private fun TimetableScreenPreview() {
 private fun TimetableEmptyPreview() {
     PhoneShimTheme {
         TimetableScreen(
-            state = ReportUiState(hourUsages = ReportUiState().hourUsages.map { it.copy(segments = emptyList()) }),
+            state = ReportUiState(),
             onTabSelected = {},
             onBottomNavSelected = {},
         )
