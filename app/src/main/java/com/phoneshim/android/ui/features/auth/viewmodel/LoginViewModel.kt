@@ -1,6 +1,8 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
 import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.BuildConfig
+import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
@@ -176,13 +178,50 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private fun Throwable.toUserMessage(): String = when (this) {
-        is AuthException.FeatureUnavailable -> message ?: "현재 사용할 수 없는 기능입니다."
-        is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
-        is ApiException.Serialization,
-        is ApiException.InvalidResponse,
-        -> "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해주세요."
-        else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+    private fun Throwable.toUserMessage(): String {
+        logAuthFailure()
+        val userMessage = when (this) {
+            is AuthException.FeatureUnavailable -> message ?: "현재 사용할 수 없는 기능입니다."
+            is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
+            is ApiException.Serialization,
+            is ApiException.InvalidResponse,
+            -> "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해주세요."
+            is ApiException -> when (code) {
+                ApiErrorCodes.EMAIL_PERMISSION_REQUIRED ->
+                    "카카오 로그인에 이메일 제공 동의가 필요합니다. 동의 항목을 확인한 뒤 다시 로그인해주세요."
+                ApiErrorCodes.ACCESS_TOKEN_REQUIRED,
+                ApiErrorCodes.INVALID_TOKEN,
+                -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            }
+            else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        }
+        return if (BuildConfig.DEBUG) {
+            "$userMessage\n(${diagnosticSummary()})"
+        } else {
+            userMessage
+        }
+    }
+
+    /** 인증 토큰과 응답 본문은 제외하고, debug 빌드에서 진단에 필요한 계약 정보만 남깁니다. */
+    private fun Throwable.logAuthFailure() {
+        if (!BuildConfig.DEBUG) return
+        val apiError = this as? ApiException
+        System.err.println(
+            "PhoneShimAuth: stage=${if (apiError == null) "sdk" else "server"} " +
+                "httpStatus=${apiError?.httpStatus ?: "none"} " +
+                "errorCode=${apiError?.code ?: "none"} " +
+                "errorType=${javaClass.simpleName}",
+        )
+    }
+
+    private fun Throwable.diagnosticSummary(): String {
+        val apiError = this as? ApiException
+        return if (apiError == null) {
+            "SDK / ${javaClass.simpleName}"
+        } else {
+            "HTTP ${apiError.httpStatus ?: "-"} / ${apiError.code ?: "-"}"
+        }
     }
 }
 

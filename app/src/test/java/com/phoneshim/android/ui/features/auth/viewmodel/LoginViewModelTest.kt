@@ -1,5 +1,8 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
+import com.phoneshim.android.data.api.common.ApiError
+import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.SocialLoginResult
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.SocialIdentity
@@ -123,6 +126,47 @@ class LoginViewModelTest {
             SocialIdentity(SocialProvider.GOOGLE, "provider-user", "user@example.com"),
             viewModel.uiState.value.withdrawalRecovery,
         )
+    }
+
+    @Test
+    fun `email permission failure shows actionable Kakao guidance`() = runTest(dispatcher) {
+        val failure = ApiException.Http(
+            statusCode = 400,
+            error = ApiError(
+                code = ApiErrorCodes.EMAIL_PERMISSION_REQUIRED,
+                message = "카카오 이메일 제공 동의가 필요합니다.",
+            ),
+            cause = IllegalStateException("HTTP 400"),
+        )
+        val viewModel = createViewModel(loginFailure = failure)
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        runCurrent()
+
+        assertTrue(
+            viewModel.uiState.value.errorMessage.orEmpty().contains(
+                "카카오 로그인에 이메일 제공 동의가 필요합니다.",
+            ),
+        )
+        assertTrue(
+            viewModel.uiState.value.errorMessage.orEmpty().contains(
+                "HTTP 400 / EMAIL_PERMISSION_REQUIRED",
+            ),
+        )
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `SDK failure exposes safe debug diagnostic without token`() = runTest(dispatcher) {
+        val viewModel = createViewModel(
+            authResult = AuthClientResult.Failure(IllegalStateException("SDK failed")),
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("SDK / IllegalStateException"))
+        assertFalse(viewModel.uiState.value.errorMessage.orEmpty().contains("provider-token"))
     }
 
     @Test
