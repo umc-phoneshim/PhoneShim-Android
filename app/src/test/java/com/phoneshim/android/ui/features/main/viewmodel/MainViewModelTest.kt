@@ -4,6 +4,8 @@ import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.DashboardSummary
 import com.phoneshim.android.domain.model.Goal
 import com.phoneshim.android.domain.model.Reminder
+import com.phoneshim.android.domain.model.ReminderDataSource
+import com.phoneshim.android.domain.model.ReminderListResult
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.model.UsageStatus
@@ -17,6 +19,7 @@ import com.phoneshim.android.domain.repository.UsageLogRepository
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
 import com.phoneshim.android.domain.usecase.ObserveRemindersUseCase
 import java.time.Instant
@@ -60,6 +63,15 @@ class MainViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `최초 진입 시 GetRemindersUseCase로 오늘 날짜를 서버에서 조회해 캐시를 채운다`() = runTest(dispatcher) {
+        advanceUntilIdle()
+
+        // 캐시가 완전히 비어있는 최초 설치 시나리오(타로 리뷰) — observeTodayReminders()의
+        // Flow만으로는 서버 데이터를 알 수 없어 fetchDashboard()가 최초 1회 서버를 불러야 한다.
+        assertEquals(listOf(LocalDate.now(KOREA_ZONE_ID)), reminderRepository.getRemindersCalledDates)
     }
 
     @Test
@@ -107,6 +119,7 @@ class MainViewModelTest {
         getDashboardSummaryUseCase = GetDashboardSummaryUseCase(dashboardRepository),
         getGoalUseCase = GetGoalUseCase(goalRepository),
         getMyInfoUseCase = GetMyInfoUseCase(myPageRepository),
+        getRemindersUseCase = GetRemindersUseCase(reminderRepository),
         observeRemindersUseCase = ObserveRemindersUseCase(reminderRepository),
     )
 
@@ -175,8 +188,15 @@ class MainViewModelTest {
     private class FakeReminderRepository : ReminderRepository {
         val remindersFlow = MutableStateFlow<List<Reminder>>(emptyList())
         val observedDates = mutableListOf<LocalDate>()
+        var getRemindersResult: Result<ReminderListResult> = Result.success(
+            ReminderListResult(emptyList(), ReminderDataSource.REMOTE),
+        )
+        val getRemindersCalledDates = mutableListOf<LocalDate>()
 
-        override suspend fun getReminders(date: LocalDate) = throw UnsupportedOperationException()
+        override suspend fun getReminders(date: LocalDate): Result<ReminderListResult> {
+            getRemindersCalledDates += date
+            return getRemindersResult
+        }
 
         override suspend fun getReminder(id: String): Result<Reminder> = throw UnsupportedOperationException()
 

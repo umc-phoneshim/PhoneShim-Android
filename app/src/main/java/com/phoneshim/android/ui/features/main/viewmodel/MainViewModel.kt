@@ -7,6 +7,7 @@ import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.domain.usecase.GetDashboardSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.GetUsageStatusUseCase
 import com.phoneshim.android.domain.usecase.ObserveRemindersUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -45,6 +46,7 @@ class MainViewModel @Inject constructor(
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
     private val getGoalUseCase: GetGoalUseCase,
     private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val getRemindersUseCase: GetRemindersUseCase,
     private val observeRemindersUseCase: ObserveRemindersUseCase,
 ) : BaseViewModel<MainUiState, MainUiEvent, MainUiEffect>(MainUiState()) {
 
@@ -74,15 +76,22 @@ class MainViewModel @Inject constructor(
                 val usageStatusDeferred = async { getUsageStatusUseCase() }
                 val dashboardSummaryDeferred = async { getDashboardSummaryUseCase() }
                 val userNameDeferred = async { getMyInfoUseCase().map { it.nickname } }
+                // 최초 진입 시 Room 캐시가 완전히 비어있으면(신규 설치 등) observeTodayReminders()의
+                // Flow가 서버 데이터를 아직 모른다. 여기서 한 번 서버를 불러 캐시에 기록해두면
+                // (ReminderRepositoryImpl.getReminders 내부의 reminderDao.replaceDate) 그 Flow가
+                // 재emit되어 화면에 반영된다 — 그래서 응답값 자체는 여기서 쓰지 않는다(#74 타로 리뷰).
+                val remindersDeferred = async { getRemindersUseCase(LocalDate.now(KOREA_ZONE_ID)) }
 
                 val isGoalSet = isGoalSetDeferred.await()
                 val usageStatusResult = usageStatusDeferred.await()
                 val dashboardSummaryResult = dashboardSummaryDeferred.await()
                 val userNameResult = userNameDeferred.await()
+                val remindersResult = remindersDeferred.await()
 
                 usageStatusResult.onFailure(::reportLoadFailure)
                 dashboardSummaryResult.onFailure(::reportLoadFailure)
                 userNameResult.onFailure(::reportLoadFailure)
+                remindersResult.onFailure(::reportLoadFailure)
 
                 setState {
                     copy(
@@ -98,10 +107,11 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * 오늘 리마인더는 서버를 직접 조회하지 않고 Room 캐시([ObserveRemindersUseCase])를 그대로
-     * 관찰합니다. 리마인더 화면의 CRUD가 성공하면 캐시가 즉시 갱신되므로, 메인 화면이
-     * 살아있는 동안 계속 최신 상태를 반영합니다 — ON_RESUME 트리거나 별도 재조회 이벤트가
-     * 필요 없고, 이미 최신인 캐시를 다시 서버에 묻는 불필요한 요청도 없습니다(#74 리뷰 반영).
+     * 오늘 리마인더는 Room 캐시([ObserveRemindersUseCase])를 계속 관찰합니다. 리마인더 화면의
+     * CRUD가 성공하면 캐시가 즉시 갱신되므로, 메인 화면이 살아있는 동안 계속 최신 상태를
+     * 반영합니다 — ON_RESUME 트리거나 별도 재조회 이벤트가 필요 없습니다(#74 리뷰 반영).
+     * 캐시가 완전히 비어있는 최초 설치 시점은 이 Flow만으로는 채울 수 없어서, [fetchDashboard]가
+     * 최초 1회 [getRemindersUseCase] 로 서버를 불러 캐시를 채우는 역할을 같이 합니다(#74 타로 리뷰).
      */
     private fun observeTodayReminders() {
         viewModelScope.launch {
