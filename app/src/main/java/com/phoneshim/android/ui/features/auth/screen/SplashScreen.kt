@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -24,33 +21,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
-import com.phoneshim.android.ui.features.auth.viewmodel.SessionRestoreState
-import com.phoneshim.android.ui.features.auth.viewmodel.SplashViewModel
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
-
-@Composable
-fun SplashRoute(
-    onAuthenticated: () -> Unit,
-    onUnauthenticated: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: SplashViewModel = hiltViewModel(),
-) {
-    val state by viewModel.state.collectAsState()
-
-    LaunchedEffect(state) {
-        when (state) {
-            SessionRestoreState.LOADING -> Unit
-            SessionRestoreState.AUTHENTICATED -> onAuthenticated()
-            SessionRestoreState.UNAUTHENTICATED -> onUnauthenticated()
-        }
-    }
-
-    SplashScreen(modifier = modifier)
-}
 
 @Composable
 fun SplashScreen(modifier: Modifier = Modifier) {
