@@ -11,6 +11,7 @@ import com.phoneshim.android.domain.usecase.CreateReminderUseCase
 import com.phoneshim.android.domain.usecase.DeleteReminderUseCase
 import com.phoneshim.android.domain.usecase.GetRemindersUseCase
 import com.phoneshim.android.domain.usecase.UpdateReminderUseCase
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiError
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -265,7 +266,12 @@ class ReminderViewModel @Inject constructor(
         } else {
             currentTasks + savedTask
         }.sortedWith(compareBy(ReminderTaskUiModel::startMinutes, ReminderTaskUiModel::endMinutes))
-        sendEffect(ReminderUiEffect.ShowMessage(REMINDER_SAVED_MESSAGE))
+        sendEffect(
+            ReminderUiEffect.ShowMessage(
+                message = REMINDER_SAVED_MESSAGE,
+                type = PhoneShimSnackbarType.Info,
+            ),
+        )
         copy(
             tasksByDate = tasksByDate + (date to updated),
             isSubmitting = false,

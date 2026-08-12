@@ -28,11 +28,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
 import com.phoneshim.android.ui.common.Toggle
 import com.phoneshim.android.ui.features.setgoal.component.MAX_HOUR_VALUE
 import com.phoneshim.android.ui.features.setgoal.component.MAX_MINUTE_VALUE
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
-import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -76,7 +76,7 @@ fun UsageTimeSetScreen(
             onNext = { viewModel.onEvent(SetGoalEvent.SubmitTimeSet) },
             onBack = onBack,
         )
-        SetGoalSnackbarHost(
+        PhoneShimSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

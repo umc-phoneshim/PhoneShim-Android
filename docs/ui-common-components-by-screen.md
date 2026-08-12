@@ -40,7 +40,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | `SectionCard`, `SectionHeader` | surface/border/shape/padding, title 및 content slot | 공통 카드·섹션 제목 | 04 목표 설정, 05 메인, 07 리포트 카드에 공통 사용 |
 | `PhoneShimDialog`, `ConfirmationDialog` | width/shape/padding/dismiss 정책, content slot, destructive action | 권한·입력·탈퇴 팝업 | 03, 04, 08, 09의 팝업 컨테이너와 확인 동작에 공통 사용 |
 | `TextInputDialog`, `PermissionNoticeItem` | 입력 상태·저장 callback, 권한 제목·설명 | 목표 작성, 권한 안내 | 04-4/09 목표 작성과 auth/setgoal 권한 안내 중복 제거 |
-| `BottomMessage` | `Info/Warning/Error`, message | `Bottom Popup` | 상태 노출 primitive 구현 완료. 현재 Toast 기반 화면은 상태 소유 정책 확정 후 교체 |
+| `PhoneShimSnackbar`, `PhoneShimSnackbarHost` | `Default/Info/Error`, message, hostState | `Bottom Popup`, 리마인더 Toast | 328×43 공통 메시지와 Material Snackbar 상태·노출 시간을 연결. 화면 레이아웃에서 하단 바 위에 배치 |
 
 ## 공통화 최종 결정
 
@@ -57,7 +57,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | **ui/common 공통화** | `SectionCard`, `SectionHeader` | 04 설정 카드, 05 섹션 제목, 07 리포트 카드. 콘텐츠와 의미는 slot으로 분리한다. |
 | **ui/common 공통화** | `PhoneShimDialog`, `ConfirmationDialog` | 03 권한, 04 입력, 08 탈퇴, 09 편집. dismiss 정책과 action은 호출 화면이 결정한다. |
 | **ui/common 공통화** | `TextInputDialog`, `PermissionNoticeItem` | 04-4/09 목표 작성과 auth/setgoal 권한 안내의 동일 구조를 통합한다. |
-| **ui/common 공통화** | `BottomMessage` | 04-1~04-4의 안내 UI. 노출 상태와 시간은 화면/ViewModel이 소유한다. |
+| **ui/common 공통화** | `PhoneShimSnackbar`, `PhoneShimSnackbarHost` | 04-1~04-4의 안내와 06 저장·삭제·중복 메시지. 노출 상태와 시간은 화면/ViewModel이 소유한다. |
 | **feature 내부 공통화** | `GoalSetupStepIndicator`, `SetGoalBottomButtons` | 목표 설정 wizard에서만 반복되므로 setgoal/component에 유지한다. |
 | **feature 내부 공통화** | `TodoEditorDialog` | 리마인더 생성·수정 정책과 상태에 결합되어 reminder/component에 유지한다. |
 | **feature 내부 공통화** | `ReportTabRow`, `TimetableCell`, `SuggestionCard` 및 차트 | report 화면군에서만 재사용하며 report/component에 유지한다. |
@@ -65,7 +65,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | **화면 전용** | `GoalProgressCard` | 메인의 진행 데이터와 표현에 결합되므로 main 내부에 유지한다. |
 | **기존 Material 사용** | `TextAction`, `PopupMenu` | 각각 `TextButton`, `DropdownMenu`로 표현하고 별도 wrapper를 만들지 않는다. |
 
-`BottomMessage`는 공통 primitive와 Preview까지 제공하지만 현재 setgoal 검증이 Android `Toast`로 직접 처리된다. 화면 상태와 노출 시간을 변경하지 않는 이번 공통화 범위에서는 Toast를 강제로 교체하지 않으며, validation message가 UI state로 승격될 때 연결한다.
+`PhoneShimSnackbar`는 Figma의 328×43 Bottom Popup 규격을 사용하며 `Default`, `Info`, `Error` 색상 variant를 제공한다. `PhoneShimSnackbarHost`는 Material `SnackbarHostState`와 연결하고 화면의 일반 레이아웃 계층에 배치한다.
 
 ## 01. 앱 클릭 직후
 
@@ -120,7 +120,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 성별 선택 chip (`Context box`) | 없음 | **신규 후보** | `SelectableChip` | 09 사용자 정보 chip에도 재사용한다. selected/enabled 상태를 제공한다. |
 | 나이 선택 필드와 화살표 | `PhoneShimIcon(ChevronRight)` 일부 | **신규 후보** | `SelectionField` | 09 연령 변경과 동일한 값+드롭다운 트리거 구조로 사용한다. |
 | 연령 목록과 `Mini checkbox` | `Checkbox` | **기존 확장** | `CheckboxSize.Mini(12dp)`, `SelectionDropdown` | 표준 24dp와 mini 12dp의 터치 영역은 시각 크기와 별도로 최소 크기를 보장한다. |
-| 누락 오류 메시지/Bottom Popup | 없음 | **신규 후보** | `BottomMessage(type, text)` | 04-1~04-4의 누락·유효성 오류에서 공통 사용한다. |
+| 누락 오류 메시지/Bottom Popup | `PhoneShimSnackbarHost` | **공통 적용** | `PhoneShimSnackbar(type, message)` | 04-1~04-4의 누락·유효성 오류에서 공통 사용한다. |
 | 다음 버튼 | `PrimaryButton` | **기존 확장** | 42px `Medium` size | disabled 색상도 Figma 상태와 비교한다. |
 
 ### 04-2. 앱 선택
@@ -133,7 +133,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 앱 선택 행과 `Chekbox` | `Checkbox` | **신규 후보** | `SelectableAppRow` | 앱 아이콘·이름·선택 상태를 받고 04-4/05/09의 앱 행과 데이터 모델을 공유한다. |
 | 앱 추가 (`plus button`) | `PhoneShimIcon` 일부 | **기존 확장** | `PhoneShimIconType.Plus`, icon-only action | 아이콘의 클릭 semantics를 별도 버튼 wrapper로 제공한다. |
 | 이전/다음 버튼 | `SecondaryButton`, `PrimaryButton` | **기존 확장** | 공통 `Medium` size | 좌우 배치는 화면 레이아웃에서 담당한다. |
-| 미선택 안내 | 없음 | **신규 후보** | `BottomMessage` | 04-1/04-3/04-4 오류와 동일 계열이다. |
+| 미선택 안내 | `PhoneShimSnackbarHost` | **공통 적용** | `PhoneShimSnackbar` | 04-1/04-3/04-4 오류와 동일 계열이다. |
 
 ### 04-3. 전체 목표 사용 시간
 
@@ -145,7 +145,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 시간 요약 표시 | `DurationDisplay`, `GoalTimeCard` | **기존 재사용** | 없음 | 시간/분 표시는 `DurationDisplay`, 카드형 전체 목표 요약은 `GoalTimeCard`를 사용한다. |
 | 제한 알림 설정 (`Toggle`) | `Toggle` | **기존 재사용** | 색상 token 점검 | label과 설명은 화면에서 조합한다. |
 | 제한 알림 확인 팝업 | 없음 | **신규 후보** | `PhoneShimDialog` | 제목·본문·버튼 슬롯을 사용한다. |
-| 누락 안내 | 없음 | **신규 후보** | `BottomMessage` | validation type을 error/warning/info로 구분할 수 있게 한다. |
+| 누락 안내 | `PhoneShimSnackbarHost` | **공통 적용** | `PhoneShimSnackbar` | validation type을 default/info/error로 구분한다. |
 | 이전/다음 CTA | `SecondaryButton`, `PrimaryButton` | **기존 확장** | `Medium` size | 04-2와 동일하다. |
 
 ### 04-4. 앱별 접근 횟수·목표 시간
@@ -158,7 +158,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | 접근 제한/목표 입력 아이콘 | `PhoneShimIcon` 일부 | **기존 확장** | 아이콘 enum 및 icon action wrapper | Figma `접근 제한`, `목표 입력`을 각각 명시적인 content description과 연결한다. |
 | 접근 횟수/시간 입력 팝업 | `TextField`, `PrimaryButton`, `SecondaryButton` | **신규 후보** | `AppGoalEditorDialog` | 컨테이너는 `PhoneShimDialog`, 입력은 확장된 `TextField`를 재사용한다. |
 | 사용자 작성 목표 입력 팝업 | `TextField`, `PrimaryButton` | **신규 후보** | `TextInputDialog` | 09의 앱 사용 목표 작성 팝업(`466:5217`)과 동일한 API를 사용한다. |
-| 10분 미만 및 누락 안내 | 없음 | **신규 후보** | `BottomMessage` | 메시지와 노출 여부만 화면 state에서 전달한다. |
+| 10분 미만 및 누락 안내 | `PhoneShimSnackbarHost` | **공통 적용** | `PhoneShimSnackbar` | 메시지와 노출 여부만 화면 state에서 전달한다. |
 
 ### 04-5. 최종 확인
 
@@ -289,7 +289,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | P0 | `DurationDisplay` | 04-3, 04-4, 04-5, 04-6, 05, 09 | 시간/분 포맷 및 읽기 전용 표시 |
 | P0 | `GoalTimeCard` | 04-4, 04-5, 09 | 전체 목표 시간 카드, 화면별 라벨, 클릭 및 오류 상태 |
 | P0 | `PhoneShimDialog` | 03, 04-3/04-4, 08, 10 | 공통 surface, padding, 제목/본문/action 슬롯 |
-| P0 | `BottomMessage` | 04-1, 04-2, 04-3, 04-4 | 하단 validation/info 메시지 |
+| P0 | `PhoneShimSnackbar` | 04-1, 04-2, 04-3, 04-4, 06 | 하단 validation/info/error 메시지 |
 | P1 | `SectionCard` / `SectionHeader` | 04-5, 05, 07, 09 | 카드 surface와 아이콘·제목 헤더 |
 | P1 | `SelectableChip` / `SelectionDropdown` | 04-1, 09 | 단일 선택 및 드롭다운 목록 |
 | P1 | `TodoRow` / `TodoEditorDialog` | 05, 06 | 할 일 표시와 추가·수정 |

@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.SnackbarHostState
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEffect
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEvent
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderViewModel
@@ -31,7 +32,10 @@ fun ReminderRoute(
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ReminderUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is ReminderUiEffect.ShowMessage -> snackbarHostState.showPhoneShimSnackbar(
+                    message = effect.message,
+                    type = effect.type,
+                )
             }
         }
     }

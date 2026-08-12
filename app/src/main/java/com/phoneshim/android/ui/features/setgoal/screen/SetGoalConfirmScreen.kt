@@ -26,7 +26,7 @@ import com.phoneshim.android.ui.common.GoalTimeCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
-import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -79,7 +79,7 @@ fun SetGoalConfirmScreen(
             onConfirm = { viewModel.onEvent(SetGoalEvent.SubmitGoal) },
             onBack = onBack,
         )
-        SetGoalSnackbarHost(
+        PhoneShimSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
