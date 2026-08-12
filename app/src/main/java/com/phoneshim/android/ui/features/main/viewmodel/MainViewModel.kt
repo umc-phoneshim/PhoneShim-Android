@@ -34,6 +34,9 @@ data class MainUiState(
 
 sealed interface MainUiEvent : UiEvent {
     data object LoadDashboard : MainUiEvent
+
+    /** 메인 탭 재진입(ON_RESUME) 시 usageStatus/dashboardSummary만 다시 조회한다. */
+    data object RefreshUsageAndDashboard : MainUiEvent
 }
 
 sealed interface MainUiEffect : UiEffect {
@@ -58,6 +61,7 @@ class MainViewModel @Inject constructor(
     override fun handleEvent(event: MainUiEvent) {
         when (event) {
             MainUiEvent.LoadDashboard -> fetchDashboard()
+            MainUiEvent.RefreshUsageAndDashboard -> refreshUsageAndDashboard()
         }
     }
 
@@ -100,6 +104,41 @@ class MainViewModel @Inject constructor(
                         dashboardSummary = dashboardSummaryResult.getOrNull() ?: dashboardSummary,
                         isLoading = false,
                         userName = userNameResult.getOrDefault(userName),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * usageStatus/dashboardSummary는 리마인더와 달리 로컬 캐시(Room)가 없어 Flow로 관찰할 수
+     * 없습니다. 메인 탭을 벗어났다 돌아와도 MainViewModel은 살아있어(#74 너울 리뷰) 재진입 시
+     * 이 둘만 다시 조회합니다. isGoalSet/userName/todayReminders/isLoading은 건드리지 않습니다.
+     *
+     * [fetchDashboard] 와 같은 isLoading 가드를 둡니다. MainScreen의 ON_RESUME 구독은 등록
+     * 시점에 라이프사이클이 이미 RESUMED면 그 자리에서 즉시 한 번 더 발화하는데(안드로이드
+     * Lifecycle 표준 동작), 최초 진입 시엔 이게 init의 [fetchDashboard] 가 아직 끝나기 전(
+     * isLoading=true)에 도착하는 동기 catch-up 호출입니다. "몇 번째 ON_RESUME인지"를 화면
+     * 쪽에서 세는 대신 이 가드로 자연스럽게 무시합니다 — 화면(Composable)은 탭 전환마다
+     * dispose/재생성될 수 있어 지역 변수로는 판단이 안정적이지 않기 때문입니다.
+     */
+    private fun refreshUsageAndDashboard() {
+        if (currentState.isLoading) return
+        viewModelScope.launch {
+            coroutineScope {
+                val usageStatusDeferred = async { getUsageStatusUseCase() }
+                val dashboardSummaryDeferred = async { getDashboardSummaryUseCase() }
+
+                val usageStatusResult = usageStatusDeferred.await()
+                val dashboardSummaryResult = dashboardSummaryDeferred.await()
+
+                usageStatusResult.onFailure(::reportLoadFailure)
+                dashboardSummaryResult.onFailure(::reportLoadFailure)
+
+                setState {
+                    copy(
+                        usageStatus = usageStatusResult.getOrDefault(usageStatus),
+                        dashboardSummary = dashboardSummaryResult.getOrNull() ?: dashboardSummary,
                     )
                 }
             }
