@@ -40,7 +40,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | `SectionCard`, `SectionHeader` | surface/border/shape/padding, title 및 content slot | 공통 카드·섹션 제목 | 04 목표 설정, 05 메인, 07 리포트 카드에 공통 사용 |
 | `PhoneShimDialog`, `ConfirmationDialog` | width/shape/padding/dismiss 정책, content slot, destructive action | 권한·입력·탈퇴 팝업 | 03, 04, 08, 09의 팝업 컨테이너와 확인 동작에 공통 사용 |
 | `TextInputDialog`, `PermissionNoticeItem` | 입력 상태·저장 callback, 권한 제목·설명 | 목표 작성, 권한 안내 | 04-4/09 목표 작성과 auth/setgoal 권한 안내 중복 제거 |
-| `PhoneShimSnackbar`, `PhoneShimSnackbarHost`, `PhoneShimBottomBarSnackbarHost` | `Default/Info/Error`, message, hostState | `Bottom Popup`, 리마인더 Toast | 328×43 공통 메시지와 Material Snackbar 상태·노출 시간을 연결. 하단 바 화면의 공통 여백 variant 제공 |
+| `PhoneShimSnackbar`, `PhoneShimSnackbarHost`, `PhoneShimBottomSnackbarHost`, `PhoneShimBottomBarSnackbarHost` | `Default/Info/Error`, message, hostState | `Bottom Popup`, 리마인더 Toast | 328×43 공통 메시지와 Material Snackbar 상태·노출 시간을 연결. 일반 하단 및 하단 바 화면의 공통 여백 variant 제공 |
 
 ## 공통화 최종 결정
 
@@ -65,7 +65,7 @@ Figma 인스턴스 이름은 원문을 병기한다. 예를 들어 Figma의 `Che
 | **화면 전용** | `GoalProgressCard` | 메인의 진행 데이터와 표현에 결합되므로 main 내부에 유지한다. |
 | **기존 Material 사용** | `TextAction`, `PopupMenu` | 각각 `TextButton`, `DropdownMenu`로 표현하고 별도 wrapper를 만들지 않는다. |
 
-`PhoneShimSnackbar`는 Figma의 328×43 Bottom Popup 규격을 사용하며 `Default`, `Info`, `Error` 색상 variant를 제공한다. `PhoneShimSnackbarHost`는 Material `SnackbarHostState`와 연결하고 화면의 일반 레이아웃 계층에 배치한다. `PhoneShimBottomBarSnackbarHost`는 `BottomBarDefaults.ContentBottomPadding`을 적용해 하단 바와 겹치지 않게 한다. Snackbar는 한 줄 안내만 담당하며 서버 원문이 긴 경우 `UiError.toSnackbarMessage()` 또는 feature fallback으로 짧게 변환한다.
+`PhoneShimSnackbar`는 Figma의 328×43 Bottom Popup 규격을 사용하며 `Default`, `Info`, `Error` 색상 variant를 제공한다. `PhoneShimSnackbarHost`는 Material `SnackbarHostState`와 연결하고 화면의 일반 레이아웃 계층에 배치한다. `PhoneShimBottomSnackbarHost`는 화면 하단에서 16dp 띄우며, `PhoneShimBottomBarSnackbarHost`는 `BottomBarDefaults.ContentBottomPadding`을 적용해 하단 바와 겹치지 않게 한다. Snackbar는 한 줄 안내만 담당하며 서버 원문이 긴 경우 `UiError.toSnackbarMessage()` 또는 feature fallback으로 짧게 변환한다.
 
 ## 01. 앱 클릭 직후
 

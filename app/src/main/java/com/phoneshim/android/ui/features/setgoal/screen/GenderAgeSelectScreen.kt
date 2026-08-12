@@ -34,7 +34,7 @@ import com.phoneshim.android.ui.common.SelectionField
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
-import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
+import com.phoneshim.android.ui.common.PhoneShimBottomSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -80,7 +80,7 @@ fun GenderAgeSelectScreen(
             onNext = { viewModel.onEvent(SetGoalEvent.SubmitGenderAge) },
             onBack = onBack,
         )
-        PhoneShimSnackbarHost(
+        PhoneShimBottomSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

@@ -84,6 +84,19 @@ fun PhoneShimSnackbarHost(
 }
 
 @Composable
+fun PhoneShimBottomSnackbarHost(
+    hostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
+    PhoneShimSnackbarHost(
+        hostState = hostState,
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(bottom = SnackbarBottomPadding),
+    )
+}
+
+@Composable
 fun PhoneShimBottomBarSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
@@ -120,6 +133,7 @@ private data class PhoneShimSnackbarVisuals(
 private val SnackbarHeight = 43.dp
 private val SnackbarHorizontalPadding = 16.dp
 private val SnackbarContentPadding = 12.dp
+private val SnackbarBottomPadding = 16.dp
 private val SnackbarShape = RoundedCornerShape(8.dp)
 private val SnackbarInfoColor = Color(0xFF3183FF)
 
