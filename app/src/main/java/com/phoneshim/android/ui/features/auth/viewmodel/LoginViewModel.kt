@@ -2,14 +2,12 @@ package com.phoneshim.android.ui.features.auth.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiException
-import com.phoneshim.android.domain.model.SocialProvider
-import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.CurrentUserRepository
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
-import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -25,7 +23,6 @@ class LoginViewModel @Inject constructor(
     private val googleAuthClient: GoogleAuthClient,
     private val kakaoAuthClient: KakaoAuthClient,
     private val socialLoginUseCase: SocialLoginUseCase,
-    private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
     private val getMyInfoUseCase: GetMyInfoUseCase,
     private val currentUserRepository: CurrentUserRepository,
     private val authFeatureAvailability: AuthFeatureAvailability,
@@ -33,7 +30,6 @@ class LoginViewModel @Inject constructor(
     BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(
         LoginUiState(
             canGoogleLogin = authFeatureAvailability.canGoogleLogin,
-            canRecoverWithdrawal = authFeatureAvailability.canRecoverWithdrawal,
         ),
     ) {
 
@@ -41,9 +37,10 @@ class LoginViewModel @Inject constructor(
         when (event) {
             is LoginUiEvent.LoginClicked -> startLogin(event.provider)
             LoginUiEvent.ErrorDismissed -> setState { copy(errorMessage = null) }
-            LoginUiEvent.WithdrawalRecoveryConfirmed -> recoverWithdrawal()
-            LoginUiEvent.WithdrawalRecoveryDismissed -> setState {
-                copy(withdrawalRecovery = null)
+            LoginUiEvent.WithdrawalPendingAcknowledged,
+            LoginUiEvent.WithdrawalPendingDismissed,
+            -> setState {
+                copy(isWithdrawalPending = false)
             }
         }
     }
@@ -78,7 +75,7 @@ class LoginViewModel @Inject constructor(
         authResult: AuthClientResult.Success,
     ) {
         // provider token은 서버 JWT 교환에만 전달하며 ViewModel 상태나 로컬 저장소에 보관하지 않는다.
-        socialLoginUseCase(provider, authResult.providerAccessToken)
+        socialLoginUseCase(provider, authResult.providerToken)
             .onSuccess { result ->
                 if (result.isNewUser) {
                     finishLoading()
@@ -93,7 +90,7 @@ class LoginViewModel @Inject constructor(
             }
             .onFailure { error ->
                 if (error is AuthException.WithdrawalPending) {
-                    showWithdrawalRecovery(provider, authResult)
+                    showWithdrawalPending()
                 } else {
                     showError(error.toUserMessage())
                 }
@@ -117,48 +114,14 @@ class LoginViewModel @Inject constructor(
             }
     }
 
-    private fun showWithdrawalRecovery(
-        provider: SocialProvider,
-        authResult: AuthClientResult.Success,
-    ) {
-        val providerUserId = authResult.providerUserId
-        val email = authResult.email
-        if (providerUserId == null || email == null) {
-            showError("계정 복구 정보를 확인하지 못했습니다. 다시 로그인해주세요.")
-            return
-        }
+    private fun showWithdrawalPending() {
         setState {
             copy(
                 isLoading = false,
                 selectedProvider = null,
-                withdrawalRecovery = SocialIdentity(provider, providerUserId, email),
+                errorMessage = null,
+                isWithdrawalPending = true,
             )
-        }
-    }
-
-    private fun recoverWithdrawal() {
-        val identity = currentState.withdrawalRecovery ?: return
-        if (!currentState.canRecoverWithdrawal) {
-            setState { copy(withdrawalRecovery = null) }
-            return
-        }
-        if (currentState.isLoading) return
-        setState { copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch {
-            recoverWithdrawalUseCase(identity)
-                .onSuccess {
-                    setState {
-                        copy(
-                            isLoading = false,
-                            withdrawalRecovery = null,
-                        )
-                    }
-                    sendEffect(LoginUiEffect.NavigateToMain)
-                }
-                .onFailure { error ->
-                    setState { copy(isLoading = false) }
-                    showError(error.toUserMessage())
-                }
         }
     }
 
@@ -189,8 +152,8 @@ class LoginViewModel @Inject constructor(
 sealed interface LoginUiEvent : UiEvent {
     data class LoginClicked(val provider: SocialProvider) : LoginUiEvent
     data object ErrorDismissed : LoginUiEvent
-    data object WithdrawalRecoveryConfirmed : LoginUiEvent
-    data object WithdrawalRecoveryDismissed : LoginUiEvent
+    data object WithdrawalPendingAcknowledged : LoginUiEvent
+    data object WithdrawalPendingDismissed : LoginUiEvent
 }
 
 sealed interface LoginUiEffect : UiEffect {

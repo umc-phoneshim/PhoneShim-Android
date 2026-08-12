@@ -325,7 +325,7 @@ $ git clone https://github.com/[Your-Repository]/phone-shim-android.git
 
 GOOGLE_WEB_CLIENT_ID=발급받은 웹 클라이언트 ID
 KAKAO_NATIVE_APP_KEY=발급받은 네이티브 앱 키
-# 서버가 Google ID token을 accessToken으로 받는 계약이 확인된 뒤에만 활성화합니다.
+# 서버의 Google ID token 검증 API가 배포된 뒤에만 활성화합니다.
 GOOGLE_ID_TOKEN_LOGIN_ENABLED=false
 
 # 3. Android Studio로 프로젝트 오픈 후 빌드 진행 (Gradle Sync)

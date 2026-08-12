@@ -1,19 +1,16 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
-import com.phoneshim.android.domain.model.SocialLoginResult
-import com.phoneshim.android.domain.model.SocialProvider
-import com.phoneshim.android.domain.model.SocialIdentity
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.CurrentUserRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
-import com.phoneshim.android.domain.repository.PendingAuthRepository
-import com.phoneshim.android.domain.usecase.SocialLoginUseCase
-import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.ui.features.auth.client.AuthClientResult
 import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
 import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
@@ -57,6 +54,7 @@ class LoginViewModelTest {
         assertNull(state.selectedProvider)
         assertFalse(state.isLoading)
         assertNull(state.errorMessage)
+        assertFalse(state.isWithdrawalPending)
     }
 
     @Test
@@ -105,24 +103,41 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `withdrawal pending login exposes recovery state`() = runTest(dispatcher) {
-        val authResult = AuthClientResult.Success(
-            providerAccessToken = "provider-token",
-            providerUserId = "provider-user",
-            email = "user@example.com",
-        )
+    fun `withdrawal pending login exposes informational state without identity`() = runTest(dispatcher) {
         val viewModel = createViewModel(
-            authResult = authResult,
             loginFailure = AuthException.WithdrawalPending,
         )
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
         runCurrent()
 
-        assertEquals(
-            SocialIdentity(SocialProvider.GOOGLE, "provider-user", "user@example.com"),
-            viewModel.uiState.value.withdrawalRecovery,
-        )
+        val state = viewModel.uiState.value
+        assertTrue(state.isWithdrawalPending)
+        assertFalse(state.isLoading)
+        assertNull(state.selectedProvider)
+        assertNull(state.errorMessage)
+    }
+
+    @Test
+    fun `acknowledging withdrawal pending clears informational state`() = runTest(dispatcher) {
+        val viewModel = createViewModel(loginFailure = AuthException.WithdrawalPending)
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalPendingAcknowledged)
+
+        assertFalse(viewModel.uiState.value.isWithdrawalPending)
+    }
+
+    @Test
+    fun `dismissing withdrawal pending clears informational state`() = runTest(dispatcher) {
+        val viewModel = createViewModel(loginFailure = AuthException.WithdrawalPending)
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalPendingDismissed)
+
+        assertFalse(viewModel.uiState.value.isWithdrawalPending)
     }
 
     @Test
@@ -161,23 +176,14 @@ class LoginViewModelTest {
         val repository = object : AuthRepository {
             override suspend fun socialLogin(
                 provider: SocialProvider,
-                providerAccessToken: String,
+                providerToken: String,
             ): Result<SocialLoginResult> = loginFailure?.let(Result.Companion::failure)
                 ?: Result.success(loginResult)
-        }
-        val pendingRepository = object : PendingAuthRepository {
-            override suspend fun logout(): Result<Unit> = Result.success(Unit)
-            override suspend fun recoverWithdrawal(
-                identity: SocialIdentity,
-            ): Result<SocialLoginResult> = Result.success(SocialLoginResult(isNewUser = false))
-
-            override suspend fun linkAccount(identity: SocialIdentity): Result<Unit> = Result.success(Unit)
         }
         return LoginViewModel(
             googleAuthClient = googleAuthClient,
             kakaoAuthClient = kakaoAuthClient,
             socialLoginUseCase = SocialLoginUseCase(repository),
-            recoverWithdrawalUseCase = RecoverWithdrawalUseCase(pendingRepository),
             getMyInfoUseCase = GetMyInfoUseCase(
                 object : MyPageRepository {
                     override suspend fun getMyInfo() = Result.success(TEST_USER)
@@ -193,7 +199,6 @@ class LoginViewModelTest {
             },
             authFeatureAvailability = AuthFeatureAvailability(
                 canGoogleLogin = canGoogleLogin,
-                canRecoverWithdrawal = true,
                 shouldLoadRemoteProfile = true,
             ),
         )
