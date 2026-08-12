@@ -2,10 +2,11 @@ package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.repository.DashboardRepositoryImpl
 import com.phoneshim.android.data.repository.DeviceUsageRepositoryImpl
-import com.phoneshim.android.data.repository.fake.FakePackageMonitoredAppResolver
 import com.phoneshim.android.data.repository.fake.FakeUsageReasonRepositoryImpl
 import com.phoneshim.android.data.repository.GoalRepositoryImpl
 import com.phoneshim.android.data.repository.InstalledAppsRepositoryImpl
+import com.phoneshim.android.data.repository.MonitoredAppPackageResolver
+import com.phoneshim.android.data.repository.MonitoredAppRepositoryImpl
 import com.phoneshim.android.data.repository.MyPageRepositoryImpl
 import com.phoneshim.android.data.repository.ReportRepositoryImpl
 import com.phoneshim.android.data.repository.ReportUsageReasonRepositoryImpl
@@ -14,6 +15,7 @@ import com.phoneshim.android.domain.repository.DashboardRepository
 import com.phoneshim.android.domain.repository.DeviceUsageRepository
 import com.phoneshim.android.domain.repository.GoalRepository
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
+import com.phoneshim.android.domain.repository.MonitoredAppRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
 import com.phoneshim.android.domain.repository.PackageMonitoredAppResolver
 import com.phoneshim.android.domain.repository.ReportRepository
@@ -52,14 +54,17 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindDeviceUsageRepository(impl: DeviceUsageRepositoryImpl): DeviceUsageRepository
 
-    /**
-     * packageName -> monitoredAppId 매핑. 노뱅의 MonitoredApp 도메인이 develop에 아직 안 들어와서
-     * Fake로 스텁 처리합니다. 실제 도메인이 공개되면 실구현으로 교체하고 Fake를 지우세요.
-     */
+    @Binds
+    @Singleton
+    abstract fun bindMonitoredAppRepository(
+        impl: MonitoredAppRepositoryImpl,
+    ): MonitoredAppRepository
+
+    // packageName -> monitoredAppId 매핑. MonitoredApp 도메인 위에서 캐시 우선으로 변환합니다.
     @Binds
     @Singleton
     abstract fun bindPackageMonitoredAppResolver(
-        impl: FakePackageMonitoredAppResolver,
+        impl: MonitoredAppPackageResolver,
     ): PackageMonitoredAppResolver
 
     @Binds

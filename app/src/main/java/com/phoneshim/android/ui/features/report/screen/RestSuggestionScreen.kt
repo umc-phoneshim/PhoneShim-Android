@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.domain.model.RestSuggestion
+import com.phoneshim.android.domain.model.SuggestionType
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.component.ReportCard
@@ -120,16 +121,10 @@ fun RestSuggestionScreen(
                     CircularProgressIndicator(color = PhoneShimTheme.colors.brand)
                 }
 
-                // 422 INSUFFICIENT_AI_FEEDBACK_DATA. 오류가 아니라 데이터 부족 안내입니다.
-                state.isDataInsufficient -> InsufficientDataCard(
-                    message = state.insufficientDataMessage.orEmpty(),
-                    onRetry = onRetry,
-                )
-
                 state.restSuggestion != null -> SuggestionCard(state.restSuggestion)
 
                 else -> InsufficientDataCard(
-                    message = "아직 보여드릴 제안이 없어요.",
+                    message = state.insufficientDataMessage ?: "아직 보여드릴 제안이 없어요.",
                     onRetry = onRetry,
                 )
             }
@@ -146,15 +141,28 @@ fun RestSuggestionScreen(
     }
 }
 
+/**
+ * 서버가 골라준 문구를 그대로 보여줍니다.
+ * 목표를 넘긴 경우에만 초과 시간을 강조해 한 줄 덧붙입니다.
+ */
 @Composable
 private fun SuggestionCard(suggestion: RestSuggestion, modifier: Modifier = Modifier) {
     ReportCard(modifier = modifier) {
-        Text(
-            text = suggestion.date,
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.textTertiary,
-        )
-        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+        if (suggestion.excessMinutes > 0) {
+            Text(
+                text = "목표보다 ${suggestion.excessMinutes}분",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.error,
+            )
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+        } else if (suggestion.isAchieved) {
+            Text(
+                text = "목표 달성",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.brandStrong,
+            )
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
+        }
         Text(
             text = suggestion.message,
             style = PhoneShimType.KorBodyM,
@@ -203,27 +211,45 @@ private fun InsufficientDataCard(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "목표 초과", showBackground = true)
 @Composable
 private fun RestSuggestionPreview() {
     PhoneShimTheme {
         RestSuggestionScreen(
             state = ReportUiState(
                 restSuggestion = RestSuggestion(
-                    date = "2026-07-11",
-                    message = "오늘은 점심 시간대 사용이 많았습니다. 앱을 열기 전 5분 휴식을 먼저 시도해보세요.",
+                    suggestionType = SuggestionType.TOTAL_EXCEEDED,
+                    message = "오늘 폰 사용 시간이 목표보다 42분 많았어요. " +
+                        "그 중 특히 유튜브 사용이 많이 나타났어요. " +
+                        "내일은 유튜브 사용을 줄여 전체 폰 사용 시간을 줄여봐요.",
+                    excessMinutes = 42,
+                    appName = "유튜브",
                 ),
             ),
         )
     }
 }
 
-@Preview(name = "데이터 부족", showBackground = true)
+@Preview(name = "목표 달성", showBackground = true)
 @Composable
-private fun RestSuggestionInsufficientPreview() {
+private fun RestSuggestionAchievedPreview() {
     PhoneShimTheme {
         RestSuggestionScreen(
-            state = ReportUiState(insufficientDataMessage = "아직 분석할 기록이 충분하지 않아요."),
+            state = ReportUiState(
+                restSuggestion = RestSuggestion(
+                    suggestionType = SuggestionType.ACHIEVED,
+                    message = "오늘 목표를 달성했어요! 지금처럼 꾸준히 이어가 보세요.",
+                    excessMinutes = 0,
+                ),
+            ),
         )
+    }
+}
+
+@Preview(name = "불러오는 중", showBackground = true)
+@Composable
+private fun RestSuggestionLoadingPreview() {
+    PhoneShimTheme {
+        RestSuggestionScreen(state = ReportUiState(isLoading = true))
     }
 }

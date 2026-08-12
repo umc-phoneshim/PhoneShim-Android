@@ -1,7 +1,6 @@
 package com.phoneshim.android.data.repository
 
 import com.google.gson.Gson
-import com.google.gson.JsonParser
 import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.local.TokenDataSource
@@ -48,15 +47,15 @@ class AuthRepositoryImplTest {
         server.enqueue(successResponse(200, isNewUser = false))
         val tokens = tokens("google")
 
-        val result = repository(tokens).socialLogin(SocialProvider.GOOGLE, "google-token")
+        val result = repository(tokens).socialLogin(SocialProvider.GOOGLE, "google-id-token")
 
         assertEquals(SocialLoginResult(isNewUser = false), result.getOrThrow())
         assertEquals("phoneshim-jwt", tokens.getAccessToken())
         val request = server.takeRequest()
+        val requestBody = request.body.readUtf8()
         assertEquals("/api/auth/google", request.path)
-        val body = JsonParser.parseString(request.body.readUtf8()).asJsonObject
-        assertEquals("google-token", body.get("idToken").asString)
-        assertFalse(body.has("accessToken"))
+        assertEquals("""{"idToken":"google-id-token"}""", requestBody)
+        assertFalse(requestBody.contains("accessToken"))
     }
 
     @Test
@@ -67,7 +66,9 @@ class AuthRepositoryImplTest {
             .socialLogin(SocialProvider.KAKAO, "kakao-token")
 
         assertEquals(SocialLoginResult(isNewUser = true), result.getOrThrow())
-        assertEquals("/api/auth/kakao", server.takeRequest().path)
+        val request = server.takeRequest()
+        assertEquals("/api/auth/kakao", request.path)
+        assertEquals("""{"accessToken":"kakao-token"}""", request.body.readUtf8())
     }
 
     @Test

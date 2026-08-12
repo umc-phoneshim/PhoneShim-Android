@@ -63,21 +63,33 @@ class UsageMinutesReader @Inject constructor(
         packageName: String,
         blockedIntervals: List<BlockedInterval> = emptyList(),
         foregroundPackage: String? = null,
+        watchedPackages: Set<String> = emptySet(),
     ): UsageSnapshot {
         val start = startOfToday()
         val now = System.currentTimeMillis()
-        val perPackageMs = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
+        val perPackage = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
 
-        val phoneMs = perPackageMs
+        val phoneMs = perPackage
             .filterKeys { it !in launcherPackages }
             .filterKeys { it != context.packageName }
             .filterKeys { !isSystemApp(it) }
-            .values.sum()
-        val appMs = perPackageMs[packageName] ?: 0L
+            .values.sumOf { it.usedMs }
+        val appMs = perPackage[packageName]?.usedMs ?: 0L
+
+        // 오늘 한 번이라도 쓴 주의앱만 담는다. 안 쓴 앱은 서버에 보낼 값이 없다.
+        val watched = watchedPackages.mapNotNull { pkg ->
+            val aggregate = perPackage[pkg] ?: return@mapNotNull null
+            AppUsageSnapshot(
+                packageName = pkg,
+                usedMinutes = (aggregate.usedMs / 60_000L).toInt(),
+                entryCount = aggregate.entryCount,
+            )
+        }
 
         return UsageSnapshot(
             phoneMinutes = (phoneMs / 60_000L).toInt(),
             appMinutes = (appMs / 60_000L).toInt(),
+            watchedApps = watched,
         )
     }
 
@@ -100,8 +112,10 @@ class UsageMinutesReader @Inject constructor(
         now: Long,
         blockedIntervals: List<BlockedInterval>,
         foregroundPackage: String?,
-    ): Map<String, Long> {
-        val total = HashMap<String, Long>()
+    ): Map<String, PackageAggregate> {
+        val usedMs = HashMap<String, Long>()
+        val entries = HashMap<String, Int>()   // 진입 횟수. 1분 내 재진입은 묶는다.
+        val exitedAt = HashMap<String, Long>() // 직전 이탈 시각. 재진입 묶음 판정용.
         val openedAt = HashMap<String, Long>() // 아직 종료 안 된 세션의 시작 시각
         val switched = HashSet<String>()       // 이 구간에 전환 이벤트가 한 번이라도 관측된 패키지
 
@@ -114,17 +128,23 @@ class UsageMinutesReader @Inject constructor(
                 UsageEvents.Event.MOVE_TO_FOREGROUND -> {
                     switched += pkg
                     openedAt[pkg] = event.timeStamp
+                    if (isNewEntry(exitedAt[pkg], event.timeStamp)) {
+                        entries[pkg] = (entries[pkg] ?: 0) + 1
+                    }
                 }
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     switched += pkg
+                    exitedAt[pkg] = event.timeStamp
                     val from = openedAt.remove(pkg) ?: continue
                     val counted = countedMs(pkg, from, event.timeStamp, blockedIntervals)
-                    if (counted > 0L) total[pkg] = (total[pkg] ?: 0L) + counted
+                    if (counted > 0L) usedMs[pkg] = (usedMs[pkg] ?: 0L) + counted
                 }
             }
         }
 
         // start 이전부터 이어지는 세션 보정. 위 KDoc 참고.
+        // 진입 이벤트가 아니므로 진입 횟수는 올리지 않는다.
+        // (자정 이전부터 이어진 세션은 당일 진입 횟수에 잡히지 않는다 - 이슈 #45 완료 조건)
         if (foregroundPackage != null && foregroundPackage !in switched) {
             openedAt[foregroundPackage] = start
         }
@@ -133,9 +153,15 @@ class UsageMinutesReader @Inject constructor(
         // 차단 중인 앱도 세션이 열린 채로 남으므로, 여기서도 차단 구간을 제외한다.
         for ((pkg, from) in openedAt) {
             val counted = countedMs(pkg, from, now, blockedIntervals)
-            if (counted > 0L) total[pkg] = (total[pkg] ?: 0L) + counted
+            if (counted > 0L) usedMs[pkg] = (usedMs[pkg] ?: 0L) + counted
         }
-        return total
+
+        return (usedMs.keys + entries.keys).associateWith { pkg ->
+            PackageAggregate(
+                usedMs = usedMs[pkg] ?: 0L,
+                entryCount = entries[pkg] ?: 0,
+            )
+        }
     }
 
     /**
@@ -158,6 +184,12 @@ class UsageMinutesReader @Inject constructor(
         }
         return ((to - from) - blocked).coerceAtLeast(0L)
     }
+
+    /** 한 패키지의 오늘 집계 중간값. 이 클래스 밖으로 나가지 않는다. */
+    private data class PackageAggregate(
+        val usedMs: Long,
+        val entryCount: Int,
+    )
 
     private fun resolveLauncherPackages(): Set<String> {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -182,8 +214,46 @@ class UsageMinutesReader @Inject constructor(
     }
 }
 
+/**
+ * 이 시간 안에 다시 들어오면 같은 진입으로 본다. 기획 MAIN104.
+ */
+internal const val REENTRY_WINDOW_MS = 60_000L
+
+/**
+ * 이 포그라운드 전환을 새 진입으로 셀지.
+ *
+ * 기획(MAIN104): "진입 횟수는 1분 내 재진입 시 1회로 처리한다."
+ * 알림을 확인하려고 잠깐 나갔다 오는 것을 두 번으로 세지 않기 위한 규칙이다.
+ * 직전 이탈 기록이 없으면(오늘 첫 진입) 항상 새 진입이다.
+ *
+ * [UsageMinutesReader] 는 UsageStatsManager 를 직접 잡아 인스턴스를 만들 수 없으므로,
+ * 규칙만 최상위 함수로 빼서 단위 테스트가 가능하게 둔다.
+ *
+ * @param lastExitAt 직전 이탈 시각. 오늘 첫 진입이면 null.
+ * @param enteredAt 이번 진입 시각.
+ */
+internal fun isNewEntry(lastExitAt: Long?, enteredAt: Long): Boolean =
+    lastExitAt == null || enteredAt - lastExitAt >= REENTRY_WINDOW_MS
+
 /** 한 번의 조회로 얻은 사용량 스냅샷(분). */
 data class UsageSnapshot(
     val phoneMinutes: Int,
     val appMinutes: Int,
+    /**
+     * 주의앱별 오늘 사용량. usageSnapshot(watchedPackages = ...) 로 요청했을 때만 채워진다.
+     * 서버 업로드용이며, 오늘 사용 기록이 없는 앱은 담기지 않는다.
+     */
+    val watchedApps: List<AppUsageSnapshot> = emptyList(),
+)
+
+/**
+ * 오늘(기기 자정)부터 현재까지 누적된 주의앱 하나의 사용량.
+ *
+ * 하루가 끝난 확정값이 아니라 그 시점의 스냅샷이라 조회할 때마다 값이 커진다.
+ * 서버 업로드(PUT /api/usage-logs)에 그대로 실린다.
+ */
+data class AppUsageSnapshot(
+    val packageName: String,
+    val usedMinutes: Int,
+    val entryCount: Int,
 )

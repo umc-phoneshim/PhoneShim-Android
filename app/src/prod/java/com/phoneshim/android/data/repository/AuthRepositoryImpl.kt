@@ -23,17 +23,13 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
     override suspend fun socialLogin(
         provider: SocialProvider,
-        providerAccessToken: String,
+        providerToken: String,
     ): Result<SocialLoginResult> = try {
-        require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
+        require(providerToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         val response = apiCallExecutor.execute {
             when (provider) {
-                SocialProvider.GOOGLE -> authApi.loginWithGoogle(
-                    GoogleLoginRequest(idToken = providerAccessToken),
-                )
-                SocialProvider.KAKAO -> authApi.loginWithKakao(
-                    KakaoLoginRequest(accessToken = providerAccessToken),
-                )
+                SocialProvider.GOOGLE -> authApi.loginWithGoogle(GoogleLoginRequest(providerToken))
+                SocialProvider.KAKAO -> authApi.loginWithKakao(KakaoLoginRequest(providerToken))
             }
         }
         // 소셜 provider token 대신 폰쉼 서버가 발급한 JWT만 장기 세션으로 저장한다.

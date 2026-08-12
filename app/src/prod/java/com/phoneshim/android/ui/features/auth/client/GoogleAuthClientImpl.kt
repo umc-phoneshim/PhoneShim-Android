@@ -1,6 +1,5 @@
 package com.phoneshim.android.ui.features.auth.client
 
-import android.app.Activity
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -10,7 +9,6 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.phoneshim.android.BuildConfig
 import com.phoneshim.android.domain.model.AuthException
-import com.phoneshim.android.domain.model.PendingAuthFeature
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,7 +20,7 @@ class GoogleAuthClientImpl @Inject constructor(
         val activity = activityProvider.requireActivity()
         if (!BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED) {
             return AuthClientResult.Failure(
-                AuthException.FeatureUnavailable(PendingAuthFeature.GOOGLE_LOGIN_TOKEN_CONTRACT),
+                IllegalStateException("Google ID token 로그인이 비활성화되어 있습니다."),
             )
         }
         if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
@@ -32,7 +30,6 @@ class GoogleAuthClientImpl @Inject constructor(
         }
 
         return try {
-            // 로그인 화면의 명시적 버튼에서는 계정 추가·재인증을 지원하는 버튼 전용 옵션을 사용한다.
             val googleIdOption = GetSignInWithGoogleOption.Builder(
                 BuildConfig.GOOGLE_WEB_CLIENT_ID,
             )
@@ -50,11 +47,7 @@ class GoogleAuthClientImpl @Inject constructor(
             ) {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 AuthClientResult.Success(
-                    // 공통 모델의 이름은 providerAccessToken이지만 Google에서는 OIDC ID token을 전달한다.
-                    providerAccessToken = googleCredential.idToken,
-                    // TODO: 서버가 ID token의 sub/email claim을 검증하도록 계약 변경 후 식별 정보 직접 전달을 제거한다.
-                    providerUserId = googleCredential.id,
-                    email = googleCredential.id,
+                    providerToken = googleCredential.idToken,
                 )
             } else {
                 AuthClientResult.Failure(

@@ -166,9 +166,7 @@ class ReminderViewModel @Inject constructor(
             setState {
                 copy(draft = draft.copy(titleError = titleError, timeError = timeError))
             }
-            if (timeError != DUPLICATE_SCHEDULE_MESSAGE) {
-                sendEffect(ReminderUiEffect.ShowMessage(requireNotNull(timeError ?: titleError)))
-            }
+            sendEffect(ReminderUiEffect.ShowMessage(requireNotNull(timeError ?: titleError)))
             return
         }
         val startInstant = state.selectedDate.atMinutes(requireNotNull(start))
@@ -219,6 +217,7 @@ class ReminderViewModel @Inject constructor(
                             isTaskPopupVisible = false,
                         )
                     }
+                    sendEffect(ReminderUiEffect.ShowMessage(REMINDER_DELETED_MESSAGE))
                 }
                 .onFailure(::handleMutationFailure)
         }
@@ -266,6 +265,7 @@ class ReminderViewModel @Inject constructor(
         } else {
             currentTasks + savedTask
         }.sortedWith(compareBy(ReminderTaskUiModel::startMinutes, ReminderTaskUiModel::endMinutes))
+        sendEffect(ReminderUiEffect.ShowMessage(REMINDER_SAVED_MESSAGE))
         copy(
             tasksByDate = tasksByDate + (date to updated),
             isSubmitting = false,
@@ -282,7 +282,7 @@ class ReminderViewModel @Inject constructor(
             when (error.code) {
                 ReminderErrorCodes.REMINDER_TIME_OVERLAP -> setState {
                     copy(draft = draft.copy(timeError = DUPLICATE_SCHEDULE_MESSAGE))
-                }
+                }.also { sendEffect(ReminderUiEffect.ShowMessage(DUPLICATE_SCHEDULE_MESSAGE)) }
                 ReminderErrorCodes.INVALID_TIME_RANGE -> setState {
                     copy(draft = draft.copy(timeError = "시간 범위를 다시 확인해 주세요"))
                 }
@@ -342,6 +342,8 @@ private fun UiError.toReminderMessage(): String = when (code) {
 private val KOREA_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private const val CACHE_WARNING_MESSAGE = "네트워크에 연결할 수 없어 저장된 일정을 표시하고 있어요."
 private const val OFFLINE_EDIT_MESSAGE = "네트워크 연결 후 일정을 변경해 주세요."
+private const val REMINDER_SAVED_MESSAGE = "저장되었습니다."
+private const val REMINDER_DELETED_MESSAGE = "삭제되었습니다."
 
 internal fun timeRangesOverlap(newStart: Int, newEnd: Int, existingStart: Int, existingEnd: Int): Boolean =
     newStart < existingEnd && existingStart < newEnd

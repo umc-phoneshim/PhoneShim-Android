@@ -76,11 +76,14 @@ class GoalRepositoryImpl @Inject constructor(
             return@runCatchingApiCall null
         }
 
-        val appGoals = monitoredApps.associate { app -> app.id to getAppGoalOrNull(app.id) }
-        val goal = toDomain(monitoredApps, totalGoal, appGoals)
+        // id 나 packageName 이 빠진 항목은 식별도 차단도 할 수 없어 버린다.
+        // (Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어온다)
+        val usableApps = monitoredApps.filter { it.id != null && it.packageName != null }
+        val appGoals = usableApps.associate { app -> app.id!! to getAppGoalOrNull(app.id!!) }
+        val goal = toDomain(usableApps, totalGoal, appGoals)
 
         // 서버가 원본이므로 성공적으로 읽었으면 엔진용 캐시를 갱신해 둔다.
-        mirrorToLocal(monitoredApps, totalGoal, appGoals)
+        mirrorToLocal(usableApps, totalGoal, appGoals)
         goal
     }
 
@@ -103,6 +106,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = it.goalMinutes,
                     accessLimited = it.limitEnabled,
                     targetCount = it.targetCount,
+                    goalReason = it.goalReason,
                 )
             },
         )
@@ -121,14 +125,17 @@ class GoalRepositoryImpl @Inject constructor(
             ageGroup = profile?.ageGroup,
             dailyGoalMinutes = totalGoal?.targetMinutes ?: 0,
             blockAfterGoal = totalGoal?.restrictAfter ?: false,
-            apps = monitoredApps.map { app ->
+            apps = monitoredApps.mapNotNull { app ->
+                val packageName = app.packageName ?: return@mapNotNull null
                 val appGoal = appGoals[app.id]
                 AppGoal(
-                    packageName = app.packageName,
-                    appName = app.appName,
+                    packageName = packageName,
+                    // 앱 이름이 없으면 패키지명이라도 보여준다. 빈 줄로 두는 것보다 낫다.
+                    appName = app.appName ?: packageName,
                     goalMinutes = appGoal?.targetMinutes ?: 0,
                     accessLimited = appGoal?.restrictAfter ?: false,
                     targetCount = appGoal?.targetCount ?: 1,
+                    goalReason = appGoal?.goalReason,
                 )
             },
         )
@@ -159,6 +166,7 @@ class GoalRepositoryImpl @Inject constructor(
                     goalMinutes = app.goalMinutes,
                     limitEnabled = app.accessLimited,
                     targetCount = app.targetCount,
+                    goalReason = app.goalReason,
                     monitoredAppId = previous?.monitoredAppId,
                     appGoalId = previous?.appGoalId,
                 )
@@ -182,11 +190,13 @@ class GoalRepositoryImpl @Inject constructor(
 
         remoteApps
             .filter { it.packageName !in selectedPackages }
-            .forEach { monitoredAppApi.deleteMonitoredApp(it.id) }
+            // id 가 없으면 삭제 요청을 만들 수 없다. 서버 응답이 온전치 않은 경우라 건너뛴다.
+            .mapNotNull { it.id }
+            .forEach { id -> apiCallExecutor.executeNoContent { monitoredAppApi.deleteMonitoredApp(id) } }
 
         val totalGoal = upsertTotalGoal(goal)
 
-        val syncedApps = goal.apps.mapIndexed { index, app ->
+        val syncedApps = goal.apps.mapIndexedNotNull { index, app ->
             val monitored = remoteByPackage[app.packageName]
                 ?: apiCallExecutor.execute {
                     monitoredAppApi.createMonitoredApp(
@@ -197,8 +207,10 @@ class GoalRepositoryImpl @Inject constructor(
                         ),
                     )
                 }
-            val appGoal = upsertAppGoal(monitored.id, app)
-            app to (monitored to appGoal)
+            // id 가 없으면 앱 목표를 어디에 붙일지 알 수 없다. 이 앱만 건너뛰고 나머지는 진행한다.
+            val monitoredAppId = monitored.id ?: return@mapIndexedNotNull null
+            val appGoal = upsertAppGoal(monitoredAppId, app)
+            Triple(app, monitoredAppId, appGoal)
         }
 
         // 서버가 발급한 식별자를 캐시에 반영해 둔다.
@@ -210,15 +222,15 @@ class GoalRepositoryImpl @Inject constructor(
             ),
         )
         goalDao.upsertAppGoals(
-            syncedApps.map { (app, ids) ->
-                val (monitored, appGoal) = ids
+            syncedApps.map { (app, monitoredAppId, appGoal) ->
                 AppGoalEntity(
                     packageName = app.packageName,
                     appLabel = app.appName,
                     goalMinutes = app.goalMinutes,
                     limitEnabled = app.accessLimited,
                     targetCount = app.targetCount,
-                    monitoredAppId = monitored.id,
+                    goalReason = app.goalReason,
+                    monitoredAppId = monitoredAppId,
                     appGoalId = appGoal.id,
                 )
             },
@@ -252,13 +264,16 @@ class GoalRepositoryImpl @Inject constructor(
     /** 주의 앱 1개당 목표 1개다. 없으면 POST, 있으면 PATCH. */
     private suspend fun upsertAppGoal(monitoredAppId: String, app: AppGoal): AppGoalResponse {
         val existing = getAppGoalOrNull(monitoredAppId)
-        return if (existing == null) {
+        // 조회는 됐는데 id 가 없으면 PATCH 경로를 만들 수 없어 생성으로 돌린다.
+        val existingId = existing?.id
+        return if (existingId == null) {
             apiCallExecutor.execute {
                 appGoalApi.createAppGoal(
                     AppGoalCreateRequest(
                         monitoredAppId = monitoredAppId,
                         targetMinutes = app.goalMinutes,
                         targetCount = app.targetCount,
+                        goalReason = app.goalReason,
                         restrictAfter = app.accessLimited,
                     ),
                 )
@@ -266,10 +281,11 @@ class GoalRepositoryImpl @Inject constructor(
         } else {
             apiCallExecutor.execute {
                 appGoalApi.updateAppGoal(
-                    existing.id,
+                    existingId,
                     AppGoalUpdateRequest(
                         targetMinutes = app.goalMinutes,
                         targetCount = app.targetCount,
+                        goalReason = app.goalReason,
                         restrictAfter = app.accessLimited,
                     ),
                 )
@@ -293,14 +309,16 @@ class GoalRepositoryImpl @Inject constructor(
         )
         goalDao.clearAppGoals()
         goalDao.upsertAppGoals(
-            monitoredApps.map { app ->
+            monitoredApps.mapNotNull { app ->
+                val packageName = app.packageName ?: return@mapNotNull null
                 val appGoal = appGoals[app.id]
                 AppGoalEntity(
-                    packageName = app.packageName,
-                    appLabel = app.appName,
+                    packageName = packageName,
+                    appLabel = app.appName ?: packageName,
                     goalMinutes = appGoal?.targetMinutes ?: 0,
                     limitEnabled = appGoal?.restrictAfter ?: false,
                     targetCount = appGoal?.targetCount ?: 1,
+                    goalReason = appGoal?.goalReason,
                     monitoredAppId = app.id,
                     appGoalId = appGoal?.id,
                 )

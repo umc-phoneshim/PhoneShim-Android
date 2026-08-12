@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.api
 
 import com.phoneshim.android.data.api.common.ApiResponse
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -46,11 +47,14 @@ interface MonitoredAppApi {
     /**
      * 상태: 구현완료. 성공 시 204 No Content라 envelope 없이 본문이 비어 옵니다.
      * 연결된 app_goals·reminder_restricted_apps는 서버 cascade 정책을 따릅니다.
+     *
+     * 공통 ApiCallExecutor.executeNoContent 로 감싸야 실패 응답이 ApiException 으로
+     * 변환되고 서버 오류 코드가 보존됩니다. 그래서 Response<Unit> 으로 받습니다.
      */
     @DELETE("api/monitored-apps/{id}")
     suspend fun deleteMonitoredApp(
         @Path("id") id: String,
-    )
+    ): Response<Unit>
 }
 
 data class MonitoredAppCreateRequest(
@@ -69,13 +73,17 @@ data class MonitoredAppUpdateRequest(
     val sortOrder: Int? = null,
 )
 
+/**
+ * Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+ * 그래서 전부 nullable 로 받고 도메인 변환에서 보정합니다.
+ */
 data class MonitoredAppResponse(
-    val id: String,
-    val userId: String,
-    val packageName: String,
-    val appName: String,
+    val id: String? = null,
+    val userId: String? = null,
+    val packageName: String? = null,
+    val appName: String? = null,
     val appIcon: String? = null,
-    val sortOrder: Int,
-    val createdAt: String,
-    val updatedAt: String,
+    val sortOrder: Int? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )

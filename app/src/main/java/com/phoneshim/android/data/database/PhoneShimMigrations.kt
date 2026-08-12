@@ -79,3 +79,13 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         database.execSQL("ALTER TABLE `phone_goal_cache` ADD COLUMN `serverGoalId` TEXT")
     }
 }
+
+/**
+ * 앱별 목표 이유(서버 goalReason)를 캐시에 추가한다.
+ * 설정(PREF)의 '어플 목표 설정' 문구가 이 값이며, 기존 행은 값이 없어 NULL 로 둔다.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE `app_goal_cache` ADD COLUMN `goalReason` TEXT")
+    }
+}

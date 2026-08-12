@@ -143,6 +143,23 @@ class GoalRepositoryImplTest {
         assertEquals(1, kakaoGoal.targetCount)
     }
 
+    @Test
+    fun `목표 이유는 서버와 로컬 캐시에 함께 저장된다`() = runTest {
+        val goal = sampleGoal().let { base ->
+            base.copy(apps = base.apps.map { it.copy(goalReason = "쇼츠를 줄이기 위해") })
+        }
+
+        repository.saveGoal(goal).getOrThrow()
+
+        val kakaoGoal = appGoalApi.goals.values.first { it.monitoredAppId == "monitored-com.kakao.talk" }
+        assertEquals("쇼츠를 줄이기 위해", kakaoGoal.goalReason)
+        // 설정(PREF)이 오프라인에서도 문구를 복원할 수 있어야 한다.
+        assertEquals(
+            "쇼츠를 줄이기 위해",
+            goalDao.appGoals.first { it.packageName == "com.kakao.talk" }.goalReason,
+        )
+    }
+
     // ── 조회 ────────────────────────────────────────────────────────
 
     @Test
@@ -253,10 +270,11 @@ class GoalRepositoryImplTest {
             return ApiResponse(success = true, data = apps.first { it.id == id })
         }
 
-        override suspend fun deleteMonitoredApp(id: String) {
+        override suspend fun deleteMonitoredApp(id: String): Response<Unit> {
             failWith?.let { throw it }
             deletedIds += id
             apps.removeAll { it.id == id }
+            return Response.success(null)
         }
     }
 
@@ -336,8 +354,9 @@ class GoalRepositoryImplTest {
             return ApiResponse(success = true, data = updated)
         }
 
-        override suspend fun deleteAppGoal(id: String) {
+        override suspend fun deleteAppGoal(id: String): Response<Unit> {
             goals.entries.removeAll { it.value.id == id }
+            return Response.success(null)
         }
     }
 
@@ -360,6 +379,10 @@ class GoalRepositoryImplTest {
             appGoals.removeAll { it.packageName == packageName }
         }
         override suspend fun clearAppGoals() = appGoals.clear()
+        override suspend fun findMonitoredAppId(packageName: String): String? =
+            appGoals.firstOrNull { it.packageName == packageName }?.monitoredAppId
+        override suspend fun findPackageName(monitoredAppId: String): String? =
+            appGoals.firstOrNull { it.monitoredAppId == monitoredAppId }?.packageName
     }
 
     private class FakeUserProfileDao : UserProfileDao {

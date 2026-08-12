@@ -48,8 +48,7 @@ import kotlin.math.abs
 
 private val TaskRowHeight = 56.dp
 private val TaskItemSpacing = 12.dp
-private val TaskCardPadding = 12.dp
-private val TaskCardHeight = TaskRowHeight + TaskCardPadding * 2
+private val TaskCardHeight = TaskRowHeight
 
 @Composable
 internal fun ReminderTaskSection(
@@ -101,11 +100,7 @@ internal fun ReminderTaskSection(
                                     ),
                                     fadeOutSpec = null,
                                 )
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(PhoneShimTheme.colors.surface)
-                                .border(1.dp, PhoneShimPalette.Primary300, RoundedCornerShape(12.dp))
-                                .padding(TaskCardPadding),
+                                .fillMaxWidth(),
                         ) {
                             ReminderTaskItem(
                                 task = task,
@@ -152,7 +147,7 @@ private fun ReminderTaskItem(
     onMoveTask: (Int, Int) -> Unit,
 ) {
     val moveThreshold = with(androidx.compose.ui.platform.LocalDensity.current) {
-        ((TaskRowHeight + TaskCardPadding * 2 + TaskItemSpacing) / 2).toPx()
+        ((TaskRowHeight + TaskItemSpacing) / 2).toPx()
     }
     val latestIndex by rememberUpdatedState(index)
     var accumulatedDrag by remember(task.id) { mutableFloatStateOf(0f) }
@@ -162,6 +157,7 @@ private fun ReminderTaskItem(
         title = task.title,
         timeRange = "${formatMinutes(task.startMinutes)} ~ ${formatMinutes(task.endMinutes)}",
         modifier = Modifier.fillMaxWidth().height(TaskRowHeight),
+        variant = com.phoneshim.android.ui.common.TodoRowVariant.Card,
         leadingContent = {
             Icon(
                 painter = painterResource(R.drawable.ic_reminder_drag_handle),

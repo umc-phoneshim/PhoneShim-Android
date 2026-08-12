@@ -18,9 +18,9 @@ class MockAuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
     override suspend fun socialLogin(
         provider: SocialProvider,
-        providerAccessToken: String,
+        providerToken: String,
     ): Result<SocialLoginResult> = runCatching {
-        require(providerAccessToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
+        require(providerToken.isNotBlank()) { "소셜 인증 토큰이 비어 있습니다." }
         when (scenarioStore.scenario) {
             MockAuthScenario.SERVER_FAILURE -> error("dev mock 서버 로그인 실패")
             MockAuthScenario.WITHDRAWAL_PENDING -> throw AuthException.WithdrawalPending

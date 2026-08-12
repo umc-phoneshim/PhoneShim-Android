@@ -1,5 +1,6 @@
 package com.phoneshim.android.blocking.policy
 
+import android.util.Log
 import com.phoneshim.android.data.database.dao.ReminderRestrictionDao
 import java.time.LocalDate
 import java.time.LocalTime
@@ -29,18 +30,28 @@ class ReminderSchedulePolicyProvider @Inject constructor(
             return ScheduleBlock.FullPhone
         }
 
-        val packages = active
-            .filter { it.restrictionMode == MODE_SPECIFIC_APPS }
+        val specificApps = active.filter { it.restrictionMode == MODE_SPECIFIC_APPS }
+        val packages = specificApps
             .flatMap { it.restrictedPackages.split(",") }
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .toSet()
+
+        // 사용자가 앱을 골라 저장했으니 목록이 비어 있을 수 없다. 비었다면 캐시에 잘못 들어간 것이다.
+        // 흔한 원인은 monitoredAppId -> packageName 변환 실패
+        // 여기서 막을 방법은 없으므로 판정은 그대로 두고, "일정을 걸었는데 안 막힌다" 는
+        // 증상의 원인을 로그로 남긴다.
+        if (specificApps.isNotEmpty() && packages.isEmpty()) {
+            Log.w(TAG, "특정 앱 제한 일정이 활성인데 대상 패키지가 비었다. 변환 실패 가능성. " +
+                    "taskIds=${specificApps.map { it.taskId }}")
+        }
 
         return if (packages.isEmpty()) ScheduleBlock.None
         else ScheduleBlock.SpecificApps(packages)
     }
 
     private companion object {
+        const val TAG = "ReminderSchedule"
         const val MODE_FULL_PHONE = "FULL_PHONE"
         const val MODE_SPECIFIC_APPS = "SPECIFIC_APP" // API 명세 값
     }

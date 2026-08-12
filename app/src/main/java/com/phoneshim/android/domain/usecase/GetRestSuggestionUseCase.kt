@@ -5,8 +5,9 @@ import com.phoneshim.android.domain.repository.ReportRepository
 import javax.inject.Inject
 
 /**
- * 쉼이의 제안.
- * 백엔드가 사용 빈도 등을 분석해 완성된 문구를 내려주고, 화면은 그대로 출력합니다.
+ * 쉼이의 제안. GET /api/reports/suggestion?date=
+ *
+ * AI가 아니라 백엔드가 목표 대비 사용량을 보고 정해진 문구를 골라 줍니다.
  */
 class GetRestSuggestionUseCase @Inject constructor(
     private val reportRepository: ReportRepository,

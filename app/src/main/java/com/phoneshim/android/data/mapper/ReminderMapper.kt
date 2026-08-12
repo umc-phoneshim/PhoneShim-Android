@@ -12,8 +12,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val koreaZoneId: ZoneId = ZoneId.of("Asia/Seoul")
+private val reminderDateTimeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ssXXX")
 
 fun ReminderResponse.toDomain(): Reminder =
     try {
@@ -90,7 +93,8 @@ private fun ReminderRestrictionMode.toApiValue(): String =
 private fun ReminderRestrictionMode.validatedAppIds(appIds: Set<String>): List<String> =
     if (this == ReminderRestrictionMode.SPECIFIC_APP) appIds.sorted() else emptyList()
 
-private fun Instant.toKoreaOffsetString(): String = atZone(koreaZoneId).toOffsetDateTime().toString()
+private fun Instant.toKoreaOffsetString(): String =
+    reminderDateTimeFormatter.format(atZone(koreaZoneId).toOffsetDateTime())
 
 class ReminderMappingException(
     message: String,

@@ -39,11 +39,11 @@ class SocialLoginUseCaseTest {
 
         override suspend fun socialLogin(
             provider: SocialProvider,
-            providerAccessToken: String,
+            providerToken: String,
         ): Result<SocialLoginResult> {
             callCount += 1
             this.provider = provider
-            token = providerAccessToken
+            token = providerToken
             return Result.success(SocialLoginResult(isNewUser = false))
         }
     }

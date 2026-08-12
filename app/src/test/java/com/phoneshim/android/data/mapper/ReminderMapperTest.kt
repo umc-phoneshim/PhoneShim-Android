@@ -48,7 +48,8 @@ class ReminderMapperTest {
         val request = command.toRequest()
 
         assertEquals("2026-07-16", request.date)
-        assertEquals("2026-07-16T10:00+09:00", request.startTime)
+        assertEquals("2026-07-16T10:00:00+09:00", request.startTime)
+        assertEquals("2026-07-16T11:00:00+09:00", request.endTime)
         assertEquals("SPECIFIC_APP", request.restrictMode)
         assertEquals(listOf("app-1", "app-2"), request.restrictedAppIds)
     }
@@ -76,6 +77,17 @@ class ReminderMapperTest {
         assertEquals(null, request.startTime)
         assertEquals(null, request.restrictMode)
         assertEquals(null, request.restrictedAppIds)
+    }
+
+    @Test
+    fun `수정 시간도 초와 timezone을 포함한 ISO 형식으로 변환한다`() {
+        val request = UpdateReminderCommand(
+            startTime = Instant.parse("2026-07-16T01:00:00Z"),
+            endTime = Instant.parse("2026-07-16T02:00:00Z"),
+        ).toRequest()
+
+        assertEquals("2026-07-16T10:00:00+09:00", request.startTime)
+        assertEquals("2026-07-16T11:00:00+09:00", request.endTime)
     }
 
     @Test(expected = ReminderMappingException::class)

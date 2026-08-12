@@ -26,7 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +96,15 @@ fun AppSelectScreen(
     }
 }
 
+/**
+ * 카드에 기본으로 보여줄 앱 개수.
+ *
+ * 설치 앱을 전부 뿌리면 목록이 100개를 넘어 스크롤이 길어집니다. 목록은 사용량이 많은
+ * 순으로 정렬되어 있고(사용정보 접근 권한이 없으면 가나다순), 주의 앱은 최대 5개까지
+ * 고를 수 있어 이 정도면 대부분 여기서 끝납니다. 더 필요하면 '기타 어플 추가'로 펼칩니다.
+ */
+private const val SHORTLIST_SIZE = 5
+
 @Composable
 private fun AppSelectContent(
     apps: List<InstalledApp>,
@@ -102,6 +114,22 @@ private fun AppSelectContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    // 접힌 상태에서도 이미 고른 앱은 보여야 합니다. 펼쳐서 고른 뒤 접히면
+    // 선택한 앱이 목록에서 사라져 해제할 방법이 없어집니다.
+    val visibleApps = remember(apps, selectedPackages, expanded) {
+        if (expanded) {
+            apps
+        } else {
+            val top = apps.take(SHORTLIST_SIZE)
+            val topPackages = top.mapTo(mutableSetOf()) { it.packageName }
+            top + apps.filter {
+                it.packageName in selectedPackages && it.packageName !in topPackages
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -117,6 +145,9 @@ private fun AppSelectContent(
                     start = PhoneShimDimens.screenHorizontalPadding,
                     end = PhoneShimDimens.screenHorizontalPadding,
                     top = PhoneShimDimens.spacing16,
+                    // 버튼이 스크롤 안에 있어서, 앱이 많아 끝까지 내리면 버튼이 화면 밑변에
+                    // 붙어버린다. 다른 04-x 화면의 하단 여백과 같은 16을 준다.
+                    bottom = PhoneShimDimens.spacing16,
                 )
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
@@ -146,7 +177,7 @@ private fun AppSelectContent(
                 )
 
                 SetGoalCard {
-                    apps.forEachIndexed { index, app ->
+                    visibleApps.forEachIndexed { index, app ->
                         AppInfoRow(
                             appName = app.label,
                             appNameStyle = PhoneShimType.KorCaption,
@@ -159,44 +190,46 @@ private fun AppSelectContent(
                                 AppCheckCircle(checked = selectedPackages.contains(app.packageName))
                             },
                         )
-                        if (index != apps.lastIndex) {
+                        if (index != visibleApps.lastIndex) {
                             SetGoalCardDivider()
                         }
                     }
 
-                    if (apps.isNotEmpty()) {
+                    if (visibleApps.isNotEmpty()) {
                         SetGoalCardDivider()
                     }
 
-                    // TODO: 기타 어플 추가 플로우 연동
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(28.dp)
-                            .clickable { },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-                    ) {
-                        Box(
+                    // 남은 앱을 목록에 펼칩니다. 더 펼칠 게 없으면 행을 감춥니다.
+                    if (!expanded && visibleApps.size < apps.size) {
+                        Row(
                             modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(PhoneShimTheme.colors.background)
-                                .border(1.dp, PhoneShimTheme.colors.border, CircleShape),
-                            contentAlignment = Alignment.Center,
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .clickable { expanded = true },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_plus),
-                                contentDescription = null,
-                                tint = PhoneShimTheme.colors.textTertiary,
-                                modifier = Modifier.size(10.dp),
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(PhoneShimTheme.colors.background)
+                                    .border(1.dp, PhoneShimTheme.colors.border, CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_plus),
+                                    contentDescription = null,
+                                    tint = PhoneShimTheme.colors.textTertiary,
+                                    modifier = Modifier.size(10.dp),
+                                )
+                            }
+                            Text(
+                                text = "기타 어플 추가",
+                                style = PhoneShimType.KorLabel,
+                                color = PhoneShimTheme.colors.textTertiary,
                             )
                         }
-                        Text(
-                            text = "기타 어플 추가",
-                            style = PhoneShimType.KorLabel,
-                            color = PhoneShimTheme.colors.textTertiary,
-                        )
                     }
                 }
             }
