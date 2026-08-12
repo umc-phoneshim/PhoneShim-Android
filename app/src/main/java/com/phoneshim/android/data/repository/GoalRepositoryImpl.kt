@@ -1,6 +1,5 @@
 package com.phoneshim.android.data.repository
 
-import com.phoneshim.android.data.api.ApiException
 import com.phoneshim.android.data.api.AppGoalApi
 import com.phoneshim.android.data.api.AppGoalCreateRequest
 import com.phoneshim.android.data.api.AppGoalResponse
@@ -13,9 +12,8 @@ import com.phoneshim.android.data.api.TotalGoalApi
 import com.phoneshim.android.data.api.TotalGoalCreateRequest
 import com.phoneshim.android.data.api.TotalGoalResponse
 import com.phoneshim.android.data.api.TotalGoalUpdateRequest
-import com.phoneshim.android.data.api.runCatchingApi
-import com.phoneshim.android.data.api.toApiException
-import com.phoneshim.android.data.api.unwrap
+import com.phoneshim.android.data.api.common.ApiCallExecutor
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.database.dao.GoalDao
 import com.phoneshim.android.data.database.dao.UserProfileDao
 import com.phoneshim.android.data.database.entity.AppGoalEntity
@@ -25,7 +23,7 @@ import com.phoneshim.android.domain.model.AppGoal
 import com.phoneshim.android.domain.model.Goal
 import com.phoneshim.android.domain.repository.GoalRepository
 import javax.inject.Inject
-import retrofit2.HttpException
+import kotlinx.coroutines.CancellationException
 
 /**
  * 목표 저장소. 서버 MonitoredApp/TotalGoal/AppGoal 3개 도메인을 도메인 모델 [Goal] 하나로 합쳐 다룬다.
@@ -44,6 +42,7 @@ class GoalRepositoryImpl @Inject constructor(
     private val monitoredAppApi: MonitoredAppApi,
     private val totalGoalApi: TotalGoalApi,
     private val appGoalApi: AppGoalApi,
+    private val apiCallExecutor: ApiCallExecutor,
     private val goalDao: GoalDao,
     private val userProfileDao: UserProfileDao,
 ) : GoalRepository {
@@ -59,7 +58,7 @@ class GoalRepositoryImpl @Inject constructor(
     override suspend fun saveGoal(goal: Goal): Result<Unit> = runCatching {
         saveLocal(goal)
         // 서버 동기화 실패가 로컬 저장을 되돌리지 않는다.
-        runCatchingApi { syncToServer(goal) }
+        runCatchingApiCall { syncToServer(goal) }
         Unit
     }
 
@@ -69,12 +68,12 @@ class GoalRepositoryImpl @Inject constructor(
      * 서버에서 주의 앱·전체 목표·앱별 목표를 모아 [Goal] 로 만든다.
      * 성공했지만 아직 설정된 목표가 없으면 성공(null)이고, 통신 자체가 실패하면 failure 다.
      */
-    private suspend fun fetchRemoteGoal(): Result<Goal?> = runCatchingApi {
-        val monitoredApps = monitoredAppApi.getMonitoredApps().unwrap()
+    private suspend fun fetchRemoteGoal(): Result<Goal?> = runCatchingApiCall {
+        val monitoredApps = apiCallExecutor.execute { monitoredAppApi.getMonitoredApps() }
         val totalGoal = getTotalGoalOrNull()
         // 목표를 아직 한 번도 설정하지 않은 상태. 온보딩을 띄워야 하므로 null.
         if (monitoredApps.isEmpty() && totalGoal == null) {
-            return@runCatchingApi null
+            return@runCatchingApiCall null
         }
 
         val appGoals = monitoredApps.associate { app -> app.id to getAppGoalOrNull(app.id) }
@@ -177,7 +176,7 @@ class GoalRepositoryImpl @Inject constructor(
      * 남은 앱은 등록/갱신한 뒤 전체 목표와 앱별 목표를 upsert 한다.
      */
     private suspend fun syncToServer(goal: Goal) {
-        val remoteApps = monitoredAppApi.getMonitoredApps().unwrap()
+        val remoteApps = apiCallExecutor.execute { monitoredAppApi.getMonitoredApps() }
         val remoteByPackage = remoteApps.associateBy { it.packageName }
         val selectedPackages = goal.apps.mapTo(mutableSetOf()) { it.packageName }
 
@@ -189,13 +188,15 @@ class GoalRepositoryImpl @Inject constructor(
 
         val syncedApps = goal.apps.mapIndexed { index, app ->
             val monitored = remoteByPackage[app.packageName]
-                ?: monitoredAppApi.createMonitoredApp(
-                    MonitoredAppCreateRequest(
-                        packageName = app.packageName,
-                        appName = app.appName,
-                        sortOrder = index,
-                    ),
-                ).unwrap()
+                ?: apiCallExecutor.execute {
+                    monitoredAppApi.createMonitoredApp(
+                        MonitoredAppCreateRequest(
+                            packageName = app.packageName,
+                            appName = app.appName,
+                            sortOrder = index,
+                        ),
+                    )
+                }
             val appGoal = upsertAppGoal(monitored.id, app)
             app to (monitored to appGoal)
         }
@@ -228,19 +229,23 @@ class GoalRepositoryImpl @Inject constructor(
     private suspend fun upsertTotalGoal(goal: Goal): TotalGoalResponse {
         val existing = getTotalGoalOrNull()
         return if (existing == null) {
-            totalGoalApi.createTotalGoal(
-                TotalGoalCreateRequest(
-                    targetMinutes = goal.dailyGoalMinutes,
-                    restrictAfter = goal.blockAfterGoal,
-                ),
-            ).unwrap()
+            apiCallExecutor.execute {
+                totalGoalApi.createTotalGoal(
+                    TotalGoalCreateRequest(
+                        targetMinutes = goal.dailyGoalMinutes,
+                        restrictAfter = goal.blockAfterGoal,
+                    ),
+                )
+            }
         } else {
-            totalGoalApi.updateTotalGoal(
-                TotalGoalUpdateRequest(
-                    targetMinutes = goal.dailyGoalMinutes,
-                    restrictAfter = goal.blockAfterGoal,
-                ),
-            ).unwrap()
+            apiCallExecutor.execute {
+                totalGoalApi.updateTotalGoal(
+                    TotalGoalUpdateRequest(
+                        targetMinutes = goal.dailyGoalMinutes,
+                        restrictAfter = goal.blockAfterGoal,
+                    ),
+                )
+            }
         }
     }
 
@@ -248,23 +253,27 @@ class GoalRepositoryImpl @Inject constructor(
     private suspend fun upsertAppGoal(monitoredAppId: String, app: AppGoal): AppGoalResponse {
         val existing = getAppGoalOrNull(monitoredAppId)
         return if (existing == null) {
-            appGoalApi.createAppGoal(
-                AppGoalCreateRequest(
-                    monitoredAppId = monitoredAppId,
-                    targetMinutes = app.goalMinutes,
-                    targetCount = app.targetCount,
-                    restrictAfter = app.accessLimited,
-                ),
-            ).unwrap()
+            apiCallExecutor.execute {
+                appGoalApi.createAppGoal(
+                    AppGoalCreateRequest(
+                        monitoredAppId = monitoredAppId,
+                        targetMinutes = app.goalMinutes,
+                        targetCount = app.targetCount,
+                        restrictAfter = app.accessLimited,
+                    ),
+                )
+            }
         } else {
-            appGoalApi.updateAppGoal(
-                existing.id,
-                AppGoalUpdateRequest(
-                    targetMinutes = app.goalMinutes,
-                    targetCount = app.targetCount,
-                    restrictAfter = app.accessLimited,
-                ),
-            ).unwrap()
+            apiCallExecutor.execute {
+                appGoalApi.updateAppGoal(
+                    existing.id,
+                    AppGoalUpdateRequest(
+                        targetMinutes = app.goalMinutes,
+                        targetCount = app.targetCount,
+                        restrictAfter = app.accessLimited,
+                    ),
+                )
+            }
         }
     }
 
@@ -305,22 +314,27 @@ class GoalRepositoryImpl @Inject constructor(
 
     private suspend fun getTotalGoalOrNull(): TotalGoalResponse? =
         nullOnNotFound(GoalErrorCodes.TOTAL_GOAL_NOT_FOUND) {
-            totalGoalApi.getTotalGoal().unwrap()
+            apiCallExecutor.execute { totalGoalApi.getTotalGoal() }
         }
 
     private suspend fun getAppGoalOrNull(monitoredAppId: String): AppGoalResponse? =
         nullOnNotFound(GoalErrorCodes.APP_GOAL_NOT_FOUND) {
-            appGoalApi.getAppGoal(monitoredAppId).unwrap()
+            apiCallExecutor.execute { appGoalApi.getAppGoal(monitoredAppId) }
         }
 
     private suspend fun <T> nullOnNotFound(code: String, block: suspend () -> T): T? = try {
         block()
-    } catch (e: HttpException) {
-        // Retrofit 은 HTTP 오류를 HttpException 으로 던진다. 서버 에러 코드를 보려면 변환이 필요하다.
-        val api = e.toApiException()
-        if (api.httpStatus == 404 && api.code == code) null else throw api
     } catch (e: ApiException) {
-        // envelope 의 success=false 로 온 경우.
         if (e.code == code) null else throw e
+    }
+
+    private suspend inline fun <T> runCatchingApiCall(
+        crossinline block: suspend () -> T,
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        Result.failure(error)
     }
 }

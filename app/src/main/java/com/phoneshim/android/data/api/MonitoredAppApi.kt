@@ -1,5 +1,6 @@
 package com.phoneshim.android.data.api
 
+import com.phoneshim.android.data.api.common.ApiResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -23,24 +24,24 @@ interface MonitoredAppApi {
     @POST("api/monitored-apps")
     suspend fun createMonitoredApp(
         @Body request: MonitoredAppCreateRequest,
-    ): ApiEnvelope<MonitoredAppResponse>
+    ): ApiResponse<MonitoredAppResponse>
 
     /** 상태: 구현완료. 로그인 사용자의 주의 앱 전체 목록(pagination 없음). */
     @GET("api/monitored-apps")
-    suspend fun getMonitoredApps(): ApiEnvelope<List<MonitoredAppResponse>>
+    suspend fun getMonitoredApps(): ApiResponse<List<MonitoredAppResponse>>
 
     /** 상태: 구현완료. */
     @GET("api/monitored-apps/{id}")
     suspend fun getMonitoredApp(
         @Path("id") id: String,
-    ): ApiEnvelope<MonitoredAppResponse>
+    ): ApiResponse<MonitoredAppResponse>
 
     /** 상태: 구현완료. 넘긴 필드만 수정됩니다. */
     @PATCH("api/monitored-apps/{id}")
     suspend fun updateMonitoredApp(
         @Path("id") id: String,
         @Body request: MonitoredAppUpdateRequest,
-    ): ApiEnvelope<MonitoredAppResponse>
+    ): ApiResponse<MonitoredAppResponse>
 
     /**
      * 상태: 구현완료. 성공 시 204 No Content라 envelope 없이 본문이 비어 옵니다.

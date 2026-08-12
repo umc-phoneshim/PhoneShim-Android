@@ -51,5 +51,31 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             )
             """.trimIndent(),
         )
+        database.execSQL(
+            """
+            CREATE TABLE `app_goal_cache_new` (
+                `packageName` TEXT NOT NULL,
+                `appLabel` TEXT NOT NULL,
+                `goalMinutes` INTEGER NOT NULL,
+                `limitEnabled` INTEGER NOT NULL,
+                `targetCount` INTEGER NOT NULL,
+                `monitoredAppId` TEXT,
+                `appGoalId` TEXT,
+                PRIMARY KEY(`packageName`)
+            )
+            """.trimIndent(),
+        )
+        database.execSQL(
+            """
+            INSERT INTO `app_goal_cache_new` (
+                `packageName`, `appLabel`, `goalMinutes`, `limitEnabled`, `targetCount`
+            )
+            SELECT `packageName`, `appLabel`, `goalMinutes`, `limitEnabled`, 1
+            FROM `app_goal_cache`
+            """.trimIndent(),
+        )
+        database.execSQL("DROP TABLE `app_goal_cache`")
+        database.execSQL("ALTER TABLE `app_goal_cache_new` RENAME TO `app_goal_cache`")
+        database.execSQL("ALTER TABLE `phone_goal_cache` ADD COLUMN `serverGoalId` TEXT")
     }
 }

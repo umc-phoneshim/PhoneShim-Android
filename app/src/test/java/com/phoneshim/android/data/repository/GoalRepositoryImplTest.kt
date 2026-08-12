@@ -1,6 +1,6 @@
 package com.phoneshim.android.data.repository
 
-import com.phoneshim.android.data.api.ApiEnvelope
+import com.google.gson.Gson
 import com.phoneshim.android.data.api.AppGoalApi
 import com.phoneshim.android.data.api.AppGoalCreateRequest
 import com.phoneshim.android.data.api.AppGoalResponse
@@ -14,6 +14,10 @@ import com.phoneshim.android.data.api.TotalGoalApi
 import com.phoneshim.android.data.api.TotalGoalCreateRequest
 import com.phoneshim.android.data.api.TotalGoalResponse
 import com.phoneshim.android.data.api.TotalGoalUpdateRequest
+import com.phoneshim.android.data.api.common.ApiCallExecutor
+import com.phoneshim.android.data.api.common.ApiError
+import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.data.api.common.ApiResponse
 import com.phoneshim.android.data.database.dao.GoalDao
 import com.phoneshim.android.data.database.dao.UserProfileDao
 import com.phoneshim.android.data.database.entity.AppGoalEntity
@@ -45,11 +49,13 @@ class GoalRepositoryImplTest {
     private val monitoredAppApi = FakeMonitoredAppApi()
     private val totalGoalApi = FakeTotalGoalApi()
     private val appGoalApi = FakeAppGoalApi()
+    private val apiCallExecutor = ApiCallExecutor(Gson())
 
     private val repository = GoalRepositoryImpl(
         monitoredAppApi = monitoredAppApi,
         totalGoalApi = totalGoalApi,
         appGoalApi = appGoalApi,
+        apiCallExecutor = apiCallExecutor,
         goalDao = goalDao,
         userProfileDao = userProfileDao,
     )
@@ -210,7 +216,7 @@ class GoalRepositoryImplTest {
 
         override suspend fun createMonitoredApp(
             request: MonitoredAppCreateRequest,
-        ): ApiEnvelope<MonitoredAppResponse> {
+        ): ApiResponse<MonitoredAppResponse> {
             failWith?.let { throw it }
             createdPackages += request.packageName
             val created = MonitoredAppResponse(
@@ -224,27 +230,27 @@ class GoalRepositoryImplTest {
                 updatedAt = "",
             )
             apps += created
-            return ApiEnvelope(success = true, data = created)
+            return ApiResponse(success = true, data = created)
         }
 
-        override suspend fun getMonitoredApps(): ApiEnvelope<List<MonitoredAppResponse>> {
+        override suspend fun getMonitoredApps(): ApiResponse<List<MonitoredAppResponse>> {
             failWith?.let { throw it }
-            return ApiEnvelope(success = true, data = apps.toList())
+            return ApiResponse(success = true, data = apps.toList())
         }
 
-        override suspend fun getMonitoredApp(id: String): ApiEnvelope<MonitoredAppResponse> {
+        override suspend fun getMonitoredApp(id: String): ApiResponse<MonitoredAppResponse> {
             failWith?.let { throw it }
             val found = apps.firstOrNull { it.id == id }
                 ?: throw ApiExceptionFor(404, GoalErrorCodes.MONITORED_APP_NOT_FOUND)
-            return ApiEnvelope(success = true, data = found)
+            return ApiResponse(success = true, data = found)
         }
 
         override suspend fun updateMonitoredApp(
             id: String,
             request: MonitoredAppUpdateRequest,
-        ): ApiEnvelope<MonitoredAppResponse> {
+        ): ApiResponse<MonitoredAppResponse> {
             failWith?.let { throw it }
-            return ApiEnvelope(success = true, data = apps.first { it.id == id })
+            return ApiResponse(success = true, data = apps.first { it.id == id })
         }
 
         override suspend fun deleteMonitoredApp(id: String) {
@@ -261,7 +267,7 @@ class GoalRepositoryImplTest {
 
         override suspend fun createTotalGoal(
             request: TotalGoalCreateRequest,
-        ): ApiEnvelope<TotalGoalResponse> {
+        ): ApiResponse<TotalGoalResponse> {
             createCount++
             goal = TotalGoalResponse(
                 id = "total-created", userId = "u",
@@ -269,24 +275,24 @@ class GoalRepositoryImplTest {
                 restrictAfter = request.restrictAfter ?: false,
                 createdAt = "", updatedAt = "",
             )
-            return ApiEnvelope(success = true, data = goal)
+            return ApiResponse(success = true, data = goal)
         }
 
-        override suspend fun getTotalGoal(): ApiEnvelope<TotalGoalResponse> {
+        override suspend fun getTotalGoal(): ApiResponse<TotalGoalResponse> {
             val current = goal ?: throw ApiExceptionFor(404, GoalErrorCodes.TOTAL_GOAL_NOT_FOUND)
-            return ApiEnvelope(success = true, data = current)
+            return ApiResponse(success = true, data = current)
         }
 
         override suspend fun updateTotalGoal(
             request: TotalGoalUpdateRequest,
-        ): ApiEnvelope<TotalGoalResponse> {
+        ): ApiResponse<TotalGoalResponse> {
             updateCount++
             val current = goal ?: throw ApiExceptionFor(404, GoalErrorCodes.TOTAL_GOAL_NOT_FOUND)
             goal = current.copy(
                 targetMinutes = request.targetMinutes ?: current.targetMinutes,
                 restrictAfter = request.restrictAfter ?: current.restrictAfter,
             )
-            return ApiEnvelope(success = true, data = goal)
+            return ApiResponse(success = true, data = goal)
         }
     }
 
@@ -296,7 +302,7 @@ class GoalRepositoryImplTest {
 
         override suspend fun createAppGoal(
             request: AppGoalCreateRequest,
-        ): ApiEnvelope<AppGoalResponse> {
+        ): ApiResponse<AppGoalResponse> {
             val created = AppGoalResponse(
                 id = "appgoal-${request.monitoredAppId}",
                 monitoredAppId = request.monitoredAppId,
@@ -307,19 +313,19 @@ class GoalRepositoryImplTest {
                 createdAt = "", updatedAt = "",
             )
             goals[request.monitoredAppId] = created
-            return ApiEnvelope(success = true, data = created)
+            return ApiResponse(success = true, data = created)
         }
 
-        override suspend fun getAppGoal(monitoredAppId: String): ApiEnvelope<AppGoalResponse> {
+        override suspend fun getAppGoal(monitoredAppId: String): ApiResponse<AppGoalResponse> {
             val found = goals[monitoredAppId]
                 ?: throw ApiExceptionFor(404, GoalErrorCodes.APP_GOAL_NOT_FOUND)
-            return ApiEnvelope(success = true, data = found)
+            return ApiResponse(success = true, data = found)
         }
 
         override suspend fun updateAppGoal(
             id: String,
             request: AppGoalUpdateRequest,
-        ): ApiEnvelope<AppGoalResponse> {
+        ): ApiResponse<AppGoalResponse> {
             val key = goals.entries.first { it.value.id == id }.key
             val updated = goals.getValue(key).copy(
                 targetMinutes = request.targetMinutes ?: goals.getValue(key).targetMinutes,
@@ -327,7 +333,7 @@ class GoalRepositoryImplTest {
                 restrictAfter = request.restrictAfter ?: goals.getValue(key).restrictAfter,
             )
             goals[key] = updated
-            return ApiEnvelope(success = true, data = updated)
+            return ApiResponse(success = true, data = updated)
         }
 
         override suspend fun deleteAppGoal(id: String) {
@@ -363,6 +369,10 @@ class GoalRepositoryImplTest {
     }
 }
 
-/** envelope 안에서 실패가 온 상황을 흉내내는 헬퍼. */
+/** 공통 API 계층에서 HTTP 실패가 변환된 상황을 흉내내는 헬퍼. */
 private fun ApiExceptionFor(status: Int, code: String) =
-    com.phoneshim.android.data.api.ApiException(code = code, httpStatus = status, message = code)
+    ApiException.Http(
+        statusCode = status,
+        error = ApiError(code = code, message = code),
+        cause = IllegalStateException(code),
+    )
