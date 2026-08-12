@@ -7,6 +7,8 @@ import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.blocking.policy.ReminderSchedulePolicyProvider
 import com.phoneshim.android.blocking.policy.RoomBlockingPolicyProvider
 import com.phoneshim.android.blocking.policy.SchedulePolicyProvider
+import com.phoneshim.android.blocking.schedule.ReminderScheduleCoordinatorImpl
+import com.phoneshim.android.domain.schedule.ReminderScheduleCoordinator
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -53,4 +55,14 @@ abstract class BlockingPolicyBindModule {
     abstract fun bindSchedulePolicyProvider(
         impl: ReminderSchedulePolicyProvider,
     ): SchedulePolicyProvider
+
+    /**
+     * 리마인더 CRUD 후 예약·해제 계약.
+     * 호출자(리마인더 Repository)가 엔진 내부를 모르도록 도메인 인터페이스로만 노출한다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindReminderScheduleCoordinator(
+        impl: ReminderScheduleCoordinatorImpl,
+    ): ReminderScheduleCoordinator
 }
