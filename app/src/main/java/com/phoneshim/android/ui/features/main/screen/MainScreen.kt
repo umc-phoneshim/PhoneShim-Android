@@ -32,12 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -49,12 +53,16 @@ import androidx.lifecycle.LifecycleEventObserver
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.phoneshim.android.R
+import com.phoneshim.android.blocking.detection.BlockingPermissions
+import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.domain.model.DashboardSummary
 import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
@@ -168,6 +176,34 @@ fun MainScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // 앱 재설치 시 사용정보 접근/오버레이 권한이 초기화되는데, 지금 동의 UI는 온보딩에만
+    // 있어 재설치 후 다시 요청할 경로가 없다는 문제 대응. 설정 화면 쪽 UI가 준비되기 전까지
+    // 메인 화면에 최소 구현으로 배너를 둔다. isPreview는 SetGoalStartScreen.kt와 동일하게
+    // ActivityResult 런처를 만들 수 없는 프리뷰에서 권한 요청 훅을 건너뛰기 위함.
+    val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+    var hasAllPermissions by remember(context, isPreview) {
+        mutableStateOf(isPreview || BlockingPermissions.hasAll(context))
+    }
+
+    // 설정 화면 왕복 후 돌아왔을 때(ON_RESUME) 배너가 바로 갱신되도록 재확인한다.
+    DisposableEffect(lifecycleOwner, context, isPreview) {
+        if (isPreview) return@DisposableEffect onDispose {}
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAllPermissions = BlockingPermissions.hasAll(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val permissionRequest = if (isPreview) {
+        null
+    } else {
+        rememberBlockingPermissionRequest { hasAllPermissions = BlockingPermissions.hasAll(context) }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -238,6 +274,12 @@ fun MainScreen(
                         }
                     }
                 } else {
+                    // 설정 완료 후 화면에서만 배너를 보여준다 — 설정 전(온보딩 흐름)에는 넣지 않는다.
+                    if (!hasAllPermissions) {
+                        item {
+                            PermissionRecheckBanner(onRecheckClick = { permissionRequest?.launch() })
+                        }
+                    }
                     item { GreetingCard(userName = state.userName, isSetupCompleted = state.isGoalSet) }
                     item { DailyUsageSection(dashboardSummary = state.dashboardSummary) }
                     item {
@@ -399,6 +441,41 @@ fun EmptySetupCard(
                 )
             }
         }
+    }
+}
+
+/* ============================================================
+ * 6-2. 권한 재확인 배너
+ *  - 앱 재설치로 특수 권한(사용정보 접근/오버레이)이 초기화됐을 때, 온보딩 밖에서
+ *    다시 요청할 경로가 없어 설정 완료 후 메인 화면에 임시로 배치.
+ *  - TODO: 디자인팀 설정 화면 UI 확정 전 임시 구현. 배너 스타일(테두리 색/버튼)은
+ *    기존 카드·SecondaryButton을 그대로 재사용한 것이라 확정 디자인이 나오면
+ *    디자이너 리뷰 후 교체 필요.
+ * ============================================================ */
+@Composable
+private fun PermissionRecheckBanner(onRecheckClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(PhoneShimTheme.colors.surface)
+            .border(1.dp, PhoneShimTheme.colors.warning, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "일부 권한이 꺼져 있어 차단 기능이 동작하지 않아요",
+            style = PhoneShimType.KorCaption,
+            color = PhoneShimTheme.colors.textPrimary,
+        )
+        SecondaryButton(
+            text = "권한 다시 설정하기",
+            onClick = onRecheckClick,
+            size = PhoneShimButtonSize.Small,
+            fullWidth = false,
+            accentColor = PhoneShimTheme.colors.warning,
+            pressedAccentColor = PhoneShimTheme.colors.warning,
+        )
     }
 }
 
@@ -735,5 +812,13 @@ private fun MainScreenFilledPreview() {
             CautionAppSection(apps = previewApps.map { it.toCautionAppItem() })
             TodoSection(todos = List(2) { MainTodoItem("과제하기", "10:00 ~ 11:00") })
         }
+    }
+}
+
+@Preview(name = "권한 재확인 배너 (임시 구현)", widthDp = 360, showBackground = true)
+@Composable
+private fun PermissionRecheckBannerPreview() {
+    PhoneShimTheme {
+        PermissionRecheckBanner(onRecheckClick = {})
     }
 }
