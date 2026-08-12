@@ -69,7 +69,7 @@ class LoginViewModel @Inject constructor(
             }
             when (authResult) {
                 AuthClientResult.Cancelled -> finishLoading()
-                is AuthClientResult.Failure -> showError(authResult.cause.toUserMessage())
+                is AuthClientResult.Failure -> showError(authResult.cause.toUserMessage(provider))
                 is AuthClientResult.Success -> completeServerLogin(provider, authResult)
             }
         }
@@ -97,7 +97,7 @@ class LoginViewModel @Inject constructor(
                 if (error is AuthException.WithdrawalPending) {
                     showWithdrawalRecovery(provider, authResult)
                 } else {
-                    showError(error.toUserMessage())
+                    showError(error.toUserMessage(provider))
                 }
             }
     }
@@ -159,7 +159,7 @@ class LoginViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     setState { copy(isLoading = false) }
-                    showError(error.toUserMessage())
+                    showError(error.toUserMessage(identity.provider))
                 }
         }
     }
@@ -178,10 +178,12 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private fun Throwable.toUserMessage(): String {
+    private fun Throwable.toUserMessage(provider: SocialProvider): String {
         logAuthFailure()
         val userMessage = when (this) {
             is AuthException.FeatureUnavailable -> message ?: "현재 사용할 수 없는 기능입니다."
+            AuthException.GoogleCredentialUnavailable ->
+                "기기의 Google 계정 상태를 확인해주세요. 계정을 추가하거나 다시 인증한 뒤 로그인해주세요."
             is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
             is ApiException.Serialization,
             is ApiException.InvalidResponse,
@@ -189,9 +191,21 @@ class LoginViewModel @Inject constructor(
             is ApiException -> when (code) {
                 ApiErrorCodes.EMAIL_PERMISSION_REQUIRED ->
                     "카카오 로그인에 이메일 제공 동의가 필요합니다. 동의 항목을 확인한 뒤 다시 로그인해주세요."
-                ApiErrorCodes.ACCESS_TOKEN_REQUIRED,
-                ApiErrorCodes.INVALID_TOKEN,
-                -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                ApiErrorCodes.EMAIL_NOT_VERIFIED ->
+                    "Google 계정의 이메일 인증 상태를 확인한 뒤 다시 로그인해주세요."
+                ApiErrorCodes.INVALID_GOOGLE_ID_TOKEN,
+                ApiErrorCodes.ID_TOKEN_REQUIRED,
+                -> "Google 로그인 설정이 앱과 서버에서 일치하지 않습니다. 관리자에게 문의해주세요."
+                ApiErrorCodes.ACCESS_TOKEN_REQUIRED -> when (provider) {
+                    SocialProvider.GOOGLE ->
+                        "Google 로그인 서버가 이전 인증 방식으로 동작하고 있습니다. 서버 업데이트가 필요합니다."
+                    SocialProvider.KAKAO -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                }
+                ApiErrorCodes.INVALID_TOKEN -> when (provider) {
+                    SocialProvider.GOOGLE ->
+                        "Google 로그인 서버가 ID Token을 지원하지 않습니다. 서버 업데이트가 필요합니다."
+                    SocialProvider.KAKAO -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                }
                 else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
             }
             else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."

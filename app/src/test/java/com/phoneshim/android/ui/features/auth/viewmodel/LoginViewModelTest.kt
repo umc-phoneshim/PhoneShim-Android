@@ -170,6 +170,41 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `missing Google credential shows account recovery guidance`() = runTest(dispatcher) {
+        val viewModel = createViewModel(
+            authResult = AuthClientResult.Failure(AuthException.GoogleCredentialUnavailable),
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("Google 계정 상태"))
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `legacy invalid token error identifies outdated server for Google login`() =
+        runTest(dispatcher) {
+            val failure = ApiException.Http(
+                statusCode = 401,
+                error = ApiError(
+                    code = ApiErrorCodes.INVALID_TOKEN,
+                    message = "Invalid token.",
+                ),
+                cause = IllegalStateException("HTTP 401"),
+            )
+            val viewModel = createViewModel(loginFailure = failure)
+
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+            runCurrent()
+
+            val message = viewModel.uiState.value.errorMessage.orEmpty()
+            assertTrue(message.contains("서버 업데이트가 필요"))
+            assertFalse(message.contains("카카오 로그인 정보"))
+            assertTrue(message.contains("HTTP 401 / INVALID_TOKEN"))
+        }
+
+    @Test
     fun `clicks while loading do not replace selected provider`() = runTest(dispatcher) {
         val deferred = CompletableDeferred<AuthClientResult>()
         val viewModel = createViewModel(

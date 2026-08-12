@@ -5,7 +5,8 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.phoneshim.android.BuildConfig
 import com.phoneshim.android.domain.model.AuthException
@@ -19,7 +20,6 @@ class GoogleAuthClientImpl @Inject constructor(
 ) : GoogleAuthClient {
     override suspend fun authenticate(): AuthClientResult {
         val activity = activityProvider.requireActivity()
-        // 현재 서버의 accessToken 필드가 Google ID token을 검증하는 계약으로 확정되기 전에는 실행하지 않는다.
         if (!BuildConfig.GOOGLE_ID_TOKEN_LOGIN_ENABLED) {
             return AuthClientResult.Failure(
                 AuthException.FeatureUnavailable(PendingAuthFeature.GOOGLE_LOGIN_TOKEN_CONTRACT),
@@ -32,10 +32,10 @@ class GoogleAuthClientImpl @Inject constructor(
         }
 
         return try {
-            val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-                .setAutoSelectEnabled(false)
+            // 로그인 화면의 명시적 버튼에서는 계정 추가·재인증을 지원하는 버튼 전용 옵션을 사용한다.
+            val googleIdOption = GetSignInWithGoogleOption.Builder(
+                BuildConfig.GOOGLE_WEB_CLIENT_ID,
+            )
                 .build()
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(googleIdOption)
@@ -63,6 +63,8 @@ class GoogleAuthClientImpl @Inject constructor(
             }
         } catch (_: GetCredentialCancellationException) {
             AuthClientResult.Cancelled
+        } catch (_: NoCredentialException) {
+            AuthClientResult.Failure(AuthException.GoogleCredentialUnavailable)
         } catch (error: Throwable) {
             AuthClientResult.Failure(error)
         }

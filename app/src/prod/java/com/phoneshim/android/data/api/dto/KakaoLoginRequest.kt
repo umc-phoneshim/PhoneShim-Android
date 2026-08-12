@@ -1,5 +1,5 @@
 package com.phoneshim.android.data.api.dto
 
-data class SocialLoginRequest(
+data class KakaoLoginRequest(
     val accessToken: String,
 )

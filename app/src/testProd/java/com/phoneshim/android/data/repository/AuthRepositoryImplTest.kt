@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.repository
 
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.local.TokenDataSource
@@ -51,7 +52,11 @@ class AuthRepositoryImplTest {
 
         assertEquals(SocialLoginResult(isNewUser = false), result.getOrThrow())
         assertEquals("phoneshim-jwt", tokens.getAccessToken())
-        assertEquals("/api/auth/google", server.takeRequest().path)
+        val request = server.takeRequest()
+        assertEquals("/api/auth/google", request.path)
+        val body = JsonParser.parseString(request.body.readUtf8()).asJsonObject
+        assertEquals("google-token", body.get("idToken").asString)
+        assertFalse(body.has("accessToken"))
     }
 
     @Test
