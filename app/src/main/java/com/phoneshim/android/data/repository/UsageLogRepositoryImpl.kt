@@ -1,9 +1,9 @@
 package com.phoneshim.android.data.repository
 
-import com.phoneshim.android.data.api.UsageAppStatusResponse
 import com.phoneshim.android.data.api.UsageLogApi
-import com.phoneshim.android.data.api.UsageLogEntryResponse
+import com.phoneshim.android.data.api.UsageLogResponse
 import com.phoneshim.android.data.api.UsageLogUpsertRequest
+import com.phoneshim.android.data.api.UsageStatusResponse
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.DailyUsageLog
 import com.phoneshim.android.domain.model.UsageStatus
@@ -39,7 +39,7 @@ class UsageLogRepositoryImpl @Inject constructor(
         )
     }.map { Unit }
 
-    private fun UsageLogEntryResponse.toDomain(): DailyUsageLog = DailyUsageLog(
+    private fun UsageLogResponse.toDomain(): DailyUsageLog = DailyUsageLog(
         id = id,
         monitoredAppId = monitoredAppId,
         date = date,
@@ -47,7 +47,7 @@ class UsageLogRepositoryImpl @Inject constructor(
         entryCount = entryCount,
     )
 
-    private fun UsageAppStatusResponse.toDomain(): UsageStatus = UsageStatus(
+    private fun UsageStatusResponse.toDomain(): UsageStatus = UsageStatus(
         monitoredAppId = monitoredAppId,
         appName = appName,
         packageName = packageName,
