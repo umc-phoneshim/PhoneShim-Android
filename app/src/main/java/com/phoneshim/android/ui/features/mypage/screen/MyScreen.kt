@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,8 +40,10 @@ import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.PhoneShimBottomBarSnackbarHost
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
@@ -80,7 +81,10 @@ fun MyRoute(
             when (effect) {
                 MyPageUiEffect.NavigateToSideMenu -> onNavigateToSideMenu()
                 is MyPageUiEffect.NavigateToLogin -> onNavigateToLogin(effect.noticeMessage)
-                is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is MyPageUiEffect.ShowMessage -> snackbarHostState.showPhoneShimSnackbar(
+                    message = effect.message,
+                    type = effect.type,
+                )
                 // 마이페이지 본체에서는 발생하지 않는 이펙트입니다. (사이드 메뉴 전용)
                 MyPageUiEffect.OpenContactSupport -> Unit
             }
@@ -126,7 +130,6 @@ fun MyScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = PhoneShimTheme.colors.background,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -229,6 +232,10 @@ fun MyScreen(
         BottomBar(
             selectedTab = selectedBottomTab,
             onTabSelected = onBottomNavSelected,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+        PhoneShimBottomBarSnackbarHost(
+            hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }

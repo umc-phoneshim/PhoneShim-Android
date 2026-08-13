@@ -42,11 +42,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.ui.common.AppInfoRow
+import com.phoneshim.android.ui.common.PhoneShimBottomSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalBottomButtons
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCard
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalCardDivider
-import com.phoneshim.android.ui.features.setgoal.component.SetGoalSnackbarHost
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalStepIndicator
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTitle
 import com.phoneshim.android.ui.features.setgoal.component.SetGoalTopBar
@@ -89,7 +89,7 @@ fun AppSelectScreen(
             onNext = { viewModel.onEvent(SetGoalEvent.SubmitAppSelection) },
             onBack = onBack,
         )
-        SetGoalSnackbarHost(
+        PhoneShimBottomSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

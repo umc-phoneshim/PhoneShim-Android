@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.features.mypage.component.WithdrawPopup
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
@@ -59,7 +60,10 @@ fun MySideMenuRoute(
                     onNavigateToLogin(effect.noticeMessage)
                 }
                 MyPageUiEffect.OpenContactSupport -> onContactSupport()
-                is MyPageUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is MyPageUiEffect.ShowMessage -> snackbarHostState.showPhoneShimSnackbar(
+                    message = effect.message,
+                    type = effect.type,
+                )
                 // 사이드 메뉴에서는 발생하지 않는 이펙트입니다. (마이페이지 본체 전용)
                 MyPageUiEffect.NavigateToSideMenu -> Unit
             }
@@ -121,9 +125,11 @@ fun MySideMenuScreen(
             MenuRow(text = "문의", onClick = onContactSupportClick)
         }
 
-        SnackbarHost(
+        PhoneShimSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = PhoneShimDimens.spacing16),
         )
     }
 
