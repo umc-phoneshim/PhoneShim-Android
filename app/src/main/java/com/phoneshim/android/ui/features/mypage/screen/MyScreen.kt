@@ -216,7 +216,7 @@ fun MyScreen(
                         errorText = state.motivationError,
                         minHeight = 88.dp,
                     )
-                    MyGoalField()
+                    MyGoalField(state = state)
 
                     if (state.isEditing) {
                         SaveButton(enabled = state.canSave, isSaving = state.isSaving, onClick = onSaveClick)
@@ -317,20 +317,75 @@ private fun SaveButton(
 }
 
 @Composable
-private fun MyGoalField(modifier: Modifier = Modifier) {
+private fun MyGoalField(state: MyPageUiState, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = "목표", style = PhoneShimType.KorBodyM, color = PhoneShimTheme.colors.textSecondary)
         Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-        // TODO: GetGoalUseCase 를 MyPageViewModel 에 주입해 실제 목표 요약으로 교체하세요.
-        //  전체 목표 API(GET /api/total-goals)가 아직 서버 "예정" 상태입니다.
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp)
-                .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(12.dp)),
-        )
+                .heightIn(min = GoalCardMinHeight)
+                .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(12.dp))
+                .padding(PhoneShimDimens.spacing16),
+            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
+        ) {
+            if (!state.hasGoal) {
+                // 온보딩에서 목표를 아직 안 세웠거나, 목표 조회가 실패한 경우입니다.
+                Text(
+                    text = "아직 설정한 목표가 없어요.",
+                    style = PhoneShimType.KorBodyM,
+                    color = PhoneShimTheme.colors.textSecondary,
+                )
+                return@Column
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "하루 목표",
+                    style = PhoneShimType.KorCaption,
+                    color = PhoneShimTheme.colors.textSecondary,
+                )
+                Text(
+                    text = state.dailyGoalLabel,
+                    style = PhoneShimType.KorH3,
+                    color = PhoneShimTheme.colors.brandStrong,
+                )
+            }
+
+            state.goalApps.forEach { appGoal ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = appGoal.appName,
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textSecondary,
+                    )
+                    Text(
+                        text = "${appGoal.goalMinutes}분",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textPrimary,
+                    )
+                }
+            }
+
+            if (state.hiddenGoalAppCount > 0) {
+                Text(
+                    text = "외 ${state.hiddenGoalAppCount}개",
+                    style = PhoneShimType.KorCaption,
+                    color = PhoneShimTheme.colors.textTertiary,
+                )
+            }
+        }
     }
 }
+
+private val GoalCardMinHeight = 140.dp
 
 private fun previewUser() = User(
     email = "abcde123@gmail.com",
