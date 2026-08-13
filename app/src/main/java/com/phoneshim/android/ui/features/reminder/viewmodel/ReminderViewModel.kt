@@ -80,7 +80,6 @@ class ReminderViewModel @Inject constructor(
             ReminderUiEvent.RetryClicked -> loadMonth(currentState.visibleMonth)
             ReminderUiEvent.AddTaskClicked -> openAddPopup()
             is ReminderUiEvent.EditTaskClicked -> openEditPopup(event)
-            is ReminderUiEvent.TaskMoved -> moveTask(event)
             ReminderUiEvent.PopupDismissed -> dismissPopup()
             is ReminderUiEvent.TitleChanged -> updateTitle(event)
             is ReminderUiEvent.StartTimeChanged -> updateStartTime(event)
@@ -141,17 +140,6 @@ class ReminderViewModel @Inject constructor(
 
     private fun dismissPopup() = setState {
         copy(draft = ReminderDraft(), isTaskPopupVisible = false)
-    }
-
-    private fun moveTask(event: ReminderUiEvent.TaskMoved) = setState {
-        val tasks = tasksByDate[selectedDate].orEmpty()
-        if (event.fromIndex !in tasks.indices || event.toIndex !in tasks.indices || event.fromIndex == event.toIndex) {
-            return@setState this
-        }
-        val reordered = tasks.toMutableList().apply {
-            add(event.toIndex, removeAt(event.fromIndex))
-        }
-        copy(tasksByDate = tasksByDate + (selectedDate to reordered))
     }
 
     private fun updateTitle(event: ReminderUiEvent.TitleChanged) = updateDraft {

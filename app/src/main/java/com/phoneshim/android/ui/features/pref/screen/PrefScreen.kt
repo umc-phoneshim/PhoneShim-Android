@@ -59,7 +59,8 @@ import kotlinx.coroutines.delay
 private object PrefScreenDefaults {
     val topBarHeight = 56.dp
     val topBarStartPadding = 4.dp
-    val userToGoalSpacing = 20.dp
+    val userToGoalSpacing = 24.dp
+    val contentTopPadding = 16.dp
     val contentBottomPadding = 32.dp
     val actionToBottomBarSpacing = 8.dp
     const val restrictionTooltipDurationMillis = 4_000L
@@ -80,6 +81,7 @@ fun PrefScreen(
     onAgeGroupSelected: (AgeGroup) -> Unit,
     onSelectionDismissed: () -> Unit,
     onTotalGoalClick: () -> Unit,
+    onTotalLimitToggle: () -> Unit,
     onHoursChanged: (String) -> Unit,
     onMinutesChanged: (String) -> Unit,
     onTimeEditorLimitToggled: () -> Unit,
@@ -130,6 +132,7 @@ fun PrefScreen(
                     onAgeGroupSelected = onAgeGroupSelected,
                     onSelectionDismissed = onSelectionDismissed,
                     onTotalGoalClick = onTotalGoalClick,
+                    onTotalLimitToggle = onTotalLimitToggle,
                     onEditAppTime = onEditAppTime,
                     onToggleLimit = {
                         showRestrictionTooltip = false
@@ -233,6 +236,7 @@ private fun PrefContent(
     onAgeGroupSelected: (AgeGroup) -> Unit,
     onSelectionDismissed: () -> Unit,
     onTotalGoalClick: () -> Unit,
+    onTotalLimitToggle: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
     showRestrictionTooltip: Boolean,
@@ -250,6 +254,7 @@ private fun PrefContent(
             .verticalScroll(rememberScrollState())
             .padding(
                 start = PhoneShimDimens.screenHorizontalPadding,
+                top = PrefScreenDefaults.contentTopPadding,
                 end = PhoneShimDimens.screenHorizontalPadding,
                 bottom = PrefScreenDefaults.contentBottomPadding +
                     BottomBarDefaults.ContentBottomPadding +
@@ -277,9 +282,11 @@ private fun PrefContent(
         Spacer(Modifier.height(PrefScreenDefaults.userToGoalSpacing))
         PrefGoalSection(
             totalGoalMinutes = uiState.draftSettings.totalGoalMinutes,
+            isTotalLimitEnabled = uiState.draftSettings.isTotalLimitEnabled,
             appGoals = uiState.draftSettings.appGoals,
             validation = uiState.validation,
             onTotalGoalClick = onTotalGoalClick,
+            onTotalLimitToggle = onTotalLimitToggle,
             onEditAppTime = onEditAppTime,
             onToggleLimit = onToggleLimit,
             showRestrictionTooltip = showRestrictionTooltip,
@@ -308,7 +315,7 @@ private fun PrefActionButtons(
             enabled = !isSaving,
         )
         PrimaryButton(
-            text = if (isSaving) "저장 중" else "확인",
+            text = if (isSaving) "저장 중" else "저장",
             onClick = onSave,
             modifier = Modifier.weight(1f),
             size = PhoneShimButtonSize.Medium,
@@ -340,6 +347,7 @@ private fun PreviewPrefScreen(uiState: PrefUiState) {
             onAgeGroupSelected = noOpAgeGroup,
             onSelectionDismissed = noOp,
             onTotalGoalClick = noOp,
+            onTotalLimitToggle = noOp,
             onHoursChanged = noOpString,
             onMinutesChanged = noOpString,
             onTimeEditorLimitToggled = noOp,

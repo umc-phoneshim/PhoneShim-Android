@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +33,8 @@ fun GoalTimeCard(
     modifier: Modifier = Modifier,
     isError: Boolean = false,
     onClick: (() -> Unit)? = null,
+    restrictionEnabled: Boolean? = null,
+    onRestrictionToggle: (() -> Unit)? = null,
 ) {
     val shape = MaterialTheme.shapes.medium
     val borderColor = if (isError) {
@@ -70,7 +73,34 @@ fun GoalTimeCard(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             DurationDisplay(totalMinutes = totalMinutes)
-            if (onClick != null) {
+            if (restrictionEnabled != null) {
+                Image(
+                    painter = painterResource(
+                        if (restrictionEnabled) {
+                            R.drawable.ic_access_restriction
+                        } else {
+                            R.drawable.ic_access_restriction_disabled
+                        },
+                    ),
+                    contentDescription = if (restrictionEnabled) {
+                        "전체 폰 사용 제한 켜짐"
+                    } else {
+                        "전체 폰 사용 제한 꺼짐"
+                    },
+                    modifier = Modifier
+                        .size(30.dp)
+                        .then(
+                            if (onRestrictionToggle != null) {
+                                Modifier.clickable(
+                                    role = Role.Switch,
+                                    onClick = onRestrictionToggle,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
+                )
+            } else if (onClick != null) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more),
                     contentDescription = null,

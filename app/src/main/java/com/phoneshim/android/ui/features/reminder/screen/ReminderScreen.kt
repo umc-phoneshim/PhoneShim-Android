@@ -55,7 +55,6 @@ fun ReminderScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onNavigateToMain: () -> Unit = {},
     onNavigateToReport: () -> Unit = {},
-    onMoveTask: (Int, Int) -> Unit = { _, _ -> },
     onDismissPopup: () -> Unit = {},
     onTitleChange: (String) -> Unit = {},
     onStartTimeChange: (String) -> Unit = {},
@@ -117,7 +116,6 @@ fun ReminderScreen(
                         isReadOnly = state.isShowingCachedData,
                         onAddTask = onAddTask,
                         onEditTask = onEditTask,
-                        onMoveTask = onMoveTask,
                         onRetry = onRetry,
                     )
                 }

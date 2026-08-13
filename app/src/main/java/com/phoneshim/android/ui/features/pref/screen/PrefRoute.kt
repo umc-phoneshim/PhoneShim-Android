@@ -62,6 +62,7 @@ fun PrefRoute(
         onAgeGroupSelected = { viewModel.onEvent(PrefUiEvent.AgeGroupSelected(it)) },
         onSelectionDismissed = { viewModel.onEvent(PrefUiEvent.SelectionPopupDismissed) },
         onTotalGoalClick = { viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened) },
+        onTotalLimitToggle = { viewModel.onEvent(PrefUiEvent.TotalLimitToggled) },
         onHoursChanged = { viewModel.onEvent(PrefUiEvent.HoursInputChanged(it)) },
         onMinutesChanged = { viewModel.onEvent(PrefUiEvent.MinutesInputChanged(it)) },
         onTimeEditorLimitToggled = { viewModel.onEvent(PrefUiEvent.TimeEditorLimitToggled) },
