@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.mypage.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.model.LogoutResult
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
 import com.phoneshim.android.domain.usecase.LogoutUseCase
@@ -107,11 +108,15 @@ class MyPageViewModel @Inject constructor(
         setState { copy(isSaving = true) }
         viewModelScope.launch {
             logoutUseCase()
-                .onSuccess {
+                .onSuccess { result ->
                     setState { copy(isSaving = false) }
                     sendEffect(
                         MyPageUiEffect.NavigateToLogin(
-                            "서버 로그아웃 API가 준비 중이어서 이 기기의 세션만 종료했습니다.",
+                            when (result) {
+                                LogoutResult.ServerConfirmed -> "로그아웃되었습니다."
+                                LogoutResult.LocalOnly ->
+                                    "서버 연결을 확인하지 못했지만 이 기기의 세션은 종료했습니다."
+                            },
                         ),
                     )
                 }
