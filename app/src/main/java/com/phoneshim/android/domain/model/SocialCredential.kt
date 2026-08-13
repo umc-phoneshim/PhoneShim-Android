@@ -4,4 +4,7 @@ package com.phoneshim.android.domain.model
 data class SocialCredential(
     val provider: SocialProvider,
     val providerToken: String,
-)
+) {
+    override fun toString(): String =
+        "SocialCredential(provider=$provider, providerToken=[REDACTED])"
+}

@@ -49,10 +49,10 @@ fun LoginRoute(
     if (uiState.isWithdrawalPending) {
         ConfirmationDialog(
             title = "탈퇴 유예 중인 계정입니다",
-            message = "계정 복구 기능이 준비 중입니다. 현재 앱에서는 복구를 진행할 수 없습니다.",
-            confirmText = "확인",
+            message = "탈퇴를 취소하고 계정을 복구하시겠어요? 복구하면 바로 다시 이용할 수 있습니다.",
+            confirmText = "계정 복구",
             onConfirm = {
-                viewModel.onEvent(LoginUiEvent.WithdrawalPendingAcknowledged)
+                viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
             },
             onDismiss = {
                 viewModel.onEvent(LoginUiEvent.WithdrawalPendingDismissed)
