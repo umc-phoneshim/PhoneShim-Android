@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageSessionCreateRequest
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.DailyReport
 import com.phoneshim.android.domain.model.ReasonAppUsage
@@ -74,6 +75,20 @@ class ReportRepositoryImpl @Inject constructor(
                 )
             }
         }
+
+    override suspend fun uploadUsageSession(
+        monitoredAppId: String,
+        startTime: String,
+        endTime: String,
+    ): Result<Unit> = apiCallExecutor.executeAsResult {
+        reportApi.postUsageSession(
+            UsageSessionCreateRequest(
+                monitoredAppId = monitoredAppId,
+                startTime = startTime,
+                endTime = endTime,
+            ),
+        )
+    }.map { }
 
     override suspend fun getReportSummary(
         range: ReportRange,

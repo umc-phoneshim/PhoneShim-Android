@@ -9,6 +9,7 @@ import com.phoneshim.android.domain.model.UsageSession
 import com.phoneshim.android.domain.repository.AlertSettingRepository
 import com.phoneshim.android.domain.repository.ReportPreferencesRepository
 import com.phoneshim.android.domain.repository.ReportRepository
+import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
 import com.phoneshim.android.domain.usecase.GetAlertSettingUseCase
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
@@ -47,6 +48,7 @@ class ReportAlertSettingViewModelTest {
             getUsageSessionsUseCase = GetUsageSessionsUseCase(reportRepository),
             getReportSummaryUseCase = GetReportSummaryUseCase(reportRepository),
             getRestSuggestionUseCase = GetRestSuggestionUseCase(reportRepository),
+            getAchievedDatesUseCase = GetAchievedDatesUseCase(reportRepository),
             reportPreferencesRepository = FakeReportPreferencesRepository(),
             getAlertSettingUseCase = GetAlertSettingUseCase(alertRepository),
             updateAlertSettingUseCase = UpdateAlertSettingUseCase(alertRepository),
@@ -129,6 +131,12 @@ class ReportAlertSettingViewModelTest {
 
         override suspend fun getUsageSessions(date: String): Result<List<UsageSession>> =
             Result.success(emptyList())
+
+        override suspend fun uploadUsageSession(
+            monitoredAppId: String,
+            startTime: String,
+            endTime: String,
+        ): Result<Unit> = Result.success(Unit)
 
         override suspend fun getReportSummary(
             range: ReportRange,

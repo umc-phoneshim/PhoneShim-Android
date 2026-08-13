@@ -316,6 +316,7 @@ fun ReportSummaryScreen(
             onPreviousMonth = onPickerPreviousMonth,
             onNextMonth = onPickerNextMonth,
             onDismiss = onDatePickerDismiss,
+            achievedDates = state.achievedDates,
         )
     }
 

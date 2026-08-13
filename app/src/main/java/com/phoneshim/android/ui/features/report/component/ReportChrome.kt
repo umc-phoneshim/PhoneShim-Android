@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -206,6 +207,7 @@ fun ReportDatePickerDialog(
     onNextMonth: () -> Unit,
     onDismiss: () -> Unit,
     maxDate: LocalDate = todayDate,
+    achievedDates: Set<LocalDate> = emptySet(),
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -225,6 +227,15 @@ fun ReportDatePickerDialog(
                 labelStyle = PhoneShimType.KorH3,
                 labelColor = PhoneShimTheme.colors.brandStrong,
             )
+
+            Text(
+                text = "하루 목표를 모두 달성할 경우 캘린더 날짜에 O표시 됩니다.",
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+            )
+
+            // 달성한 날짜는 공통 CalendarGrid 의 markedDates 로 넘겨 표시를 붙입니다.
             CalendarGrid(
                 visibleMonth = visibleMonth,
                 selectedDate = selectedDate,
@@ -232,32 +243,8 @@ fun ReportDatePickerDialog(
                 onDateSelected = { date ->
                     if (!date.isAfter(maxDate)) onDateSelected(date)
                 },
+                markedDates = achievedDates,
             )
-
-            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing4))
-
-            // 달력에서 목표 달성 여부를 표시하는 방식 안내.
-            // TODO: 공통 CalendarGrid 에 날짜별 표시 슬롯이 생기면 문구 대신 실제 표시를 넣으세요.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PhoneShimTheme.colors.brandSubtle)
-                    .padding(PhoneShimDimens.spacing12),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(PhoneShimTheme.colors.brand, CircleShape),
-                )
-                Text(
-                    text = "목표를 달성한 날은 초록색으로 표시돼요.",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.brandStrong,
-                )
-            }
         }
     }
 }

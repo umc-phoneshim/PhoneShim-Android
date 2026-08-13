@@ -4,12 +4,15 @@ import android.util.Log
 import com.phoneshim.android.blocking.detection.AppUsageSnapshot
 import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
+import com.phoneshim.android.blocking.detection.UsageSessionSnapshot
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.local.TokenProvider
 import com.phoneshim.android.domain.usecase.RestoreAuthSessionUseCase
 import com.phoneshim.android.domain.usecase.UploadDeviceUsageUseCase
 import com.phoneshim.android.domain.usecase.UploadUsageLogUseCase
+import com.phoneshim.android.domain.usecase.UploadUsageSessionsUseCase
+import com.phoneshim.android.domain.usecase.UsageSessionUpload
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +42,8 @@ class UsageUploader @Inject constructor(
     private val policyProvider: BlockingPolicyProvider,
     private val uploadUsageLog: UploadUsageLogUseCase,
     private val uploadDeviceUsage: UploadDeviceUsageUseCase,
+    private val uploadUsageSessions: UploadUsageSessionsUseCase,
+    private val sentSessionStore: SentUsageSessionStore,
     private val pendingStore: PendingUsageUploadStore,
     private val tokenProvider: TokenProvider,
     private val restoreAuthSession: RestoreAuthSessionUseCase,
@@ -95,6 +100,11 @@ class UsageUploader @Inject constructor(
             watchedPackages = watched,
         )
 
+        // 사용 구간은 누적 사용량과 수명이 다르다.
+        // 누적값은 같으면 보낼 이유가 없지만(아래 lastSent 비교), 구간은 "아직 안 보낸 것" 이
+        // 남아 있으면 보내야 한다. 그래서 lastSent 비교보다 앞에 둔다.
+        uploadPendingSessions(today, snapshot.watchedSessions)
+
         val payload = UsageUploadPayload(
             date = today,
             phoneMinutes = snapshot.phoneMinutes,
@@ -128,6 +138,36 @@ class UsageUploader @Inject constructor(
                 .onFailure { retryable = retryable or handleFailure(app.packageName, payload.date, it) }
         }
         return !retryable
+    }
+
+    /**
+     * 아직 안 올린 사용 구간만 전송한다.
+     *
+     * 서버가 겹치는 구간을 409 로 거부하므로 같은 구간을 두 번 보내면 안 된다.
+     * 성공한 것만 기록하고, 실패분은 기록하지 않아 다음 주기에 다시 시도된다.
+     * 이 재시도는 누적 사용량의 lastSent / pendingStore 와 완전히 분리돼 있다.
+     */
+    private suspend fun uploadPendingSessions(
+        date: String,
+        sessions: List<UsageSessionSnapshot>,
+    ) {
+        val unsent = sessions
+            .filterNot { sentSessionStore.isSent(date, it.uploadKey) }
+            .map { session ->
+                UsageSessionUpload(
+                    packageName = session.packageName,
+                    startedAt = session.startedAt,
+                    endedAt = session.endedAt,
+                    uploadKey = session.uploadKey,
+                )
+            }
+        if (unsent.isEmpty()) return
+
+        val uploaded = uploadUsageSessions(unsent)
+        uploaded.forEach { key -> sentSessionStore.markSent(date, key) }
+
+        val failed = unsent.size - uploaded.size
+        if (failed > 0) Log.i(TAG, "사용 구간 $failed 건 보류. 다음 주기에 재시도 $date")
     }
 
     /**

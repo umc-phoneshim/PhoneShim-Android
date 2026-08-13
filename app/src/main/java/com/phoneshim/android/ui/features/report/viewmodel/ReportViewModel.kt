@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.domain.model.AlertSettingPolicy
 import com.phoneshim.android.domain.repository.ReportPreferencesRepository
+import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
 import com.phoneshim.android.domain.usecase.GetAlertSettingUseCase
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
@@ -13,8 +14,10 @@ import com.phoneshim.android.domain.usecase.UpdateAlertSettingUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.toSnackbarMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -24,25 +27,25 @@ class ReportViewModel @Inject constructor(
     private val getUsageSessionsUseCase: GetUsageSessionsUseCase,
     private val getReportSummaryUseCase: GetReportSummaryUseCase,
     private val getRestSuggestionUseCase: GetRestSuggestionUseCase,
+    private val getAchievedDatesUseCase: GetAchievedDatesUseCase,
     private val reportPreferencesRepository: ReportPreferencesRepository,
     private val getAlertSettingUseCase: GetAlertSettingUseCase,
     private val updateAlertSettingUseCase: UpdateAlertSettingUseCase,
 ) : BaseViewModel<ReportUiState, ReportUiEvent, ReportUiEffect>(ReportUiState()) {
+
+    /** 달력 달성일 조회. 월을 빠르게 넘길 때 이전 요청을 취소하려고 들고 있습니다. */
+    private var achievedDatesJob: Job? = null
 
     override fun handleEvent(event: ReportUiEvent) {
         when (event) {
             is ReportUiEvent.ScreenEntered -> enterScreen(event)
             ReportUiEvent.PreviousDateClicked -> moveDate(-1)
             ReportUiEvent.NextDateClicked -> moveDate(1)
-            ReportUiEvent.DatePickerOpened -> setState {
-                copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date))
-            }
+            ReportUiEvent.DatePickerOpened -> openDatePicker()
             ReportUiEvent.DatePickerDismissed -> setState { copy(isDatePickerVisible = false) }
             ReportUiEvent.CalendarTooltipDismissed -> dismissCalendarTooltip()
             is ReportUiEvent.DatePicked -> pickDate(event)
-            is ReportUiEvent.PickerMonthMoved -> setState {
-                copy(pickerMonth = pickerMonth.plusMonths(event.offset))
-            }
+            is ReportUiEvent.PickerMonthMoved -> movePickerMonth(event)
             is ReportUiEvent.TabSelected -> selectTab(event)
             is ReportUiEvent.PeriodSelected -> selectPeriod(event)
             is ReportUiEvent.TimetableEntryClicked -> openUsageReasonInput(event)
@@ -163,6 +166,44 @@ class ReportViewModel @Inject constructor(
             sendEffect(
                 ReportUiEffect.ShowMessage(error.message.takeIf { it.isNotBlank() } ?: fallback),
             )
+        }
+    }
+
+    // ---------------------------------------------------------------- 날짜 선택 달력
+
+    private fun openDatePicker() {
+        setState { copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date)) }
+        loadAchievedDates()
+    }
+
+    private fun movePickerMonth(event: ReportUiEvent.PickerMonthMoved) {
+        setState { copy(pickerMonth = pickerMonth.plusMonths(event.offset), achievedDates = emptySet()) }
+        loadAchievedDates()
+    }
+
+    /**
+     * 하루 목표를 모두 지킨 날짜. 달력에 표시로 붙습니다.
+     * 실패해도 달력 자체는 써야 하니 표시만 비우고 오류는 알리지 않습니다.
+     *
+     * 월을 빠르게 넘기면 이전 요청이 늦게 끝나 지금 보고 있는 달을 덮어쓸 수 있습니다.
+     * 직전 조회를 취소하고, 응답이 도착했을 때 화면의 달이 그대로인지 한 번 더 확인합니다.
+     */
+    private fun loadAchievedDates() {
+        val month = currentState.pickerMonthParam
+        achievedDatesJob?.cancel()
+        achievedDatesJob = viewModelScope.launch {
+            getAchievedDatesUseCase(month)
+                .onSuccess { dates ->
+                    if (month != currentState.pickerMonthParam) return@onSuccess
+                    val parsed = dates.mapNotNull { raw ->
+                        runCatching { LocalDate.parse(raw) }.getOrNull()
+                    }.toSet()
+                    setState { copy(achievedDates = parsed) }
+                }
+                .onFailure {
+                    if (month != currentState.pickerMonthParam) return@onFailure
+                    setState { copy(achievedDates = emptySet()) }
+                }
         }
     }
 

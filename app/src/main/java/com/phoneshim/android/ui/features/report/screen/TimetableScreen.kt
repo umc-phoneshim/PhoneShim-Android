@@ -269,6 +269,7 @@ fun TimetableScreen(
             onPreviousMonth = onPickerPreviousMonth,
             onNextMonth = onPickerNextMonth,
             onDismiss = onDatePickerDismiss,
+            achievedDates = state.achievedDates,
         )
     }
 
