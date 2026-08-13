@@ -2,6 +2,7 @@ package com.phoneshim.android.data.repository
 
 import com.google.gson.Gson
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageSessionCreateRequest
 import com.phoneshim.android.data.api.ReportSuggestionResponse
 import com.phoneshim.android.data.api.ReportSummaryResponse
 import com.phoneshim.android.data.api.UsageCalendarResponse
@@ -124,6 +125,10 @@ class ReportRepositoryImplTest {
 
         override suspend fun getUsageSessions(date: String?): ApiResponse<List<UsageSessionResponse>> =
             throw UnsupportedOperationException()
+
+        override suspend fun postUsageSession(
+            request: UsageSessionCreateRequest,
+        ): ApiResponse<UsageSessionResponse> = throw UnsupportedOperationException()
 
         override suspend fun getReportSummary(
             range: String,

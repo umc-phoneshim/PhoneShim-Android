@@ -67,7 +67,8 @@ class UsageMinutesReader @Inject constructor(
     ): UsageSnapshot {
         val start = startOfToday()
         val now = System.currentTimeMillis()
-        val perPackage = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
+        val aggregated = aggregateByEvents(start, now, blockedIntervals, foregroundPackage)
+        val perPackage = aggregated.perPackage
 
         val phoneMs = perPackage
             .filterKeys { it !in launcherPackages }
@@ -90,6 +91,8 @@ class UsageMinutesReader @Inject constructor(
             phoneMinutes = (phoneMs / 60_000L).toInt(),
             appMinutes = (appMs / 60_000L).toInt(),
             watchedApps = watched,
+            // 리포트 타임테이블은 주의 앱 구간만 그린다. 그 외 앱은 서버에 올릴 필요가 없다.
+            watchedSessions = aggregated.sessions.filter { it.packageName in watchedPackages },
         )
     }
 
@@ -112,12 +115,15 @@ class UsageMinutesReader @Inject constructor(
         now: Long,
         blockedIntervals: List<BlockedInterval>,
         foregroundPackage: String?,
-    ): Map<String, PackageAggregate> {
+    ): AggregateResult {
         val usedMs = HashMap<String, Long>()
         val entries = HashMap<String, Int>()   // 진입 횟수. 1분 내 재진입은 묶는다.
         val exitedAt = HashMap<String, Long>() // 직전 이탈 시각. 재진입 묶음 판정용.
         val openedAt = HashMap<String, Long>() // 아직 종료 안 된 세션의 시작 시각
         val switched = HashSet<String>()       // 이 구간에 전환 이벤트가 한 번이라도 관측된 패키지
+
+        // 리포트 타임테이블용 개별 사용 구간. 합계와 달리 시각을 그대로 보존한다.
+        val sessions = mutableListOf<UsageSessionSnapshot>()
 
         val events = usm.queryEvents(start, now)
         val event = UsageEvents.Event()
@@ -138,6 +144,7 @@ class UsageMinutesReader @Inject constructor(
                     val from = openedAt.remove(pkg) ?: continue
                     val counted = countedMs(pkg, from, event.timeStamp, blockedIntervals)
                     if (counted > 0L) usedMs[pkg] = (usedMs[pkg] ?: 0L) + counted
+                    sessions += UsageSessionSnapshot(pkg, from, event.timeStamp)
                 }
             }
         }
@@ -151,18 +158,30 @@ class UsageMinutesReader @Inject constructor(
 
         // 아직 열려 있는 세션 반영. 이 블록이 없으면 사용 중인 앱의 사용량이 영원히 늘지 않는다.
         // 차단 중인 앱도 세션이 열린 채로 남으므로, 여기서도 차단 구간을 제외한다.
+        //
+        // 열려 있는 세션은 아직 끝나지 않았으므로 지금 시각을 잠정 종료로 둔다.
+        // 다음 주기에 같은 세션이 더 긴 구간으로 다시 올라가고, 서버가 같은 시작 시각으로
+        // 덮어쓰기 때문에 중복으로 쌓이지 않는다.
         for ((pkg, from) in openedAt) {
             val counted = countedMs(pkg, from, now, blockedIntervals)
             if (counted > 0L) usedMs[pkg] = (usedMs[pkg] ?: 0L) + counted
+            sessions += UsageSessionSnapshot(pkg, from, now)
         }
 
-        return (usedMs.keys + entries.keys).associateWith { pkg ->
+        val aggregates = (usedMs.keys + entries.keys).associateWith { pkg ->
             PackageAggregate(
                 usedMs = usedMs[pkg] ?: 0L,
                 entryCount = entries[pkg] ?: 0,
             )
         }
+        return AggregateResult(aggregates, sessions.sortedBy { it.startedAt })
     }
+
+    /** 이벤트 한 번 훑어서 얻는 두 결과. 합계와 개별 구간. */
+    private data class AggregateResult(
+        val perPackage: Map<String, PackageAggregate>,
+        val sessions: List<UsageSessionSnapshot>,
+    )
 
     /**
      * 세션 [from,to) 중 실제로 사용한 것으로 인정할 시간.
@@ -244,6 +263,24 @@ data class UsageSnapshot(
      * 서버 업로드용이며, 오늘 사용 기록이 없는 앱은 담기지 않는다.
      */
     val watchedApps: List<AppUsageSnapshot> = emptyList(),
+
+    /**
+     * 주의앱의 개별 사용 구간. 리포트 타임테이블이 쓴다.
+     * [watchedApps] 가 합계라면 이쪽은 "언제부터 언제까지" 를 그대로 보존한 값이다.
+     */
+    val watchedSessions: List<UsageSessionSnapshot> = emptyList(),
+)
+
+/**
+ * 앱 사용 구간 한 건. epoch millis.
+ *
+ * 아직 끝나지 않은 세션은 [endedAt] 이 조회 시각으로 잠정 기록된다.
+ * 다음 업로드에서 같은 [startedAt] 으로 더 긴 구간이 올라가고 서버가 덮어쓴다.
+ */
+data class UsageSessionSnapshot(
+    val packageName: String,
+    val startedAt: Long,
+    val endedAt: Long,
 )
 
 /**

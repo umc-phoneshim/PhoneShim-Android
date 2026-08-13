@@ -10,6 +10,8 @@ import com.phoneshim.android.data.local.TokenProvider
 import com.phoneshim.android.domain.usecase.RestoreAuthSessionUseCase
 import com.phoneshim.android.domain.usecase.UploadDeviceUsageUseCase
 import com.phoneshim.android.domain.usecase.UploadUsageLogUseCase
+import com.phoneshim.android.domain.usecase.UploadUsageSessionsUseCase
+import com.phoneshim.android.domain.usecase.UsageSessionUpload
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +23,14 @@ data class UsageUploadPayload(
     val date: String,
     val phoneMinutes: Int,
     val apps: List<AppUsageSnapshot>,
+    /**
+     * 주의앱 사용 구간. 리포트 타임테이블의 데이터 소스입니다.
+     *
+     * 보존 전송(PendingUsageUploadStore)에는 담기지 않습니다. 구간은 합계와 달리
+     * 덮어쓰기가 아니라 누적이라, 실패한 걸 나중에 다시 올리면 중복 위험이 있습니다.
+     * 대신 아직 안 끝난 세션이 다음 주기에 더 긴 구간으로 다시 올라가면서 자연히 복구됩니다.
+     */
+    val sessions: List<UsageSessionUpload> = emptyList(),
 )
 
 /**
@@ -39,6 +49,7 @@ class UsageUploader @Inject constructor(
     private val policyProvider: BlockingPolicyProvider,
     private val uploadUsageLog: UploadUsageLogUseCase,
     private val uploadDeviceUsage: UploadDeviceUsageUseCase,
+    private val uploadUsageSessions: UploadUsageSessionsUseCase,
     private val pendingStore: PendingUsageUploadStore,
     private val tokenProvider: TokenProvider,
     private val restoreAuthSession: RestoreAuthSessionUseCase,
@@ -99,12 +110,20 @@ class UsageUploader @Inject constructor(
             date = today,
             phoneMinutes = snapshot.phoneMinutes,
             apps = snapshot.watchedApps,
+            sessions = snapshot.watchedSessions.map { session ->
+                UsageSessionUpload(
+                    packageName = session.packageName,
+                    startedAt = session.startedAt,
+                    endedAt = session.endedAt,
+                )
+            },
         )
         // 값이 그대로면 보낼 이유가 없다. 화면이 꺼져 있으면 사용량도 늘지 않는다.
         if (payload == lastSent) return@withLock
 
         // 보내기 전에 남긴다. 전송 중 프로세스가 죽어도 이 값이 남아야 보전 전송이 된다.
-        pendingStore.save(payload)
+        // 구간은 재전송 시 중복 위험이 있어 보존 대상에서 뺀다(UsageUploadPayload.sessions 참고).
+        pendingStore.save(payload.copy(sessions = emptyList()))
         if (send(payload)) {
             pendingStore.remove(today)
             lastSent = payload
@@ -126,6 +145,13 @@ class UsageUploader @Inject constructor(
         payload.apps.forEach { app ->
             uploadUsageLog(app.packageName, app.usedMinutes, app.entryCount, payload.date)
                 .onFailure { retryable = retryable or handleFailure(app.packageName, payload.date, it) }
+        }
+
+        // 리포트 타임테이블용 사용 구간. 실패해도 재전송하지 않는다(중복 위험).
+        // 아직 안 끝난 세션은 다음 주기에 더 긴 구간으로 다시 올라간다.
+        val sessionFailures = uploadUsageSessions(payload.sessions)
+        if (sessionFailures > 0) {
+            Log.w(TAG, "사용 구간 업로드 일부 실패: $sessionFailures/${payload.sessions.size} ${payload.date}")
         }
         return !retryable
     }

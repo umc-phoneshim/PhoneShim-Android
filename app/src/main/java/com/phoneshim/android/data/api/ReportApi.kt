@@ -1,7 +1,9 @@
 package com.phoneshim.android.data.api
 
 import com.phoneshim.android.data.api.common.ApiResponse
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 /**
@@ -26,6 +28,16 @@ interface ReportApi {
     suspend fun getUsageSessions(
         @Query("date") date: String? = null,
     ): ApiResponse<List<UsageSessionResponse>>
+
+    /**
+     * usageSessionRouter: POST / — 사용 구간 저장.
+     * 차단 엔진이 UsageEvents 로 잡은 구간을 그대로 올립니다.
+     * 같은 monitoredAppId + startTime 이면 서버가 덮어씁니다(아직 안 끝난 세션이 길어지는 경우).
+     */
+    @POST("api/usage-sessions")
+    suspend fun postUsageSession(
+        @Body request: UsageSessionCreateRequest,
+    ): ApiResponse<UsageSessionResponse>
 
     /**
      * reportRouter: GET /summary — 구현완료.
@@ -54,6 +66,13 @@ interface ReportApi {
 data class UsageCalendarResponse(
     val month: String? = null,
     val achievedDates: List<String>? = null,
+)
+
+/** startTime / endTime 은 ISO 8601(오프셋 포함) 문자열입니다. */
+data class UsageSessionCreateRequest(
+    val monitoredAppId: String,
+    val startTime: String,
+    val endTime: String,
 )
 
 /** startTime / endTime 은 ISO 8601 문자열입니다. */

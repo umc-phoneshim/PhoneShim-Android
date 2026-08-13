@@ -17,6 +17,16 @@ interface ReportRepository {
     /** 타임테이블용 사용 구간 목록. */
     suspend fun getUsageSessions(date: String): Result<List<UsageSession>>
 
+    /**
+     * 차단 엔진이 감지한 사용 구간을 서버에 올립니다.
+     * 타임테이블에 데이터가 쌓이는 유일한 경로입니다.
+     */
+    suspend fun uploadUsageSession(
+        monitoredAppId: String,
+        startTime: String,
+        endTime: String,
+    ): Result<Unit>
+
     /** 기간별 사용 사유 요약. day/week/month. 데이터 부족은 공통 API 오류 코드로 구분됩니다. */
     suspend fun getReportSummary(range: ReportRange, date: String?): Result<ReportSummary>
 
