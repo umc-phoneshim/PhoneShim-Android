@@ -129,6 +129,25 @@ class ReminderRepositoryImplTest {
     }
 
     @Test
+    fun `서버 재조회에서 사라진 제한 일정의 기존 알람을 취소한다`() = runTest {
+        val date = LocalDate.of(2026, 7, 16)
+        api.getRemindersResult = ApiResponse(
+            success = true,
+            data = listOf(reminderResponse(restrictMode = "FULL_PHONE")),
+        )
+        repository.getReminders(date).getOrThrow()
+        coordinator.calls.clear()
+        api.getRemindersResult = ApiResponse(success = true, data = emptyList())
+
+        repository.getReminders(date).getOrThrow()
+
+        assertEquals(
+            listOf("cancel:reminder-1:empty", "refresh:empty"),
+            coordinator.calls,
+        )
+    }
+
+    @Test
     fun `네트워크 실패 시 동기화된 날짜 캐시를 반환한다`() = runTest {
         val date = LocalDate.of(2026, 7, 16)
         repository.getReminders(date).getOrThrow()

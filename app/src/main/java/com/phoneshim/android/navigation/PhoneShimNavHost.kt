@@ -37,12 +37,30 @@ import com.phoneshim.android.ui.features.setgoal.screen.SetGoalCompleteScreen
 import com.phoneshim.android.ui.features.setgoal.screen.SetGoalConfirmScreen
 import com.phoneshim.android.ui.features.setgoal.screen.SetGoalStartScreen
 import com.phoneshim.android.ui.features.setgoal.screen.UsageTimeSetScreen
+import com.phoneshim.android.data.realtime.ReminderSocketSessionCoordinator
+
+@Composable
+private fun SocketAuthExpirationEffect(
+    coordinator: ReminderSocketSessionCoordinator,
+    onAuthExpired: () -> Unit,
+) {
+    LaunchedEffect(coordinator) {
+        coordinator.authExpired.collect { onAuthExpired() }
+    }
+}
 
 // 앱 전체 화면 이동 경로(그래프)를 정의하는 네비게이션 호스트
 @Composable
-fun PhoneShimNavHost(navController: NavHostController) {
+fun PhoneShimNavHost(
+    navController: NavHostController,
+    reminderSocketSessionCoordinator: ReminderSocketSessionCoordinator,
+) {
     val authSessionViewModel: AuthSessionViewModel = hiltViewModel()
     val authNoticeMessage by authSessionViewModel.noticeMessage.collectAsState()
+    SocketAuthExpirationEffect(
+        coordinator = reminderSocketSessionCoordinator,
+        onAuthExpired = authSessionViewModel::onAuthExpired,
+    )
 
     LaunchedEffect(authSessionViewModel, navController) {
         authSessionViewModel.effect.collect { effect ->

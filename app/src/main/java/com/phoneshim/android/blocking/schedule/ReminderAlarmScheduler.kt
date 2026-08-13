@@ -36,7 +36,7 @@ class ReminderAlarmScheduler @Inject constructor(
      * 예약되지 않음. 데모가 당일 테스트면 무방. 상시 운영하려면 자정 롤오버 시다시 호출.
      */
     suspend fun rescheduleToday() {
-        val today = LocalDate.now()
+        val today = LocalDate.now(KOREA_ZONE_ID)
         val items = dao.getForDate(today.toEpochDay())
             .filter { it.restrictionMode != MODE_NONE }
 
@@ -82,7 +82,7 @@ class ReminderAlarmScheduler @Inject constructor(
     }
 
     private fun epochMillisFor(date: LocalDate, minutesOfDay: Int): Long =
-        date.atStartOfDay(ZoneId.systemDefault())
+        date.atStartOfDay(KOREA_ZONE_ID)
             .plusMinutes(minutesOfDay.toLong())
             .toInstant()
             .toEpochMilli()
@@ -94,5 +94,6 @@ class ReminderAlarmScheduler @Inject constructor(
         const val EDGE_START = "START"
         const val EDGE_END = "END"
         private const val MODE_NONE = "NONE"
+        private val KOREA_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }
