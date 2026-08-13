@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
+import com.phoneshim.android.domain.model.AuthSessionState
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.repository.AuthSessionRepository
 import com.phoneshim.android.domain.repository.CurrentUserRepository
@@ -73,6 +74,7 @@ class AuthSessionViewModelTest {
 
     private class RecordingAuthSessionRepository : AuthSessionRepository {
         var clearCount = 0
+        override val sessionState = MutableStateFlow(AuthSessionState.UNAUTHENTICATED)
 
         override suspend fun restoreSession() = false
 
