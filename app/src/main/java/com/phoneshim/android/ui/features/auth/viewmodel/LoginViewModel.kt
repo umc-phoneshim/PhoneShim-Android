@@ -1,28 +1,250 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
-import androidx.lifecycle.ViewModel
-import com.phoneshim.android.domain.usecase.LoginUseCase
+import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.BuildConfig
+import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.data.api.common.ApiException
+import com.phoneshim.android.domain.model.AuthException
+import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.model.SocialCredential
+import com.phoneshim.android.domain.model.SocialProvider
+import com.phoneshim.android.domain.repository.CurrentUserRepository
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
+import com.phoneshim.android.domain.usecase.SocialLoginUseCase
+import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.UiEffect
+import com.phoneshim.android.ui.common.base.UiEvent
+import com.phoneshim.android.ui.features.auth.client.AuthClientResult
+import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
+import com.phoneshim.android.ui.features.auth.client.KakaoAuthClient
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
-
-data class LoginUiState(
-    val email: String = "",
-    val password: String = "",
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-)
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase,
-) : ViewModel() {
+    private val googleAuthClient: GoogleAuthClient,
+    private val kakaoAuthClient: KakaoAuthClient,
+    private val socialLoginUseCase: SocialLoginUseCase,
+    private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
+    private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val currentUserRepository: CurrentUserRepository,
+    private val authFeatureAvailability: AuthFeatureAvailability,
+) :
+    BaseViewModel<LoginUiState, LoginUiEvent, LoginUiEffect>(
+        LoginUiState(
+            canGoogleLogin = authFeatureAvailability.canGoogleLogin,
+        ),
+    ) {
+    private var pendingRecoveryCredential: SocialCredential? = null
 
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState
-
-    fun login() {
-        // TODO: loginUseCase 호출 및 uiState 갱신
+    override fun handleEvent(event: LoginUiEvent) {
+        when (event) {
+            is LoginUiEvent.LoginClicked -> startLogin(event.provider)
+            LoginUiEvent.ErrorDismissed -> setState { copy(errorMessage = null) }
+            LoginUiEvent.WithdrawalRecoveryConfirmed -> recoverPendingAccount()
+            LoginUiEvent.WithdrawalPendingDismissed -> dismissWithdrawalPending()
+        }
     }
+
+    private fun startLogin(provider: SocialProvider) {
+        if (currentState.isLoading) return
+        if (provider == SocialProvider.GOOGLE && !currentState.canGoogleLogin) return
+
+        setState {
+            copy(
+                selectedProvider = provider,
+                isLoading = true,
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            val authResult = when (provider) {
+                SocialProvider.GOOGLE -> googleAuthClient.authenticate()
+                SocialProvider.KAKAO -> kakaoAuthClient.authenticate()
+            }
+            when (authResult) {
+                AuthClientResult.Cancelled -> finishLoading()
+                is AuthClientResult.Failure -> showError(authResult.cause.toUserMessage(provider))
+                is AuthClientResult.Success -> completeServerLogin(provider, authResult)
+            }
+        }
+    }
+
+    private suspend fun completeServerLogin(
+        provider: SocialProvider,
+        authResult: AuthClientResult.Success,
+    ) {
+        // provider token은 서버 JWT 교환에만 전달하며 ViewModel 상태나 로컬 저장소에 보관하지 않는다.
+        socialLoginUseCase(provider, authResult.providerToken)
+            .onSuccess { result ->
+                if (result.isNewUser) {
+                    finishLoading()
+                    sendEffect(LoginUiEffect.NavigateToGoalSetup)
+                } else if (!authFeatureAvailability.shouldLoadRemoteProfile) {
+                    // dev mock은 서버 사용자 API에 의존하지 않고 화면 흐름만 검증한다.
+                    finishLoading()
+                    sendEffect(LoginUiEffect.NavigateToMain)
+                } else {
+                    loadExistingUserProfile()
+                }
+            }
+            .onFailure { error ->
+                if (error is AuthException.WithdrawalPending) {
+                    showWithdrawalPending(
+                        SocialCredential(provider, authResult.providerToken),
+                    )
+                } else {
+                    showError(error.toUserMessage(provider))
+                }
+            }
+    }
+
+    private suspend fun loadExistingUserProfile() {
+        getMyInfoUseCase()
+            .onSuccess { user ->
+                currentUserRepository.update(user)
+                finishLoading()
+                sendEffect(LoginUiEffect.NavigateToMain)
+            }
+            .onFailure { throwable ->
+                handleError(throwable) { error ->
+                    finishLoading()
+                    if (error.kind != com.phoneshim.android.ui.common.base.UiError.Kind.AUTH) {
+                        sendEffect(LoginUiEffect.NavigateToMain)
+                    }
+                }
+            }
+    }
+
+    private fun showWithdrawalPending(credential: SocialCredential) {
+        pendingRecoveryCredential = credential
+        setState {
+            copy(
+                isLoading = false,
+                selectedProvider = null,
+                errorMessage = null,
+                isWithdrawalPending = true,
+            )
+        }
+    }
+
+    private fun recoverPendingAccount() {
+        val credential = pendingRecoveryCredential ?: return
+        setState {
+            copy(
+                isWithdrawalPending = false,
+                isLoading = true,
+                selectedProvider = credential.provider,
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            recoverWithdrawalUseCase(credential)
+                .onSuccess {
+                    pendingRecoveryCredential = null
+                    if (authFeatureAvailability.shouldLoadRemoteProfile) {
+                        loadExistingUserProfile()
+                    } else {
+                        finishLoading()
+                        sendEffect(LoginUiEffect.NavigateToMain)
+                    }
+                }
+                .onFailure { error -> showError(error.toUserMessage(credential.provider)) }
+        }
+    }
+
+    private fun dismissWithdrawalPending() {
+        pendingRecoveryCredential = null
+        setState { copy(isWithdrawalPending = false) }
+    }
+
+    private fun finishLoading() {
+        setState { copy(isLoading = false, selectedProvider = null) }
+    }
+
+    private fun showError(message: String) {
+        setState {
+            copy(
+                isLoading = false,
+                selectedProvider = null,
+                errorMessage = message,
+            )
+        }
+    }
+
+    private fun Throwable.toUserMessage(provider: SocialProvider): String {
+        logAuthFailure()
+        val userMessage = when (this) {
+            is AuthException.FeatureUnavailable -> message ?: "현재 사용할 수 없는 기능입니다."
+            AuthException.GoogleCredentialUnavailable ->
+                "기기의 Google 계정 상태를 확인해주세요. 계정을 추가하거나 다시 인증한 뒤 로그인해주세요."
+            is ApiException.Network -> "인터넷 연결을 확인한 뒤 다시 시도해주세요."
+            is ApiException.Serialization,
+            is ApiException.InvalidResponse,
+            -> "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해주세요."
+            is ApiException -> when (code) {
+                ApiErrorCodes.EMAIL_PERMISSION_REQUIRED ->
+                    "카카오 로그인에 이메일 제공 동의가 필요합니다. 동의 항목을 확인한 뒤 다시 로그인해주세요."
+                ApiErrorCodes.EMAIL_NOT_VERIFIED ->
+                    "Google 계정의 이메일 인증 상태를 확인한 뒤 다시 로그인해주세요."
+                ApiErrorCodes.INVALID_GOOGLE_ID_TOKEN,
+                ApiErrorCodes.ID_TOKEN_REQUIRED,
+                -> "Google 로그인 설정이 앱과 서버에서 일치하지 않습니다. 관리자에게 문의해주세요."
+                ApiErrorCodes.ACCESS_TOKEN_REQUIRED -> when (provider) {
+                    SocialProvider.GOOGLE ->
+                        "Google 로그인 서버가 이전 인증 방식으로 동작하고 있습니다. 서버 업데이트가 필요합니다."
+                    SocialProvider.KAKAO -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                }
+                ApiErrorCodes.INVALID_TOKEN -> when (provider) {
+                    SocialProvider.GOOGLE ->
+                        "Google 로그인 서버가 ID Token을 지원하지 않습니다. 서버 업데이트가 필요합니다."
+                    SocialProvider.KAKAO -> "카카오 로그인 정보가 유효하지 않습니다. 다시 로그인해주세요."
+                }
+                else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            }
+            else -> "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        }
+        return if (BuildConfig.DEBUG) {
+            "$userMessage\n(${diagnosticSummary()})"
+        } else {
+            userMessage
+        }
+    }
+
+    /** 인증 토큰과 응답 본문은 제외하고 debug 빌드에 필요한 계약 정보만 남깁니다. */
+    private fun Throwable.logAuthFailure() {
+        if (!BuildConfig.DEBUG) return
+        val apiError = this as? ApiException
+        System.err.println(
+            "PhoneShimAuth: stage=${if (apiError == null) "sdk" else "server"} " +
+                "httpStatus=${apiError?.httpStatus ?: "none"} " +
+                "errorCode=${apiError?.code ?: "none"} " +
+                "errorType=${javaClass.simpleName}",
+        )
+    }
+
+    private fun Throwable.diagnosticSummary(): String {
+        val apiError = this as? ApiException
+        return if (apiError == null) {
+            "SDK / ${javaClass.simpleName}"
+        } else {
+            "HTTP ${apiError.httpStatus ?: "-"} / ${apiError.code ?: "-"}"
+        }
+    }
+}
+
+sealed interface LoginUiEvent : UiEvent {
+    data class LoginClicked(val provider: SocialProvider) : LoginUiEvent
+    data object ErrorDismissed : LoginUiEvent
+    data object WithdrawalRecoveryConfirmed : LoginUiEvent
+    data object WithdrawalPendingDismissed : LoginUiEvent
+}
+
+sealed interface LoginUiEffect : UiEffect {
+    data object NavigateToGoalSetup : LoginUiEffect
+    data object NavigateToMain : LoginUiEffect
 }

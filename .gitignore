@@ -8,3 +8,12 @@
 .externalNativeBuild/
 .cxx/
 local.properties
+build/
+.claude/
+.kotlin/
+
+~$*
+.DS_Store
+tmp/
+backend/
+backend/

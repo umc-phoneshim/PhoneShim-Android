@@ -10,14 +10,14 @@ import androidx.compose.ui.graphics.Color
  * 이 원시 토큰은 시맨틱 매핑에서만 참조하세요.
  */
 object PhoneShimPalette {
-    // Primary (그린 계열)
+    // Primary
     val Primary100 = Color(0xFFF4F8F1)
     val Primary300 = Color(0xFFDCE7D4)
     val Primary400 = Color(0xFFB2C69D)
-    val Primary500 = Color(0xFF8CAB7A) // 메인 브랜드 컬러
+    val Primary500 = Color(0xFF8CAB7A)
     val Primary600 = Color(0xFF6D8B5E)
 
-    // Neutral / Gray
+    // Neutral
     val White = Color(0xFFFFFFFF)
     val Gray100 = Color(0xFFECECEC)
     val Gray300 = Color(0xFFCCCCCC)
@@ -29,12 +29,18 @@ object PhoneShimPalette {
     val SoftCream = Color(0xFFFFFDF7)
     val Cream = Color(0xFFFAF7F0) // Figma Color System 명세에 맞춰 수정 (기존 #FCFAF2)
 
+    // Login
+    val KakaoYellow = Color(0xFFFEE500)
+    val LoginButtonText = Color(0xFF3A1D1D)
+
     // Semantic
     val Success = Color(0xFF7DAA64)
     val Warning = Color(0xFFFFD5CE)
     val Info = Color(0xFFB7D4FF)
+    val SnackbarInfo = Color(0xFF3183FF)
     val Error = Color(0xFFE56767)
 }
+
 
 /**
  * 시맨틱 컬러 - 역할 기반 별칭.
@@ -56,6 +62,10 @@ data class PhoneShimColors(
     val success: Color = PhoneShimPalette.Success,
     val warning: Color = PhoneShimPalette.Warning,
     val info: Color = PhoneShimPalette.Info,
+    val snackbarInfo: Color = PhoneShimPalette.SnackbarInfo,
     val error: Color = PhoneShimPalette.Error,
     val onBrand: Color = PhoneShimPalette.White,
+    val loginGoogleBackground: Color = PhoneShimPalette.Gray100,
+    val loginKakaoBackground: Color = PhoneShimPalette.KakaoYellow,
+    val loginButtonContent: Color = PhoneShimPalette.LoginButtonText,
 )
