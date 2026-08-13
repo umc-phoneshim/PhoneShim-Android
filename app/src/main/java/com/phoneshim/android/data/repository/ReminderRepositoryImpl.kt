@@ -25,6 +25,8 @@ import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ReminderRepositoryImpl @Inject constructor(
     private val reminderApi: ReminderApi,
@@ -105,6 +107,9 @@ class ReminderRepositoryImpl @Inject constructor(
             reminderRestrictionDao.delete(id)
             scheduleCoordinator.cancel(id)
         }
+
+    override fun observeReminders(date: LocalDate): Flow<List<Reminder>> =
+        reminderDao.observeForDate(date.toEpochDay()).map { list -> list.map { it.toDomain() } }
 
     private suspend fun cachedDateOrFailure(
         date: LocalDate,

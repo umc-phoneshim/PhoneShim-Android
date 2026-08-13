@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,11 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.phoneshim.android.R
@@ -56,6 +60,7 @@ import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
+import com.phoneshim.android.ui.features.main.viewmodel.MainUiEvent
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -145,6 +150,23 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // usageStatus/dashboardSummary는 로컬 캐시가 없어 리마인더처럼 Flow로 바꿀 수 없다(#74 너울
+    // 리뷰). 메인 탭을 벗어났다 돌아와도 MainViewModel은 살아있어 재조회가 안 되던 문제라,
+    // 재진입(ON_RESUME)마다 다시 불러온다. "최초 진입인지" 판단은 여기(컴포저블 지역 변수)에
+    // 두지 않는다 — 탭 전환으로 이 Composable 자체가 dispose/재생성되면 MainViewModel은
+    // 살아있어도 플래그는 매번 리셋돼 오분류된다. 대신 MainViewModel.refreshUsageAndDashboard()의
+    // isLoading 가드가 init 직후의 동기 catch-up ON_RESUME만 자연스럽게 무시한다.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onEvent(MainUiEvent.RefreshUsageAndDashboard)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Box(
         modifier = modifier

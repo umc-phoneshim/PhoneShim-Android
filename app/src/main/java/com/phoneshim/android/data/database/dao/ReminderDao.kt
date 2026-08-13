@@ -10,6 +10,7 @@ import androidx.room.Transaction
 import com.phoneshim.android.data.database.entity.ReminderEntity
 import com.phoneshim.android.data.database.entity.ReminderRestrictedAppEntity
 import com.phoneshim.android.data.database.entity.ReminderSyncStateEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReminderDao {
@@ -22,6 +23,17 @@ interface ReminderDao {
         """,
     )
     suspend fun getForDate(dateEpochDay: Long): List<ReminderWithRestrictedApps>
+
+    /** [getForDate]와 같은 쿼리를 Flow로. Room이 reminders 테이블 변경을 감지해 자동 재emit한다. */
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM reminders
+        WHERE dateEpochDay = :dateEpochDay
+        ORDER BY startTimeEpochMillis ASC, endTimeEpochMillis ASC, createdAtEpochMillis ASC
+        """,
+    )
+    fun observeForDate(dateEpochDay: Long): Flow<List<ReminderWithRestrictedApps>>
 
     @Transaction
     @Query("SELECT * FROM reminders WHERE id = :id")
