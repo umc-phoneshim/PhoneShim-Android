@@ -1,12 +1,3 @@
-// TODO(3단계 교차연동): data/api/ReportApi.kt(이안 소유)에 getUsageLogs/getUsageStatus가
-//  이미 중복 구현돼 있음(리포트 타임테이블용, 주석에 "폴 담당"이라고 표시돼 있음).
-//  분배안 3단계 "이안: 폴의 UsageLog를 사용한 리포트 연결"에서 이안과 상의해
-//  ReportRepositoryImpl이 이 UsageLogApi/UsageLogRepository를 쓰도록 정리하고
-//  ReportApi.kt의 중복 메서드+DTO를 제거할 것. 지금은 이안 파일을 건드리지 않음.
-//  NOTE: ReportApi.kt가 같은 패키지(data.api)에 UsageLogResponse/UsageStatusResponse를
-//  이미 선언해놔서 이름이 그대로 겹칩니다(컴파일 에러). 정리 전까지 임시로 접미어를 붙여
-//  UsageLogEntryResponse/UsageAppStatusResponse로 구분했습니다. 3단계 정리 때 하나로 합치고
-//  이 이름도 다시 정리해주세요.
 package com.phoneshim.android.data.api
 
 import com.phoneshim.android.data.api.common.ApiResponse
@@ -15,41 +6,54 @@ import retrofit2.http.GET
 import retrofit2.http.PUT
 import retrofit2.http.Query
 
+/**
+ * 사용량 로그 API. usageLogRouter 구현 기준입니다.
+ *
+ * 리포트 화면(ReportApi)에도 같은 경로가 중복 선언돼 있었는데, 3단계 교차연동에서
+ * 이 파일로 일원화했습니다. 리포트는 [com.phoneshim.android.data.repository.ReportRepositoryImpl]
+ * 이 이 API 를 직접 호출합니다. 리포트 전용 집계(calendar/sessions/summary/suggestion)만
+ * ReportApi 에 남아 있습니다.
+ */
 interface UsageLogApi {
 
+    /** 구현완료. 앱별 일별 사용량. date 생략 시 KST 오늘. */
     @GET("api/usage-logs")
     suspend fun getUsageLogs(
         @Query("date") date: String? = null,
-    ): ApiResponse<List<UsageLogEntryResponse>>
+    ): ApiResponse<List<UsageLogResponse>>
 
+    /** 구현완료. 오늘 사용 현황. 앱 이름/패키지명/목표까지 함께 내려옵니다. */
     @GET("api/usage-logs/status")
-    suspend fun getUsageStatus(): ApiResponse<List<UsageAppStatusResponse>>
+    suspend fun getUsageStatus(): ApiResponse<List<UsageStatusResponse>>
 
     @PUT("api/usage-logs")
     suspend fun putUsageLog(
         @Body request: UsageLogUpsertRequest,
-    ): ApiResponse<UsageLogEntryResponse>
+    ): ApiResponse<UsageLogResponse>
 }
 
-data class UsageLogEntryResponse(
-    val id: String,
+// Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
+// 그래서 아래 DTO 는 전부 nullable 로 받고 도메인 변환에서 보정합니다.
+
+data class UsageLogResponse(
+    val id: String? = null,
     val userId: String? = null,
-    val monitoredAppId: String,
-    val date: String,
-    val usedMinutes: Int,
-    val entryCount: Int,
+    val monitoredAppId: String? = null,
+    val date: String? = null,
+    val usedMinutes: Int? = null,
+    val entryCount: Int? = null,
 )
 
-data class UsageAppStatusResponse(
-    val monitoredAppId: String,
-    val appName: String,
-    val packageName: String,
+data class UsageStatusResponse(
+    val monitoredAppId: String? = null,
+    val appName: String? = null,
+    val packageName: String? = null,
     val appIcon: String? = null,
-    val sortOrder: Int = 0,
+    val sortOrder: Int? = null,
     val targetMinutes: Int? = null,
     val targetCount: Int? = null,
-    val usedMinutes: Int,
-    val entryCount: Int,
+    val usedMinutes: Int? = null,
+    val entryCount: Int? = null,
 )
 
 /** date 생략 시 KST 오늘 기준. */

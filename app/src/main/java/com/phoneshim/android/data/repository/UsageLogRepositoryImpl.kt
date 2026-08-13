@@ -1,9 +1,9 @@
 package com.phoneshim.android.data.repository
 
-import com.phoneshim.android.data.api.UsageAppStatusResponse
 import com.phoneshim.android.data.api.UsageLogApi
-import com.phoneshim.android.data.api.UsageLogEntryResponse
+import com.phoneshim.android.data.api.UsageLogResponse
 import com.phoneshim.android.data.api.UsageLogUpsertRequest
+import com.phoneshim.android.data.api.UsageStatusResponse
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.DailyUsageLog
 import com.phoneshim.android.domain.model.UsageStatus
@@ -39,23 +39,24 @@ class UsageLogRepositoryImpl @Inject constructor(
         )
     }.map { Unit }
 
-    private fun UsageLogEntryResponse.toDomain(): DailyUsageLog = DailyUsageLog(
-        id = id,
-        monitoredAppId = monitoredAppId,
-        date = date,
-        usedMinutes = usedMinutes,
-        entryCount = entryCount,
+    // DTO 가 전부 nullable 이라(Gson 이 Kotlin 기본값을 무시함) 여기서 기본값으로 보정합니다.
+    private fun UsageLogResponse.toDomain(): DailyUsageLog = DailyUsageLog(
+        id = id.orEmpty(),
+        monitoredAppId = monitoredAppId.orEmpty(),
+        date = date.orEmpty(),
+        usedMinutes = usedMinutes ?: 0,
+        entryCount = entryCount ?: 0,
     )
 
-    private fun UsageAppStatusResponse.toDomain(): UsageStatus = UsageStatus(
-        monitoredAppId = monitoredAppId,
-        appName = appName,
-        packageName = packageName,
+    private fun UsageStatusResponse.toDomain(): UsageStatus = UsageStatus(
+        monitoredAppId = monitoredAppId.orEmpty(),
+        appName = appName.orEmpty(),
+        packageName = packageName.orEmpty(),
         appIcon = appIcon,
-        sortOrder = sortOrder,
+        sortOrder = sortOrder ?: 0,
         targetMinutes = targetMinutes,
         targetCount = targetCount,
-        usedMinutes = usedMinutes,
-        entryCount = entryCount,
+        usedMinutes = usedMinutes ?: 0,
+        entryCount = entryCount ?: 0,
     )
 }

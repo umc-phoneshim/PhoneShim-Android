@@ -5,19 +5,12 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 /**
- * 리포트 화면이 사용하는 API. 백엔드 src/domains/{usageLog,usageSession,report} 구현을 직접 확인해 맞췄습니다.
+ * 리포트 화면 전용 집계 API. 백엔드 src/domains/{usageLog,usageSession,report} 구현을 직접 확인해 맞췄습니다.
+ *
+ * 앱별 사용량 조회(GET /api/usage-logs, /status)는 [UsageLogApi] 로 일원화했습니다.
+ * 여기에는 리포트에서만 쓰는 집계 엔드포인트만 둡니다.
  */
 interface ReportApi {
-
-    /** usageLogRouter: GET / — 구현완료. 앱별 일별 사용량. date 생략 시 KST 오늘. */
-    @GET("api/usage-logs")
-    suspend fun getUsageLogs(
-        @Query("date") date: String? = null,
-    ): ApiResponse<List<UsageLogResponse>>
-
-    /** usageLogRouter: GET /status — 구현완료. 오늘 사용 현황. 앱 이름/패키지명/목표 포함. */
-    @GET("api/usage-logs/status")
-    suspend fun getUsageStatus(): ApiResponse<List<UsageStatusResponse>>
 
     /** usageLogRouter: GET /calendar — 구현완료. 그 달에 전체 목표를 달성한 날짜 목록. */
     @GET("api/usage-logs/calendar")
@@ -57,27 +50,6 @@ interface ReportApi {
 
 // Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
 // 그래서 아래 DTO 는 전부 nullable 로 받고 도메인 변환에서 보정합니다.
-
-data class UsageLogResponse(
-    val id: String? = null,
-    val userId: String? = null,
-    val monitoredAppId: String? = null,
-    val date: String? = null,
-    val usedMinutes: Int? = null,
-    val entryCount: Int? = null,
-)
-
-data class UsageStatusResponse(
-    val monitoredAppId: String? = null,
-    val appName: String? = null,
-    val packageName: String? = null,
-    val appIcon: String? = null,
-    val sortOrder: Int? = null,
-    val targetMinutes: Int? = null,
-    val targetCount: Int? = null,
-    val usedMinutes: Int? = null,
-    val entryCount: Int? = null,
-)
 
 data class UsageCalendarResponse(
     val month: String? = null,

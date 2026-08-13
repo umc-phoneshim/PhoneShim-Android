@@ -43,6 +43,8 @@ import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.PhoneShimIcon
 import com.phoneshim.android.ui.common.PhoneShimIconType
+import com.phoneshim.android.ui.common.PhoneShimTooltip
+import com.phoneshim.android.ui.common.TooltipTailAlignment
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEffect
 import com.phoneshim.android.ui.features.mypage.viewmodel.MyPageUiEvent
@@ -208,15 +210,24 @@ fun MyScreen(
                         errorText = state.nameError,
                     )
                     MyInfoField(label = "이메일", value = state.email)
-                    MyInfoField(
-                        label = "다짐 문구",
-                        value = if (state.isEditing) state.motivationDraft else state.motivation,
-                        editable = state.isEditing,
-                        onValueChange = onMotivationChange,
-                        errorText = state.motivationError,
-                        minHeight = 88.dp,
-                    )
-                    MyGoalField(state = state)
+
+                    Column {
+                        // 다짐 문구가 어디에 쓰이는지 모르는 경우가 많아 편집할 때 안내를 띄웁니다.
+                        if (state.isMotivationTooltipVisible) {
+                            PhoneShimTooltip(
+                                text = "이곳에 작성한 문구는 메인화면에 표시됩니다.",
+                                tailAlignment = TooltipTailAlignment.Start,
+                            )
+                        }
+                        MyInfoField(
+                            label = "다짐 문구",
+                            value = if (state.isEditing) state.motivationDraft else state.motivation,
+                            editable = state.isEditing,
+                            onValueChange = onMotivationChange,
+                            errorText = state.motivationError,
+                            minHeight = 88.dp,
+                        )
+                    }
 
                     if (state.isEditing) {
                         SaveButton(enabled = state.canSave, isSaving = state.isSaving, onClick = onSaveClick)
@@ -317,75 +328,8 @@ private fun SaveButton(
 }
 
 @Composable
-private fun MyGoalField(state: MyPageUiState, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = "목표", style = PhoneShimType.KorBodyM, color = PhoneShimTheme.colors.textSecondary)
-        Spacer(modifier = Modifier.height(PhoneShimDimens.spacing8))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = GoalCardMinHeight)
-                .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(12.dp))
-                .padding(PhoneShimDimens.spacing16),
-            verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-        ) {
-            if (!state.hasGoal) {
-                // 온보딩에서 목표를 아직 안 세웠거나, 목표 조회가 실패한 경우입니다.
-                Text(
-                    text = "아직 설정한 목표가 없어요.",
-                    style = PhoneShimType.KorBodyM,
-                    color = PhoneShimTheme.colors.textSecondary,
-                )
-                return@Column
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "하루 목표",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textSecondary,
-                )
-                Text(
-                    text = state.dailyGoalLabel,
-                    style = PhoneShimType.KorH3,
-                    color = PhoneShimTheme.colors.brandStrong,
-                )
-            }
-
-            state.goalApps.forEach { appGoal ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = appGoal.appName,
-                        style = PhoneShimType.KorCaption,
-                        color = PhoneShimTheme.colors.textSecondary,
-                    )
-                    Text(
-                        text = "${appGoal.goalMinutes}분",
-                        style = PhoneShimType.KorCaption,
-                        color = PhoneShimTheme.colors.textPrimary,
-                    )
-                }
-            }
-
-            if (state.hiddenGoalAppCount > 0) {
-                Text(
-                    text = "외 ${state.hiddenGoalAppCount}개",
-                    style = PhoneShimType.KorCaption,
-                    color = PhoneShimTheme.colors.textTertiary,
-                )
-            }
-        }
-    }
-}
-
-private val GoalCardMinHeight = 140.dp
+// 마이페이지 "목표" 카드는 디자인에서 빠졌습니다.
+// 마이페이지는 이름 / 이메일 / 다짐 문구 세 필드만 다루고, 목표는 설정(PREF) 화면이 담당합니다.
 
 private fun previewUser() = User(
     email = "abcde123@gmail.com",

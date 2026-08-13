@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.ReportApi
+import com.phoneshim.android.data.api.UsageLogApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.DailyReport
 import com.phoneshim.android.domain.model.ReasonAppUsage
@@ -20,13 +21,15 @@ import javax.inject.Inject
 
 class ReportRepositoryImpl @Inject constructor(
     private val reportApi: ReportApi,
+    // 앱별 사용량은 폴의 UsageLogApi 로 일원화했습니다(3단계 교차연동).
+    private val usageLogApi: UsageLogApi,
     private val apiCallExecutor: ApiCallExecutor,
 ) : ReportRepository {
 
     override suspend fun getDailyReport(date: String, isToday: Boolean): Result<DailyReport> =
         if (isToday) {
             // 오늘은 앱 이름/패키지명/목표까지 함께 내려오는 status 를 사용합니다.
-            apiCallExecutor.executeAsResult { reportApi.getUsageStatus() }.map { responses ->
+            apiCallExecutor.executeAsResult { usageLogApi.getUsageStatus() }.map { responses ->
                 val usages = responses.map { response ->
                     ReportAppUsage(
                         monitoredAppId = response.monitoredAppId.orEmpty(),
@@ -41,7 +44,7 @@ class ReportRepositoryImpl @Inject constructor(
                 DailyReport(date = date, appUsages = usages)
             }
         } else {
-            apiCallExecutor.executeAsResult { reportApi.getUsageLogs(date) }.map { responses ->
+            apiCallExecutor.executeAsResult { usageLogApi.getUsageLogs(date) }.map { responses ->
                 // 과거 날짜는 앱 이름/패키지명이 내려오지 않습니다.
                 // TODO: GET /api/monitored-apps 와 조인하면 과거 날짜에도 아이콘을 띄울 수 있습니다.
                 //  해당 API는 MonitoredApp 도메인 담당입니다.

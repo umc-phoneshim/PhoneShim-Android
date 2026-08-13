@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.domain.model.DailyReportAlarm
 import com.phoneshim.android.domain.repository.ReportPreferencesRepository
+import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
@@ -12,6 +13,7 @@ import com.phoneshim.android.ui.common.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -21,6 +23,7 @@ class ReportViewModel @Inject constructor(
     private val getUsageSessionsUseCase: GetUsageSessionsUseCase,
     private val getReportSummaryUseCase: GetReportSummaryUseCase,
     private val getRestSuggestionUseCase: GetRestSuggestionUseCase,
+    private val getAchievedDatesUseCase: GetAchievedDatesUseCase,
     private val reportPreferencesRepository: ReportPreferencesRepository,
 ) : BaseViewModel<ReportUiState, ReportUiEvent, ReportUiEffect>(ReportUiState()) {
 
@@ -29,15 +32,11 @@ class ReportViewModel @Inject constructor(
             is ReportUiEvent.ScreenEntered -> enterScreen(event)
             ReportUiEvent.PreviousDateClicked -> moveDate(-1)
             ReportUiEvent.NextDateClicked -> moveDate(1)
-            ReportUiEvent.DatePickerOpened -> setState {
-                copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date))
-            }
+            ReportUiEvent.DatePickerOpened -> openDatePicker()
             ReportUiEvent.DatePickerDismissed -> setState { copy(isDatePickerVisible = false) }
             ReportUiEvent.CalendarTooltipDismissed -> dismissCalendarTooltip()
             is ReportUiEvent.DatePicked -> pickDate(event)
-            is ReportUiEvent.PickerMonthMoved -> setState {
-                copy(pickerMonth = pickerMonth.plusMonths(event.offset))
-            }
+            is ReportUiEvent.PickerMonthMoved -> movePickerMonth(event)
             is ReportUiEvent.TabSelected -> selectTab(event)
             is ReportUiEvent.PeriodSelected -> selectPeriod(event)
             is ReportUiEvent.TimetableEntryClicked -> openUsageReasonInput(event)
@@ -115,6 +114,36 @@ class ReportViewModel @Inject constructor(
                     "${alarm.hourLabel}:${alarm.minuteLabel}에 리포트 알림을 보내드릴게요.",
                 ),
             )
+        }
+    }
+
+    // ---------------------------------------------------------------- 날짜 선택 달력
+
+    private fun openDatePicker() {
+        setState { copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date)) }
+        loadAchievedDates()
+    }
+
+    private fun movePickerMonth(event: ReportUiEvent.PickerMonthMoved) {
+        setState { copy(pickerMonth = pickerMonth.plusMonths(event.offset), achievedDates = emptySet()) }
+        loadAchievedDates()
+    }
+
+    /**
+     * 하루 목표를 모두 지킨 날짜. 달력에 표시로 붙습니다.
+     * 실패해도 달력 자체는 써야 하니 표시만 비우고 오류는 알리지 않습니다.
+     */
+    private fun loadAchievedDates() {
+        val month = currentState.pickerMonthParam
+        viewModelScope.launch {
+            getAchievedDatesUseCase(month)
+                .onSuccess { dates ->
+                    val parsed = dates.mapNotNull { raw ->
+                        runCatching { LocalDate.parse(raw) }.getOrNull()
+                    }.toSet()
+                    setState { copy(achievedDates = parsed) }
+                }
+                .onFailure { setState { copy(achievedDates = emptySet()) } }
         }
     }
 

@@ -52,6 +52,12 @@ data class ReportUiState(
     val pickerMonth: YearMonth = YearMonth.from(LocalDate.now()),
 
     /**
+     * 그 달에 하루 목표를 모두 달성한 날짜. 달력에 표시가 붙습니다.
+     * GET /api/usage-logs/calendar?month=YYYY-MM
+     */
+    val achievedDates: Set<LocalDate> = emptySet(),
+
+    /**
      * 달력 버튼 안내 툴팁 노출 여부.
      * 첫 진입 화면(어플 사용 통계)에서만 보이고, 한 번 닫으면 DataStore 에 기록해
      * 앱을 다시 켜도 뜨지 않습니다. 로딩 전에는 깜빡임을 막으려고 false 로 시작합니다.
@@ -78,6 +84,9 @@ data class ReportUiState(
 
     /** API 요청용 날짜 문자열. 예) "2026-07-11" */
     val requestDate: String get() = date.toString()
+
+    /** 달력 조회용 월 문자열. 예) "2026-07" */
+    val pickerMonthParam: String get() = "%04d-%02d".format(pickerMonth.year, pickerMonth.monthValue)
 
     val isToday: Boolean get() = date == today
 
