@@ -28,7 +28,7 @@ import com.phoneshim.android.R
 import com.phoneshim.android.blocking.detection.BlockingPermissions
 import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.ui.common.PrimaryButton
-import com.phoneshim.android.ui.features.setgoal.component.PermissionConsentPopup
+import com.phoneshim.android.ui.common.PermissionConsentPopup
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
