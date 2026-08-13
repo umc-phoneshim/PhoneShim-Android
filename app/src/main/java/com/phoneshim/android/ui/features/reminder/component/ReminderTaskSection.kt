@@ -1,11 +1,8 @@
 package com.phoneshim.android.ui.features.reminder.component
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,23 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,7 +35,6 @@ import com.phoneshim.android.ui.features.reminder.viewmodel.formatMinutes
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
-import kotlin.math.abs
 
 private val TaskRowHeight = 56.dp
 private val TaskItemSpacing = 12.dp
@@ -59,7 +49,6 @@ internal fun ReminderTaskSection(
     isReadOnly: Boolean,
     onAddTask: () -> Unit,
     onEditTask: (ReminderTaskUiModel) -> Unit,
-    onMoveTask: (Int, Int) -> Unit,
     onRetry: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -89,26 +78,15 @@ internal fun ReminderTaskSection(
                     verticalArrangement = Arrangement.spacedBy(TaskItemSpacing),
                     userScrollEnabled = false,
                 ) {
-                    itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                    items(tasks, key = { task -> task.id }) { task ->
                         Box(
                             modifier = Modifier
-                                .animateItem(
-                                    fadeInSpec = null,
-                                    placementSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow,
-                                    ),
-                                    fadeOutSpec = null,
-                                )
                                 .fillMaxWidth(),
                         ) {
                             ReminderTaskItem(
                                 task = task,
-                                index = index,
-                                lastIndex = tasks.lastIndex,
                                 isReadOnly = isReadOnly,
                                 onEditTask = onEditTask,
-                                onMoveTask = onMoveTask,
                             )
                         }
                     }
@@ -140,19 +118,9 @@ private fun ReminderLoadError(errorMessage: String, onRetry: () -> Unit) {
 @Composable
 private fun ReminderTaskItem(
     task: ReminderTaskUiModel,
-    index: Int,
-    lastIndex: Int,
     isReadOnly: Boolean,
     onEditTask: (ReminderTaskUiModel) -> Unit,
-    onMoveTask: (Int, Int) -> Unit,
 ) {
-    val moveThreshold = with(androidx.compose.ui.platform.LocalDensity.current) {
-        ((TaskRowHeight + TaskItemSpacing) / 2).toPx()
-    }
-    val latestIndex by rememberUpdatedState(index)
-    var accumulatedDrag by remember(task.id) { mutableFloatStateOf(0f) }
-    var currentIndex by remember(task.id) { mutableFloatStateOf(index.toFloat()) }
-
     TodoRow(
         title = task.title,
         timeRange = "${formatMinutes(task.startMinutes)} ~ ${formatMinutes(task.endMinutes)}",
@@ -161,33 +129,9 @@ private fun ReminderTaskItem(
         leadingContent = {
             Icon(
                 painter = painterResource(R.drawable.ic_reminder_drag_handle),
-                contentDescription = "할 일 순서 변경",
+                contentDescription = null,
                 tint = Color.Unspecified,
-                modifier = Modifier
-                    .size(20.dp)
-                    .pointerInput(task.id, lastIndex, isReadOnly) {
-                        if (isReadOnly) return@pointerInput
-                        detectDragGestures(
-                            onDragStart = {
-                                accumulatedDrag = 0f
-                                currentIndex = latestIndex.toFloat()
-                            },
-                            onDragEnd = { accumulatedDrag = 0f },
-                            onDragCancel = { accumulatedDrag = 0f },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            accumulatedDrag += dragAmount.y
-                            if (abs(accumulatedDrag) >= moveThreshold) {
-                                val from = currentIndex.toInt()
-                                val to = (from + if (accumulatedDrag > 0) 1 else -1).coerceIn(0, lastIndex)
-                                if (from != to) {
-                                    onMoveTask(from, to)
-                                    currentIndex = to.toFloat()
-                                }
-                                accumulatedDrag = 0f
-                            }
-                        }
-                    },
+                modifier = Modifier.size(20.dp),
             )
         },
         trailingContent = {

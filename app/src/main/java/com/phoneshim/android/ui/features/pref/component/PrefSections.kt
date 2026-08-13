@@ -58,7 +58,7 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 
 private object PrefSectionDefaults {
     val sectionIconSize = 24.dp
-    val selectorTopSpacing = 24.dp
+    val selectorTopSpacing = 12.dp
     val genderChipWidth = 36.dp
     val ageChipWidth = 96.dp
     val selectorChipHeight = 28.dp
@@ -251,9 +251,11 @@ private class BelowAnchorPositionProvider(
 @Composable
 fun PrefGoalSection(
     totalGoalMinutes: Int,
+    isTotalLimitEnabled: Boolean,
     appGoals: List<AppGoal>,
     validation: PrefValidationResult,
     onTotalGoalClick: () -> Unit,
+    onTotalLimitToggle: () -> Unit,
     onEditAppTime: (String) -> Unit,
     onToggleLimit: (String) -> Unit,
     showRestrictionTooltip: Boolean,
@@ -264,8 +266,10 @@ fun PrefGoalSection(
         Spacer(Modifier.height(PhoneShimDimens.spacing24))
         TotalGoalCard(
             totalMinutes = totalGoalMinutes,
+            isLimitEnabled = isTotalLimitEnabled,
             isError = validation.isTotalGoalInvalid,
             onClick = onTotalGoalClick,
+            onLimitToggle = onTotalLimitToggle,
         )
         Spacer(Modifier.height(PhoneShimDimens.spacing24))
         Text(
@@ -320,13 +324,17 @@ fun PrefGoalSection(
 @Composable
 private fun TotalGoalCard(
     totalMinutes: Int,
+    isLimitEnabled: Boolean,
     isError: Boolean,
     onClick: () -> Unit,
+    onLimitToggle: () -> Unit,
 ) {
     Column {
         GoalTimeCard(
             label = "전체 폰 목표 시간",
             totalMinutes = totalMinutes,
+            restrictionEnabled = isLimitEnabled,
+            onRestrictionToggle = onLimitToggle,
             isError = isError,
             onClick = onClick,
             modifier = Modifier
