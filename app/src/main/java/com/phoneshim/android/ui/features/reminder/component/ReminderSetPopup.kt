@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.offset
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
+import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderAppUiModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
 import com.phoneshim.android.ui.features.reminder.viewmodel.DUPLICATE_SCHEDULE_MESSAGE
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -62,6 +63,8 @@ fun ReminderSetPopup(
     selectedDate: LocalDate,
     todayDate: LocalDate,
     draft: ReminderDraft,
+    monitoredApps: List<ReminderAppUiModel>,
+    isMonitoredAppsLoading: Boolean,
     onDismiss: () -> Unit,
     onTitleChange: (String) -> Unit,
     onStartTimeChange: (String) -> Unit,
@@ -121,7 +124,7 @@ fun ReminderSetPopup(
                     isRestrictionPopupVisible = true
                 },
             ) {
-                RestrictionSelection(draft)
+                RestrictionSelection(draft, monitoredApps)
             }
             PopupActions(
                 isEditing = draft.editingTaskId != null,
@@ -144,6 +147,8 @@ fun ReminderSetPopup(
             if (isRestrictionPopupVisible) {
                 ReminderRestrictionPopup(
                     draft = draft,
+                    monitoredApps = monitoredApps,
+                    isMonitoredAppsLoading = isMonitoredAppsLoading,
                     onModeChange = onRestrictionModeChange,
                     onToggleApp = onToggleApp,
                     onDismiss = { isRestrictionPopupVisible = false },
@@ -207,7 +212,7 @@ private fun PopupTimeSection(
 }
 
 @Composable
-private fun RestrictionSelection(draft: ReminderDraft) {
+private fun RestrictionSelection(draft: ReminderDraft, monitoredApps: List<ReminderAppUiModel>) {
     when (draft.restrictionMode) {
         RestrictionMode.NONE -> {
             Box(
@@ -245,7 +250,11 @@ private fun RestrictionSelection(draft: ReminderDraft) {
             )
             draft.restrictedAppIds.forEach { appId ->
                 Spacer(Modifier.width(8.dp))
-                ReminderAppIcon(appId, Modifier.size(PopupIconSize))
+                ReminderAppIcon(
+                    appId = appId,
+                    modifier = Modifier.size(PopupIconSize),
+                    packageName = monitoredApps.firstOrNull { it.id == appId }?.packageName.orEmpty(),
+                )
             }
         }
     }
@@ -323,13 +332,13 @@ private fun PopupActions(
 }
 
 @Preview(name = "할 일 팝업 세팅 전", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun BeforePopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun BeforePopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(), emptyList(), false, {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "할 일 팝업 세팅 후", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun AfterPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:00", endTimeText = "11:00", restrictionMode = RestrictionMode.SPECIFIC_APPS, restrictedAppIds = setOf("kakao")), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun AfterPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:00", endTimeText = "11:00", restrictionMode = RestrictionMode.SPECIFIC_APPS, restrictedAppIds = setOf("kakao")), emptyList(), false, {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "기존 일정 수정 팝업", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun EditPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft("1", "과제하기", "10:00", "11:00"), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun EditPopupPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft("1", "과제하기", "10:00", "11:00"), emptyList(), false, {}, {}, {}, {}, {}, {}, {}, {}) }
 
 @Preview(name = "시간 중복 오류 상태", widthDp = 360, heightDp = 800, showBackground = true)
-@Composable private fun OverlapPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:30", endTimeText = "11:30", timeError = "이미 해당 시간에 등록된 할 일이 있습니다"), {}, {}, {}, {}, {}, {}, {}, {}) }
+@Composable private fun OverlapPreview() = PhoneShimTheme { ReminderSetPopup(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 11), ReminderDraft(title = "과제", startTimeText = "10:30", endTimeText = "11:30", timeError = "이미 해당 시간에 등록된 할 일이 있습니다"), emptyList(), false, {}, {}, {}, {}, {}, {}, {}, {}) }

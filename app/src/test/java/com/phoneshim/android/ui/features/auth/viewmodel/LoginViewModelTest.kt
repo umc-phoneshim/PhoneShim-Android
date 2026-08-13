@@ -1,5 +1,8 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
+import com.phoneshim.android.data.api.common.ApiError
+import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
 import com.phoneshim.android.domain.model.SocialLoginResult
@@ -138,6 +141,62 @@ class LoginViewModelTest {
         viewModel.onEvent(LoginUiEvent.WithdrawalPendingDismissed)
 
         assertFalse(viewModel.uiState.value.isWithdrawalPending)
+    }
+
+    @Test
+    fun `email permission failure shows actionable Kakao guidance`() = runTest(dispatcher) {
+        val failure = ApiException.Http(
+            statusCode = 400,
+            error = ApiError(
+                code = ApiErrorCodes.EMAIL_PERMISSION_REQUIRED,
+                message = "카카오 이메일 제공 동의가 필요합니다.",
+            ),
+            cause = IllegalStateException("HTTP 400"),
+        )
+        val viewModel = createViewModel(loginFailure = failure)
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
+        runCurrent()
+
+        val message = viewModel.uiState.value.errorMessage.orEmpty()
+        assertTrue(message.contains("카카오 로그인에 이메일 제공 동의가 필요합니다."))
+        assertTrue(message.contains("HTTP 400 / EMAIL_PERMISSION_REQUIRED"))
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `legacy invalid token error identifies outdated server for Google login`() =
+        runTest(dispatcher) {
+            val failure = ApiException.Http(
+                statusCode = 401,
+                error = ApiError(
+                    code = ApiErrorCodes.INVALID_TOKEN,
+                    message = "Invalid token.",
+                ),
+                cause = IllegalStateException("HTTP 401"),
+            )
+            val viewModel = createViewModel(loginFailure = failure)
+
+            viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+            runCurrent()
+
+            val message = viewModel.uiState.value.errorMessage.orEmpty()
+            assertTrue(message.contains("서버 업데이트가 필요"))
+            assertFalse(message.contains("카카오 로그인 정보"))
+            assertTrue(message.contains("HTTP 401 / INVALID_TOKEN"))
+        }
+
+    @Test
+    fun `missing Google credential shows account recovery guidance`() = runTest(dispatcher) {
+        val viewModel = createViewModel(
+            authResult = AuthClientResult.Failure(AuthException.GoogleCredentialUnavailable),
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("Google 계정 상태"))
+        assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test

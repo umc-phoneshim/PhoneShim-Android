@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,27 +104,46 @@ fun PrefScreen(
             containerColor = PhoneShimTheme.colors.background,
             topBar = { PrefTopBar(onBack = onBack) },
         ) { innerPadding ->
-            PrefContent(
-                uiState = uiState,
-                contentPadding = innerPadding,
-                onGenderClick = onGenderClick,
-                onAgeGroupClick = onAgeGroupClick,
-                onGenderSelected = onGenderSelected,
-                onAgeGroupSelected = onAgeGroupSelected,
-                onSelectionDismissed = onSelectionDismissed,
-                onTotalGoalClick = onTotalGoalClick,
-                onEditAppTime = onEditAppTime,
-                onToggleLimit = {
-                    showRestrictionTooltip = false
-                    onToggleLimit(it)
-                },
-                showRestrictionTooltip = showRestrictionTooltip,
-            )
+            when {
+                uiState.isLoading -> Box(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = PhoneShimTheme.colors.brand)
+                }
+                !uiState.hasGoalData -> Box(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = uiState.errorMessage ?: "목표 설정을 불러오지 못했습니다.",
+                        style = PhoneShimType.KorCaption,
+                        color = PhoneShimTheme.colors.textSecondary,
+                    )
+                }
+                else -> PrefContent(
+                    uiState = uiState,
+                    contentPadding = innerPadding,
+                    onGenderClick = onGenderClick,
+                    onAgeGroupClick = onAgeGroupClick,
+                    onGenderSelected = onGenderSelected,
+                    onAgeGroupSelected = onAgeGroupSelected,
+                    onSelectionDismissed = onSelectionDismissed,
+                    onTotalGoalClick = onTotalGoalClick,
+                    onEditAppTime = onEditAppTime,
+                    onToggleLimit = {
+                        showRestrictionTooltip = false
+                        onToggleLimit(it)
+                    },
+                    showRestrictionTooltip = showRestrictionTooltip,
+                )
+            }
         }
-        if (uiState.hasUnsavedChanges) {
+        if (uiState.hasGoalData && uiState.hasUnsavedChanges) {
             PrefActionButtons(
                 onCancel = onCancel,
                 onSave = onSave,
+                isSaving = uiState.isSaving,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
@@ -236,6 +256,14 @@ private fun PrefContent(
                     actionButtonsReservedSpace,
             ),
     ) {
+        uiState.errorMessage?.let { message ->
+            Text(
+                text = message,
+                style = PhoneShimType.KorCaption,
+                color = PhoneShimTheme.colors.error,
+                modifier = Modifier.padding(bottom = PhoneShimDimens.spacing8),
+            )
+        }
         PrefUserInfoSection(
             gender = uiState.draftSettings.gender,
             ageGroup = uiState.draftSettings.ageGroup,
@@ -263,6 +291,7 @@ private fun PrefContent(
 private fun PrefActionButtons(
     onCancel: () -> Unit,
     onSave: () -> Unit,
+    isSaving: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -276,14 +305,16 @@ private fun PrefActionButtons(
             size = PhoneShimButtonSize.Medium,
             fullWidth = false,
             labelStyle = PhoneShimType.KorCaption,
+            enabled = !isSaving,
         )
         PrimaryButton(
-            text = "확인",
+            text = if (isSaving) "저장 중" else "확인",
             onClick = onSave,
             modifier = Modifier.weight(1f),
             size = PhoneShimButtonSize.Medium,
             fullWidth = false,
             labelStyle = PhoneShimType.KorCaption,
+            enabled = !isSaving,
         )
     }
 }
@@ -297,7 +328,7 @@ private val noOpAgeGroup: (AgeGroup) -> Unit = {}
 private fun PreviewPrefScreen(uiState: PrefUiState) {
     PhoneShimTheme {
         PrefScreen(
-            uiState = uiState,
+            uiState = uiState.copy(isLoading = false, hasGoalData = true),
             selectedBottomTab = BottomBarTab.MAIN,
             onBottomNavSelected = {},
             onBack = noOp,

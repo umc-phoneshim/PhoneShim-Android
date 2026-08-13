@@ -29,12 +29,12 @@ interface MonitoredAppRepository {
     /** packageName -> monitoredAppId. 등록되지 않은 앱이면 null. */
     suspend fun resolveMonitoredAppId(packageName: String): Result<String?>
 
-    /** monitoredAppId -> packageName. 삭제됐거나 모르는 id 면 null. */
-    suspend fun resolvePackageName(monitoredAppId: String): Result<String?>
-
     /**
-     * monitoredAppId 여러 개를 한 번에 packageName 으로 변환합니다.
+     * monitoredAppId 를 packageName 으로 변환합니다.
      * Reminder 의 restrictedAppIds 처럼 목록을 통째로 넘겨받는 쪽을 위한 함수입니다.
+     *
+     * 단건이 필요하면 `listOf(id)` 로 부르세요. 한 개짜리 함수를 따로 두면 못 찾았을 때
+     * 그냥 null 이 되어 아래 [ResolvedRestrictedApps.unresolvedIds] 구분이 사라집니다.
      *
      * 변환하지 못한 id 는 [ResolvedRestrictedApps.unresolvedIds] 로 함께 돌려줍니다.
      * 목록에서 그냥 빼버리면 '제한 없음'과 '전부 변환 실패'가 구분되지 않아,

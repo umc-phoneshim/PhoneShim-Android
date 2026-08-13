@@ -1,5 +1,9 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
+import com.phoneshim.android.domain.model.Goal
+import com.phoneshim.android.domain.repository.GoalRepository
+import com.phoneshim.android.domain.usecase.GetGoalUseCase
+import com.phoneshim.android.domain.usecase.SetGoalUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -7,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -21,11 +26,14 @@ class PrefViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var viewModel: PrefViewModel
+    private lateinit var repository: FakeGoalRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = PrefViewModel()
+        repository = FakeGoalRepository()
+        viewModel = PrefViewModel(GetGoalUseCase(repository), SetGoalUseCase(repository))
+        testDispatcher.scheduler.runCurrent()
     }
 
     @After
@@ -257,11 +265,12 @@ class PrefViewModelTest {
     }
 
     @Test
-    fun `saveChanges persists valid draft settings`() {
+    fun `saveChanges persists valid draft settings`() = runTest(testDispatcher) {
         viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
         viewModel.onEvent(PrefUiEvent.AgeGroupSelected(AgeGroup.THIRTIES))
 
         viewModel.onEvent(PrefUiEvent.SaveChanges)
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(state.draftSettings, state.savedSettings)
@@ -290,7 +299,7 @@ class PrefViewModelTest {
     }
 
     @Test
-    fun `rejected editor input does not pollute the draft saved by saveChanges`() {
+    fun `rejected editor input does not pollute the draft saved by saveChanges`() = runTest(testDispatcher) {
         viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
         viewModel.onEvent(PrefUiEvent.HoursInputChanged("0"))
         viewModel.onEvent(PrefUiEvent.MinutesInputChanged("9"))
@@ -299,6 +308,7 @@ class PrefViewModelTest {
         val savedBeforeAttempt = viewModel.uiState.value.savedSettings
 
         viewModel.onEvent(PrefUiEvent.SaveChanges)
+        runCurrent()
 
         // Invalid editor input never enters the draft, so the valid draft remains saveable.
         assertEquals(savedBeforeAttempt, viewModel.uiState.value.savedSettings)
@@ -310,7 +320,80 @@ class PrefViewModelTest {
         val effect = async { viewModel.effect.first() }
 
         viewModel.onEvent(PrefUiEvent.SaveChanges)
+        runCurrent()
 
         assertEquals(PrefUiEffect.SettingsSaved, effect.await())
+    }
+
+    @Test
+    fun `화면 진입 시 Goal을 saved와 draft에 반영한다`() {
+        val settings = viewModel.uiState.value.savedSettings
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(210, settings.totalGoalMinutes)
+        assertEquals("kakao", settings.appGoals.first().packageName)
+        assertEquals("메신저 줄이기", settings.appGoals.first().goalDescription)
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `저장 실패 시 draft를 유지하고 saved는 변경하지 않는다`() = runTest(testDispatcher) {
+        val savedBefore = viewModel.uiState.value.savedSettings
+        repository.saveError = IllegalStateException("save failed")
+        viewModel.onEvent(PrefUiEvent.TotalTimeEditorOpened)
+        viewModel.onEvent(PrefUiEvent.HoursInputChanged("4"))
+        viewModel.onEvent(PrefUiEvent.MinutesInputChanged("0"))
+        viewModel.onEvent(PrefUiEvent.GoalTimeConfirmed)
+
+        viewModel.onEvent(PrefUiEvent.SaveChanges)
+        runCurrent()
+
+        assertEquals(savedBefore, viewModel.uiState.value.savedSettings)
+        assertEquals(240, viewModel.uiState.value.draftSettings.totalGoalMinutes)
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertTrue(viewModel.uiState.value.errorMessage != null)
+    }
+}
+
+private class FakeGoalRepository : GoalRepository {
+    var goal: Goal? = Goal(
+        id = "goal-1",
+        gender = "MALE",
+        ageGroup = "TWENTIES",
+        dailyGoalMinutes = 210,
+        blockAfterGoal = true,
+        apps = listOf(
+            com.phoneshim.android.domain.model.AppGoal(
+                packageName = "kakao",
+                appName = "카카오톡",
+                goalMinutes = 60,
+                accessLimited = true,
+                goalReason = "메신저 줄이기",
+            ),
+            com.phoneshim.android.domain.model.AppGoal(
+                packageName = "facebook",
+                appName = "페이스북",
+                goalMinutes = 90,
+                accessLimited = true,
+            ),
+            com.phoneshim.android.domain.model.AppGoal(
+                packageName = "tiktok",
+                appName = "틱톡",
+                goalMinutes = 60,
+                accessLimited = true,
+            ),
+        ),
+    )
+    var loadError: Throwable? = null
+    var saveError: Throwable? = null
+
+    override suspend fun getGoal(): Result<Goal?> =
+        loadError?.let(Result<Goal?>::failure) ?: Result.success(goal)
+
+    override suspend fun saveGoal(goal: Goal): Result<Unit> {
+        saveError?.let { return Result.failure(it) }
+        this.goal = goal
+        return Result.success(Unit)
     }
 }

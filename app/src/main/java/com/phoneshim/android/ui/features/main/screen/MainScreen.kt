@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,12 +38,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.DashboardSummary
+import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
@@ -52,6 +60,7 @@ import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
 import com.phoneshim.android.ui.common.TodoRowVariant
 import com.phoneshim.android.ui.common.SectionHeader
+import com.phoneshim.android.ui.features.main.viewmodel.MainUiEvent
 import com.phoneshim.android.ui.features.main.viewmodel.MainViewModel
 import com.phoneshim.android.ui.features.setgoal.component.AppIcon
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -80,7 +89,6 @@ data class MainCautionAppItem(
     val entryCount: String
 )
 
-// 리마인더 도메인(타로 담당, 이번 범위 밖) 더미 카드 표시용. 건드리지 않음.
 data class MainTodoItem(
     val title: String,
     val timeRange: String
@@ -95,6 +103,14 @@ private fun formatDuration(totalMinutes: Int): String {
     val hours = safeMinutes / 60
     val minutes = safeMinutes % 60
     return "${hours}h ${minutes}m"
+}
+
+// "OO시간 OO분" 형태(2자리 패딩)로 표시. "하루 사용 시간" 카드의 목표 총량 캡션("OO시간 OO분 중")에서 사용.
+private fun formatKoreanDuration(totalMinutes: Int): String {
+    val safeMinutes = totalMinutes.coerceAtLeast(0)
+    val hours = safeMinutes / 60
+    val minutes = safeMinutes % 60
+    return String.format("%02d시간 %02d분", hours, minutes)
 }
 
 // targetMinutes가 없거나 0 이하면 진행률 없음(0f)으로 처리.
@@ -112,6 +128,14 @@ private fun UsageStatus.toCautionAppItem(): MainCautionAppItem = MainCautionAppI
     entryCount = "${entryCount}회",
 )
 
+private val KOREA_ZONE_ID = ZoneId.of("Asia/Seoul")
+private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm").withZone(KOREA_ZONE_ID)
+
+private fun Reminder.toMainTodoItem(): MainTodoItem = MainTodoItem(
+    title = title,
+    timeRange = "${TIME_FORMATTER.format(startTime)} ~ ${TIME_FORMATTER.format(endTime)}",
+)
+
 /* ============================================================
  * 4. SCREEN
  * ============================================================ */
@@ -127,13 +151,21 @@ fun MainScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // TODO: 실제 사용자 이름 연동 필요. Auth/MyPage 도메인 담당이라 이번 범위(UsageLog/Dashboard/
-    // DeviceUsage) 밖이라 임시 고정값을 씁니다.
-    val userName = "유리"
-
-    // 리마인더 도메인(타로 담당, 이번 범위 밖) 더미 데이터. 손대지 않음.
-    val todayTodos = remember {
-        List(4) { MainTodoItem("과제하기", "10:00 ~ 11:00") }
+    // usageStatus/dashboardSummary는 로컬 캐시가 없어 리마인더처럼 Flow로 바꿀 수 없다(#74 너울
+    // 리뷰). 메인 탭을 벗어났다 돌아와도 MainViewModel은 살아있어 재조회가 안 되던 문제라,
+    // 재진입(ON_RESUME)마다 다시 불러온다. "최초 진입인지" 판단은 여기(컴포저블 지역 변수)에
+    // 두지 않는다 — 탭 전환으로 이 Composable 자체가 dispose/재생성되면 MainViewModel은
+    // 살아있어도 플래그는 매번 리셋돼 오분류된다. 대신 MainViewModel.refreshUsageAndDashboard()의
+    // isLoading 가드가 init 직후의 동기 catch-up ON_RESUME만 자연스럽게 무시한다.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onEvent(MainUiEvent.RefreshUsageAndDashboard)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
@@ -182,28 +214,36 @@ fun MainScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 if (!state.isGoalSet) {
-                    item { GreetingCard(userName = userName, isSetupCompleted = state.isGoalSet) }
+                    item { GreetingCard(userName = state.userName, isSetupCompleted = state.isGoalSet) }
 
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             SectionTitle(title = "하루 사용 시간")
-                            EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                            EmptySetupCard(
+                                mascotRes = R.drawable.usage_time_character,
+                                mascotContentDescription = "시계를 든 사용 시간 마스코트",
+                                onSettingsClick = onNavigateToSetGoal,
+                            )
                         }
                     }
 
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             SectionTitle(title = "오늘 할 일")
-                            EmptySetupCard(onSettingsClick = onNavigateToSetGoal)
+                            EmptySetupCard(
+                                mascotRes = R.drawable.todo_character,
+                                mascotContentDescription = "달력을 든 할 일 마스코트",
+                                onSettingsClick = onNavigateToSetGoal,
+                            )
                         }
                     }
                 } else {
-                    item { GreetingCard(userName = userName, isSetupCompleted = state.isGoalSet) }
+                    item { GreetingCard(userName = state.userName, isSetupCompleted = state.isGoalSet) }
                     item { DailyUsageSection(dashboardSummary = state.dashboardSummary) }
                     item {
                         CautionAppSection(apps = state.usageStatus.map { it.toCautionAppItem() })
                     }
-                    item { TodoSection(todos = todayTodos) }
+                    item { TodoSection(todos = state.todayReminders.map { it.toMainTodoItem() }) }
                 }
             }
         }
@@ -227,7 +267,18 @@ fun MainScreen(
  * ============================================================ */
 @Composable
 fun SectionTitle(title: String) {
-    SectionHeader(title = title, titleStyle = SectionTitleStyle)
+    SectionHeader(
+        title = title,
+        titleStyle = SectionTitleStyle,
+        leadingContent = {
+            Icon(
+                painter = painterResource(R.drawable.ic_disclosure_triangle),
+                contentDescription = null,
+                tint = PhoneShimTheme.colors.textPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+        },
+    )
 }
 
 /* ============================================================
@@ -257,7 +308,8 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
             )
             Text(
                 text = if (isSetupCompleted) {
-                    "오늘도 좋은 습관 만들어봐요!"
+                    // v2: 설정 후 인사 배너 문구 확정값
+                    "휴대폰 보는 시간을 조금이라도 줄이자!"
                 } else {
                     "아직 초기 설정이 완료되지 않았어요!"
                 },
@@ -266,14 +318,20 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
             )
         }
 
-        // phoneshim_mascot.png 원본 156x164px 비율(약 0.95:1) 유지
+        // 설정 후(하트)와 설정 전(슬픔)은 같은 캐릭터의 다른 포즈 export라 원본 픽셀 비율이
+        // 조금씩 다름 — welcome_character 80x75(mdpi), welcome_character_heart 79x72(mdpi).
+        val (mascotRes, mascotAspectRatio, mascotDescription) = if (isSetupCompleted) {
+            Triple(R.drawable.welcome_character_heart, 79f / 72f, "웃으며 손을 흔드는 마스코트")
+        } else {
+            Triple(R.drawable.welcome_character, 80f / 75f, "슬퍼하는 마스코트")
+        }
         Image(
-            painter = painterResource(id = R.drawable.phoneshim_mascot),
-            contentDescription = null,
+            painter = painterResource(id = mascotRes),
+            contentDescription = mascotDescription,
             contentScale = ContentScale.Fit,
             modifier = Modifier
-                .height(72.dp)
-                .aspectRatio(156f / 164f)
+                .height(88.dp)
+                .aspectRatio(mascotAspectRatio)
         )
     }
 }
@@ -282,7 +340,11 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
  * 6-1. 초기 설정 전 빈 상태 카드
  * ============================================================ */
 @Composable
-fun EmptySetupCard(onSettingsClick: () -> Unit) {
+fun EmptySetupCard(
+    mascotRes: Int,
+    mascotContentDescription: String,
+    onSettingsClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -300,10 +362,16 @@ fun EmptySetupCard(onSettingsClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
         ) {
-            // TODO: 피그마에 실제 들어갈 아이콘/일러스트 에셋 확인 필요 (현재 빈 박스로 표시)
-            Box(modifier = Modifier.size(72.dp))
+            // usage_time_character/todo_character 원본 export가 72x72(mdpi)라 72dp로 표시해야
+            // 밀도별 비트맵의 실제 해상도와 맞아 확대 블러가 생기지 않음.
+            Image(
+                painter = painterResource(id = mascotRes),
+                contentDescription = mascotContentDescription,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(72.dp),
+            )
 
-        Text(
+            Text(
                 text = "아직 설정되지 않았어요",
                 style = PhoneShimType.KorCaption,
                 // NOTE: 피그마 순정값 #000. 디자인 시스템 textPrimary(#262626)와 다른 값이라
@@ -356,11 +424,54 @@ private fun DailyUsageSection(dashboardSummary: DashboardSummary?) {
             val remainingMinutes = dashboardSummary?.remainingMinutes ?: 0
             val totalTimeProgress = calculateProgress(usedMinutes, targetMinutes)
 
-            DurationDisplay(
-                totalMinutes = usedMinutes,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(PhoneShimTheme.colors.brandSubtle),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_target_time),
+                        contentDescription = null,
+                        tint = PhoneShimTheme.colors.brandStrong,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                DurationDisplay(totalMinutes = usedMinutes)
+
+                Text(
+                    text = "사용",
+                    style = PhoneShimType.KorBodyM,
+                    color = PhoneShimTheme.colors.textPrimary,
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 목표 총량 — targetMinutes가 없으면(로딩/미설정) 표시 자체를 생략
+                if (targetMinutes != null) {
+                    Text(
+                        text = "${formatKoreanDuration(targetMinutes)} 중",
+                        style = PhoneShimType.KorLabel,
+                        color = PhoneShimTheme.colors.textTertiary,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(PhoneShimPalette.Primary300),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -511,6 +622,8 @@ private fun TodoSection(todos: List<MainTodoItem>) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle(title = "오늘 할 일")
 
+        // TODO: 오늘 리마인더가 0건이면 지금은 빈 Column만 나옴. 빈 상태 문구/일러스트가
+        // 필요한지 타로/디자이너 확인 필요.
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -541,4 +654,86 @@ private fun TodoCard(todo: MainTodoItem) {
             )
         },
     )
+}
+
+/* ============================================================
+ * 10. PREVIEW
+ *  - MainScreen 자체는 hiltViewModel()을 직접 물고 있어 미리보기가 안 되므로,
+ *    isGoalSet 분기별 섹션 조합을 그대로 재현해서 마스코트/레이아웃만 확인.
+ * ============================================================ */
+@Preview(name = "초기 설정 전", widthDp = 360, heightDp = 800, showBackground = true)
+@Composable
+private fun MainScreenEmptyPreview() {
+    PhoneShimTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BackgroundCream)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            GreetingCard(userName = "유리", isSetupCompleted = false)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionTitle(title = "하루 사용 시간")
+                EmptySetupCard(
+                    mascotRes = R.drawable.usage_time_character,
+                    mascotContentDescription = "시계를 든 사용 시간 마스코트",
+                    onSettingsClick = {},
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionTitle(title = "오늘 할 일")
+                EmptySetupCard(
+                    mascotRes = R.drawable.todo_character,
+                    mascotContentDescription = "달력을 든 할 일 마스코트",
+                    onSettingsClick = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "초기 설정 후", widthDp = 360, heightDp = 800, showBackground = true)
+@Composable
+private fun MainScreenFilledPreview() {
+    val previewSummary = DashboardSummary(
+        date = "2026-08-12",
+        targetMinutes = 210,
+        usedMinutes = 90,
+        remainingMinutes = 120,
+        isExceeded = false,
+    )
+    val previewApps = listOf(
+        UsageStatus(
+            monitoredAppId = "1",
+            appName = "유튜브",
+            packageName = "com.google.android.youtube",
+            targetMinutes = 90,
+            usedMinutes = 30,
+            entryCount = 3,
+        ),
+        UsageStatus(
+            monitoredAppId = "2",
+            appName = "인스타그램",
+            packageName = "com.instagram.android",
+            targetMinutes = 60,
+            usedMinutes = 45,
+            entryCount = 5,
+        ),
+    )
+
+    PhoneShimTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BackgroundCream)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            GreetingCard(userName = "유리", isSetupCompleted = true)
+            DailyUsageSection(dashboardSummary = previewSummary)
+            CautionAppSection(apps = previewApps.map { it.toCautionAppItem() })
+            TodoSection(todos = List(2) { MainTodoItem("과제하기", "10:00 ~ 11:00") })
+        }
+    }
 }

@@ -1,14 +1,25 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.domain.usecase.GetGoalUseCase
+import com.phoneshim.android.domain.usecase.SetGoalUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 private const val MINIMUM_GOAL_MINUTES = 10
 
 @HiltViewModel
-class PrefViewModel @Inject constructor() :
+class PrefViewModel @Inject constructor(
+    private val getGoalUseCase: GetGoalUseCase,
+    private val setGoalUseCase: SetGoalUseCase,
+) :
     BaseViewModel<PrefUiState, PrefUiEvent, PrefUiEffect>(PrefUiState()) {
+
+    init {
+        loadGoal()
+    }
 
     override fun handleEvent(event: PrefUiEvent) {
         when (event) {
@@ -191,10 +202,56 @@ class PrefViewModel @Inject constructor() :
 
     private fun saveChanges() {
         val result = validateDraft()
-        if (!result.isValid) return
+        if (!result.isValid || currentState.isSaving) return
 
-        setState { copy(savedSettings = draftSettings) }
-        sendEffect(PrefUiEffect.SettingsSaved)
+        val settingsToSave = currentState.draftSettings
+        setState { copy(isSaving = true, errorMessage = null) }
+        viewModelScope.launch {
+            setGoalUseCase(settingsToSave.toGoal())
+                .onSuccess {
+                    setState {
+                        copy(
+                            savedSettings = settingsToSave,
+                            draftSettings = settingsToSave,
+                            isSaving = false,
+                        )
+                    }
+                    sendEffect(PrefUiEffect.SettingsSaved)
+                }
+                .onFailure { throwable ->
+                    handleError(throwable) { error ->
+                        setState { copy(isSaving = false, errorMessage = error.message) }
+                    }
+                }
+        }
+    }
+
+    private fun loadGoal() {
+        viewModelScope.launch {
+            getGoalUseCase()
+                .onSuccess { goal ->
+                    if (goal == null) {
+                        setState { copy(isLoading = false, errorMessage = "저장된 목표 설정이 없습니다.") }
+                    } else {
+                        val settings = goal.toPrefSettings(currentState.savedSettings)
+                        setState {
+                            copy(
+                                savedSettings = settings,
+                                draftSettings = settings,
+                                validation = validate(settings),
+                                isLoading = false,
+                                hasGoalData = true,
+                                errorMessage = null,
+                            )
+                        }
+                    }
+                }
+                .onFailure { throwable ->
+                    handleError(throwable) { error ->
+                        setState { copy(isLoading = false, errorMessage = error.message) }
+                    }
+                }
+        }
     }
 
     private fun discardChanges() = setState {

@@ -34,12 +34,13 @@ import kotlinx.coroutines.CancellationException
  *   다음 저장 때 이 식별자가 있으면 POST 대신 PATCH 로 보내 409 중복을 피한다.
  *
  * [저장 순서]
- *   로컬 우선. 차단 엔진 판정의 실제 소스가 로컬 캐시라, 네트워크 실패가 온보딩 완료와
- *   엔진 동작을 막지 않아야 한다. 서버 동기화는 best-effort 로 뒤따른다.
+*   차단 엔진이 즉시 읽을 수 있도록 로컬 캐시를 먼저 갱신한 뒤 서버를 동기화한다.
+ *   다만 온보딩·PREF의 저장 완료는 서버 성공을 기준으로 하므로 동기화 오류를 호출부에
+ *   그대로 전달한다. 그래야 로컬에만 주의 앱이 남아 Reminder API가 요구하는
+ *   monitoredAppId를 얻지 못하는 상태를 성공으로 오인하지 않는다.
  *
- *   동기화 실패는 삼켜지므로 호출부에 드러나지 않는다. 서버가 거절할 값(목표 시간
- *   범위 등)은 [com.phoneshim.android.domain.model.GoalLimits] 기준으로 화면에서
- *   미리 걸러야, 로컬에만 저장되고 서버에는 없는 상태가 조용히 생기지 않는다.
+ *   서버가 거절할 값(목표 시간 범위 등)은 [com.phoneshim.android.domain.model.GoalLimits]
+ *   기준으로 화면에서 미리 걸러야, 불필요한 실패가 생기지 않는다.
  */
 class GoalRepositoryImpl @Inject constructor(
     private val monitoredAppApi: MonitoredAppApi,
@@ -60,8 +61,9 @@ class GoalRepositoryImpl @Inject constructor(
 
     override suspend fun saveGoal(goal: Goal): Result<Unit> = runCatching {
         saveLocal(goal)
-        // 서버 동기화 실패가 로컬 저장을 되돌리지 않는다.
-        runCatchingApiCall { syncToServer(goal) }
+        // 로컬은 보존하되 서버 실패를 성공으로 숨기지 않는다. 사용자가 같은 설정으로
+        // 재시도하면 서버의 기존 항목을 재사용하므로 중복 생성 없이 동기화를 이어간다.
+        runCatchingApiCall { syncToServer(goal) }.getOrThrow()
         Unit
     }
 

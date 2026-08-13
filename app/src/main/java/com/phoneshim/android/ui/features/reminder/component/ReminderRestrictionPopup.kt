@@ -27,24 +27,17 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderDraft
+import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderAppUiModel
 import com.phoneshim.android.ui.features.reminder.viewmodel.RestrictionMode
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
-private data class ReminderAppOption(val id: String, val label: String)
-
-private val reminderAppOptions = listOf(
-    ReminderAppOption("com.kakao.talk", "카카오톡"),
-    ReminderAppOption("com.facebook.katana", "페이스북"),
-    ReminderAppOption("com.google.android.youtube", "유튜브"),
-    ReminderAppOption("phoneshim-self", "폰쉴"),
-    ReminderAppOption("com.musinsa.store", "무신사"),
-)
-
 @Composable
 internal fun ReminderRestrictionPopup(
     draft: ReminderDraft,
+    monitoredApps: List<ReminderAppUiModel>,
+    isMonitoredAppsLoading: Boolean,
     onModeChange: (RestrictionMode) -> Unit,
     onToggleApp: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -68,7 +61,12 @@ internal fun ReminderRestrictionPopup(
             RestrictionOptionRow("제한 없음", draft.restrictionMode == RestrictionMode.NONE) {
                 onModeChange(RestrictionMode.NONE)
             }
-            reminderAppOptions.forEach { app ->
+            if (isMonitoredAppsLoading) {
+                Text("주의 앱을 불러오는 중이에요", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textSecondary)
+            } else if (monitoredApps.isEmpty()) {
+                Text("설정된 주의 앱이 없어요", style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textSecondary)
+            }
+            monitoredApps.forEach { app ->
                 RestrictionOptionRow(app.label, app.id in draft.restrictedAppIds) {
                     if (draft.restrictionMode != RestrictionMode.SPECIFIC_APPS) {
                         onModeChange(RestrictionMode.SPECIFIC_APPS)
@@ -98,9 +96,9 @@ private fun RestrictionOptionRow(label: String, selected: Boolean, onClick: () -
 }
 
 @Composable
-internal fun ReminderAppIcon(appId: String, modifier: Modifier = Modifier) {
+internal fun ReminderAppIcon(appId: String, modifier: Modifier = Modifier, packageName: String = appId) {
     val context = LocalContext.current
-    val packageName = if (appId == "phoneshim-self") context.packageName else appId
+    val resolvedPackageName = if (packageName == "phoneshim-self") context.packageName else packageName
     AndroidView(
         modifier = modifier,
         factory = { imageContext ->
@@ -110,7 +108,7 @@ internal fun ReminderAppIcon(appId: String, modifier: Modifier = Modifier) {
             }
         },
         update = { imageView ->
-            val icon = runCatching { context.packageManager.getApplicationIcon(packageName) }.getOrNull()
+            val icon = runCatching { context.packageManager.getApplicationIcon(resolvedPackageName) }.getOrNull()
             if (icon != null) {
                 imageView.setImageDrawable(icon)
             } else {
