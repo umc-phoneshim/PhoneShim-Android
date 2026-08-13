@@ -96,6 +96,8 @@ class SessionTerminationUseCaseTest {
         override suspend fun getMyInfo(): Result<User> = error("unused")
         override suspend fun updateMyInfo(name: String?, motivation: String?): Result<User> =
             error("unused")
+        override suspend fun updateUserProfile(gender: String, ageGroup: String): Result<User> =
+            error("unused")
         override suspend fun withdraw() = Result.success(result)
     }
 }

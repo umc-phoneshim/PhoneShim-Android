@@ -1,9 +1,13 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
 import com.phoneshim.android.domain.model.Goal
+import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.repository.GoalRepository
+import com.phoneshim.android.domain.repository.MyPageRepository
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
+import com.phoneshim.android.domain.usecase.UpdateUserProfileUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -27,12 +31,19 @@ class PrefViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var viewModel: PrefViewModel
     private lateinit var repository: FakeGoalRepository
+    private lateinit var userRepository: FakeMyPageRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         repository = FakeGoalRepository()
-        viewModel = PrefViewModel(GetGoalUseCase(repository), SetGoalUseCase(repository))
+        userRepository = FakeMyPageRepository()
+        viewModel = PrefViewModel(
+            GetGoalUseCase(repository),
+            SetGoalUseCase(repository),
+            GetMyInfoUseCase(userRepository),
+            UpdateUserProfileUseCase(userRepository),
+        )
         testDispatcher.scheduler.runCurrent()
     }
 
@@ -337,6 +348,25 @@ class PrefViewModelTest {
     }
 
     @Test
+    fun `User 서버의 성별과 연령대를 Goal 로컬 값보다 우선 표시한다`() {
+        assertEquals(Gender.MALE, viewModel.uiState.value.savedSettings.gender)
+        assertEquals(AgeGroup.TWENTIES, viewModel.uiState.value.savedSettings.ageGroup)
+    }
+
+    @Test
+    fun `성별 연령대 변경 시 User API 형식으로 저장한다`() = runTest(testDispatcher) {
+        viewModel.onEvent(PrefUiEvent.GenderSelected(Gender.FEMALE))
+        viewModel.onEvent(PrefUiEvent.AgeGroupSelected(AgeGroup.FIFTIES_OR_MORE))
+
+        viewModel.onEvent(PrefUiEvent.SaveChanges)
+        runCurrent()
+
+        assertEquals("FEMALE", userRepository.lastGender)
+        assertEquals("FIFTIES_PLUS", userRepository.lastAgeGroup)
+        assertTrue(viewModel.uiState.value.hasServerUserProfile)
+    }
+
+    @Test
     fun `저장 실패 시 draft를 유지하고 saved는 변경하지 않는다`() = runTest(testDispatcher) {
         val savedBefore = viewModel.uiState.value.savedSettings
         repository.saveError = IllegalStateException("save failed")
@@ -356,11 +386,37 @@ class PrefViewModelTest {
     }
 }
 
+private class FakeMyPageRepository : MyPageRepository {
+    private var user = User(
+        email = "user@phoneshim.com",
+        nickname = "타로",
+        gender = "MALE",
+        ageGroup = "TWENTIES",
+    )
+    var lastGender: String? = null
+    var lastAgeGroup: String? = null
+
+    override suspend fun getMyInfo(): Result<User> = Result.success(user)
+
+    override suspend fun updateMyInfo(name: String?, motivation: String?): Result<User> =
+        Result.success(user)
+
+    override suspend fun updateUserProfile(gender: String, ageGroup: String): Result<User> {
+        lastGender = gender
+        lastAgeGroup = ageGroup
+        user = user.copy(gender = gender, ageGroup = ageGroup)
+        return Result.success(user)
+    }
+
+    override suspend fun withdraw() = error("unused")
+}
+
 private class FakeGoalRepository : GoalRepository {
     var goal: Goal? = Goal(
         id = "goal-1",
-        gender = "MALE",
-        ageGroup = "TWENTIES",
+        // User API 값이 이 로컬 Goal 프로필보다 우선되는지 검증하기 위해 다르게 둔다.
+        gender = "FEMALE",
+        ageGroup = "FORTIES",
         dailyGoalMinutes = 210,
         blockAfterGoal = true,
         apps = listOf(

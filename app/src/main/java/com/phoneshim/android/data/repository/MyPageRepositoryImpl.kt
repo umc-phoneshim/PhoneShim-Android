@@ -2,6 +2,7 @@ package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.MyPageApi
 import com.phoneshim.android.data.api.UpdateUserRequest
+import com.phoneshim.android.data.api.UpdateUserProfileRequest
 import com.phoneshim.android.data.api.UserResponse
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.User
@@ -21,6 +22,13 @@ class MyPageRepositoryImpl @Inject constructor(
     override suspend fun updateMyInfo(name: String?, motivation: String?): Result<User> =
         apiCallExecutor.executeAsResult {
             myPageApi.updateMyInfo(UpdateUserRequest(name = name, motivation = motivation))
+        }.map(UserResponse::toDomain)
+
+    override suspend fun updateUserProfile(gender: String, ageGroup: String): Result<User> =
+        apiCallExecutor.executeAsResult {
+            myPageApi.updateUserProfile(
+                UpdateUserProfileRequest(gender = gender, ageGroup = ageGroup),
+            )
         }.map(UserResponse::toDomain)
 
     override suspend fun withdraw(): Result<WithdrawalResult> =

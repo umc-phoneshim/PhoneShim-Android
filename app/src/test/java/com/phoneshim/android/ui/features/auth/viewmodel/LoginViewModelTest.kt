@@ -248,6 +248,8 @@ class LoginViewModelTest {
                     override suspend fun getMyInfo() = Result.success(TEST_USER)
                     override suspend fun updateMyInfo(name: String?, motivation: String?) =
                         Result.success(TEST_USER)
+                    override suspend fun updateUserProfile(gender: String, ageGroup: String) =
+                        Result.success(TEST_USER)
                     override suspend fun withdraw(): Result<WithdrawalResult> = error("unused")
                 },
             ),

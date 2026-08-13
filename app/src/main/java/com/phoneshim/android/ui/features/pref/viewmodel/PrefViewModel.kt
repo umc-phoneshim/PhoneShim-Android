@@ -3,10 +3,13 @@ package com.phoneshim.android.ui.features.pref.viewmodel
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
+import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
+import com.phoneshim.android.domain.usecase.UpdateUserProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 
 private const val MINIMUM_GOAL_MINUTES = 10
 
@@ -14,11 +17,13 @@ private const val MINIMUM_GOAL_MINUTES = 10
 class PrefViewModel @Inject constructor(
     private val getGoalUseCase: GetGoalUseCase,
     private val setGoalUseCase: SetGoalUseCase,
+    private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val updateUserProfileUseCase: UpdateUserProfileUseCase,
 ) :
     BaseViewModel<PrefUiState, PrefUiEvent, PrefUiEffect>(PrefUiState()) {
 
     init {
-        loadGoal()
+        loadSettings()
     }
 
     override fun handleEvent(event: PrefUiEvent) {
@@ -205,8 +210,21 @@ class PrefViewModel @Inject constructor(
         if (!result.isValid || currentState.isSaving) return
 
         val settingsToSave = currentState.draftSettings
+        val shouldSaveProfile = !currentState.hasServerUserProfile ||
+            settingsToSave.gender != currentState.savedSettings.gender ||
+            settingsToSave.ageGroup != currentState.savedSettings.ageGroup
         setState { copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
+            if (shouldSaveProfile) {
+                val profileResult = updateUserProfileUseCase(
+                    gender = settingsToSave.gender.toServerValue(),
+                    ageGroup = settingsToSave.ageGroup.toServerValue(),
+                )
+                if (profileResult.isFailure) {
+                    handleSaveFailure(profileResult.exceptionOrNull()!!)
+                    return@launch
+                }
+            }
             setGoalUseCase(settingsToSave.toGoal())
                 .onSuccess {
                     setState {
@@ -214,43 +232,54 @@ class PrefViewModel @Inject constructor(
                             savedSettings = settingsToSave,
                             draftSettings = settingsToSave,
                             isSaving = false,
+                            hasServerUserProfile = true,
                         )
                     }
                     sendEffect(PrefUiEffect.SettingsSaved)
                 }
                 .onFailure { throwable ->
-                    handleError(throwable) { error ->
-                        setState { copy(isSaving = false, errorMessage = error.message) }
-                    }
+                    handleSaveFailure(throwable)
                 }
         }
     }
 
-    private fun loadGoal() {
+    private fun handleSaveFailure(throwable: Throwable) {
+        handleError(throwable) { error ->
+            setState { copy(isSaving = false, errorMessage = error.message) }
+        }
+    }
+
+    private fun loadSettings() {
         viewModelScope.launch {
-            getGoalUseCase()
-                .onSuccess { goal ->
-                    if (goal == null) {
-                        setState { copy(isLoading = false, errorMessage = "저장된 목표 설정이 없습니다.") }
-                    } else {
-                        val settings = goal.toPrefSettings(currentState.savedSettings)
-                        setState {
-                            copy(
-                                savedSettings = settings,
-                                draftSettings = settings,
-                                validation = validate(settings),
-                                isLoading = false,
-                                hasGoalData = true,
-                                errorMessage = null,
-                            )
-                        }
-                    }
+            val goalDeferred = async { getGoalUseCase() }
+            val userDeferred = async { getMyInfoUseCase() }
+            val goalResult = goalDeferred.await()
+            val userResult = userDeferred.await()
+            val failure = goalResult.exceptionOrNull() ?: userResult.exceptionOrNull()
+            if (failure != null) {
+                handleError(failure) { error ->
+                    setState { copy(isLoading = false, errorMessage = error.message) }
                 }
-                .onFailure { throwable ->
-                    handleError(throwable) { error ->
-                        setState { copy(isLoading = false, errorMessage = error.message) }
-                    }
-                }
+                return@launch
+            }
+            val goal = goalResult.getOrNull()
+            if (goal == null) {
+                setState { copy(isLoading = false, errorMessage = "저장된 목표 설정이 없습니다.") }
+                return@launch
+            }
+            val user = userResult.getOrThrow()
+            val settings = goal.toPrefSettings(currentState.savedSettings).withUserProfile(user)
+            setState {
+                copy(
+                    savedSettings = settings,
+                    draftSettings = settings,
+                    validation = validate(settings),
+                    isLoading = false,
+                    hasGoalData = true,
+                    hasServerUserProfile = user.gender != null && user.ageGroup != null,
+                    errorMessage = null,
+                )
+            }
         }
     }
 
