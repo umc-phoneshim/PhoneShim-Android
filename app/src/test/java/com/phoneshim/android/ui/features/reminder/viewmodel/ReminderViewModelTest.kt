@@ -279,8 +279,6 @@ private class FakeMonitoredAppRepository : MonitoredAppRepository {
     override suspend fun refreshMonitoredApps() = Result.success(apps)
     override suspend fun resolveMonitoredAppId(packageName: String) =
         Result.success(apps.firstOrNull { it.packageName == packageName }?.id)
-    override suspend fun resolvePackageName(monitoredAppId: String) =
-        Result.success(apps.firstOrNull { it.id == monitoredAppId }?.packageName)
     override suspend fun resolvePackageNames(monitoredAppIds: List<String>) = Result.success(
         ResolvedRestrictedApps(
             packageNames = apps.filter { it.id in monitoredAppIds }.map(MonitoredApp::packageName),

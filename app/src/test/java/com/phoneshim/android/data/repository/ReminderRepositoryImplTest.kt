@@ -257,8 +257,6 @@ private class FakeMonitoredAppRepository : MonitoredAppRepository {
     override suspend fun refreshMonitoredApps(): Result<List<MonitoredApp>> = Result.success(apps)
     override suspend fun resolveMonitoredAppId(packageName: String): Result<String?> =
         Result.success(apps.firstOrNull { it.packageName == packageName }?.id)
-    override suspend fun resolvePackageName(monitoredAppId: String): Result<String?> =
-        Result.success(apps.firstOrNull { it.id == monitoredAppId }?.packageName)
     override suspend fun resolvePackageNames(monitoredAppIds: List<String>): Result<ResolvedRestrictedApps> {
         val byId = apps.associateBy(MonitoredApp::id)
         return Result.success(
