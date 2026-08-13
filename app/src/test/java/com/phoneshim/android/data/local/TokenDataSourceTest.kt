@@ -4,18 +4,23 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.phoneshim.android.domain.model.AuthToken
 import com.phoneshim.android.domain.model.AuthSessionState
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -131,6 +136,29 @@ class TokenDataSourceTest {
     }
 
     @Test
+    fun `concurrent save and clear are serialized with consistent final state`() = runTest {
+        val dataStore = PausingDataStore()
+        val store = TokenDataSource(dataStore, FakeTokenCipher())
+
+        val saveJob = launch { store.save(AuthToken("jwt-token")) }
+        dataStore.firstUpdateCommitted.await()
+
+        val clearJob = launch { store.clearSession() }
+        runCurrent()
+
+        assertFalse(dataStore.secondUpdateStarted.isCompleted)
+        dataStore.releaseFirstUpdate.complete(Unit)
+        saveJob.join()
+        clearJob.join()
+
+        assertEquals(AuthSessionState.UNAUTHENTICATED, store.sessionState.value)
+        assertNull(store.getAccessToken())
+        assertNull(
+            dataStore.data.first()[stringPreferencesKey("encrypted_jwt_access_token")],
+        )
+    }
+
+    @Test
     fun `saved token is encrypted at rest`() = runTest {
         val dataStore = createDataStore(File(temporaryFolder.root, "encrypted.preferences_pb"))
 
@@ -159,4 +187,27 @@ class TokenDataSourceTest {
             scope = backgroundScope,
             produceFile = { file },
         )
+
+    private class PausingDataStore : DataStore<Preferences> {
+        private val preferences = MutableStateFlow<Preferences>(emptyPreferences())
+        override val data: Flow<Preferences> = preferences
+        val firstUpdateCommitted = CompletableDeferred<Unit>()
+        val secondUpdateStarted = CompletableDeferred<Unit>()
+        val releaseFirstUpdate = CompletableDeferred<Unit>()
+        private var updateCount = 0
+
+        override suspend fun updateData(
+            transform: suspend (t: Preferences) -> Preferences,
+        ): Preferences {
+            updateCount += 1
+            if (updateCount == 2) secondUpdateStarted.complete(Unit)
+            val updated = transform(preferences.value)
+            preferences.value = updated
+            if (updateCount == 1) {
+                firstUpdateCommitted.complete(Unit)
+                releaseFirstUpdate.await()
+            }
+            return updated
+        }
+    }
 }
