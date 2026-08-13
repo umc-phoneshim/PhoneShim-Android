@@ -91,6 +91,7 @@ sealed interface PrefUiEvent : UiEvent {
     data class GenderSelected(val gender: Gender) : PrefUiEvent
     data class AgeGroupSelected(val ageGroup: AgeGroup) : PrefUiEvent
     data object TotalTimeEditorOpened : PrefUiEvent
+    data object TotalLimitToggled : PrefUiEvent
     data class AppTimeEditorOpened(val appId: String) : PrefUiEvent
     data class HoursInputChanged(val value: String) : PrefUiEvent
     data class MinutesInputChanged(val value: String) : PrefUiEvent

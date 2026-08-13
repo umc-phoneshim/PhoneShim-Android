@@ -54,7 +54,9 @@ data class ReminderUiState(
     val draft: ReminderDraft = ReminderDraft(),
 ) : UiState {
     val selectedTasks: List<ReminderTaskUiModel>
-        get() = tasksByDate[selectedDate].orEmpty()
+        get() = tasksByDate[selectedDate].orEmpty().sortedWith(
+            compareBy(ReminderTaskUiModel::startMinutes, ReminderTaskUiModel::endMinutes),
+        )
 }
 
 sealed interface ReminderUiEvent : UiEvent {
@@ -63,7 +65,6 @@ sealed interface ReminderUiEvent : UiEvent {
     data object RetryClicked : ReminderUiEvent
     data object AddTaskClicked : ReminderUiEvent
     data class EditTaskClicked(val task: ReminderTaskUiModel) : ReminderUiEvent
-    data class TaskMoved(val fromIndex: Int, val toIndex: Int) : ReminderUiEvent
     data object PopupDismissed : ReminderUiEvent
     data class TitleChanged(val value: String) : ReminderUiEvent
     data class StartTimeChanged(val value: String) : ReminderUiEvent

@@ -34,6 +34,7 @@ class PrefViewModel @Inject constructor(
             is PrefUiEvent.GenderSelected -> selectGender(event)
             is PrefUiEvent.AgeGroupSelected -> selectAgeGroup(event)
             PrefUiEvent.TotalTimeEditorOpened -> showTotalTimeEditor()
+            PrefUiEvent.TotalLimitToggled -> toggleTotalLimit()
             is PrefUiEvent.AppTimeEditorOpened -> showAppTimeEditor(event)
             is PrefUiEvent.HoursInputChanged -> updateHoursInput(event)
             is PrefUiEvent.MinutesInputChanged -> updateMinutesInput(event)
@@ -79,6 +80,16 @@ class PrefViewModel @Inject constructor(
                 minutesInput = (totalMinutes % 60).toString().padStart(2, '0'),
                 isLimitEnabled = draftSettings.isTotalLimitEnabled,
             ),
+        )
+    }
+
+    private fun toggleTotalLimit() = setState {
+        val updatedDraft = draftSettings.copy(
+            isTotalLimitEnabled = !draftSettings.isTotalLimitEnabled,
+        )
+        copy(
+            draftSettings = updatedDraft,
+            validation = validate(updatedDraft),
         )
     }
 
