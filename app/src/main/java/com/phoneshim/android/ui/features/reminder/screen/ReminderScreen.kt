@@ -134,10 +134,12 @@ fun ReminderScreen(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-        PhoneShimBottomBarSnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (!state.isTaskPopupVisible) {
+            PhoneShimBottomBarSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 
     if (state.isTaskPopupVisible) {
@@ -154,6 +156,7 @@ fun ReminderScreen(
             onSave = onSaveTask,
             onDelete = onDeleteTask,
             isSubmitting = state.isSubmitting,
+            snackbarHostState = snackbarHostState,
         )
     }
 }

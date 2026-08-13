@@ -2,12 +2,14 @@ package com.phoneshim.android.ui.features.reminder.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +29,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.common.PhoneShimButtonSize
+import com.phoneshim.android.ui.common.PhoneShimBottomBarSnackbarHost
 import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.common.SecondaryButton
 import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
@@ -71,84 +77,113 @@ fun ReminderSetPopup(
     onSave: () -> Unit,
     onDelete: () -> Unit,
     isSubmitting: Boolean = false,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var isNameInputVisible by remember { mutableStateOf(false) }
     var nameInput by remember { mutableStateOf(draft.title) }
     var isRestrictionPopupVisible by remember { mutableStateOf(false) }
     var showRestrictionTooltip by remember { mutableStateOf(true) }
+    val dismissInteractionSource = remember { MutableInteractionSource() }
     LaunchedEffect(Unit) {
         delay(4_000L)
         showRestrictionTooltip = false
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.width(PopupWidth).height(PopupHeight)) {
-            Column(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(PhoneShimTheme.colors.surface, RoundedCornerShape(PopupCornerRadius))
-                    .padding(PopupPadding),
-                verticalArrangement = Arrangement.spacedBy(PopupItemSpacing),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-            PopupHeader(onDismiss = onDismiss)
-            PopupTimeSection(
-                selectedDate = selectedDate,
-                todayDate = todayDate,
-                startTime = draft.startTimeText,
-                endTime = draft.endTimeText,
-                onStartTimeChange = onStartTimeChange,
-                onEndTimeChange = onEndTimeChange,
+                    .clickable(
+                        interactionSource = dismissInteractionSource,
+                        indication = null,
+                        onClick = onDismiss,
+                    ),
             )
-            PopupSelectionRow(
-                label = "이름",
-                labelColor = PhoneShimTheme.colors.textSecondary,
-                onClick = {
-                    nameInput = draft.title
-                    isNameInputVisible = true
-                },
+            Box(
+                modifier = Modifier
+                    .width(PopupWidth)
+                    .height(PopupHeight)
+                    .align(Alignment.Center)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Final)
+                            }
+                        }
+                    },
             ) {
-                if (draft.title.isNotBlank()) {
-                    Text(draft.title, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
-                    Spacer(Modifier.width(4.dp))
-                }
-                Icon(painterResource(R.drawable.ic_chevron_right_small), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
-            }
-            PopupSelectionRow(
-                label = "제한 선택",
-                labelColor = PhoneShimTheme.colors.error,
-                onClick = {
-                    showRestrictionTooltip = false
-                    isRestrictionPopupVisible = true
-                },
-            ) {
-                RestrictionSelection(draft)
-            }
-            PopupActions(
-                isEditing = draft.editingTaskId != null,
-                onCancel = onDismiss,
-                onDelete = onDelete,
-                onSave = onSave,
-                enabled = !isSubmitting,
-            )
-            }
-            if (showRestrictionTooltip) {
-                PhoneShimTooltip(
-                    text = "선택 시 설정한 시간동안 사용이 제한됩니다.",
-                    tailAlignment = TooltipTailAlignment.End,
+                Column(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(y = (-20).dp)
-                        .zIndex(2f),
-                )
+                        .matchParentSize()
+                        .background(PhoneShimTheme.colors.surface, RoundedCornerShape(PopupCornerRadius))
+                        .padding(PopupPadding),
+                    verticalArrangement = Arrangement.spacedBy(PopupItemSpacing),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    PopupHeader(onDismiss = onDismiss)
+                    PopupTimeSection(
+                        selectedDate = selectedDate,
+                        todayDate = todayDate,
+                        startTime = draft.startTimeText,
+                        endTime = draft.endTimeText,
+                        onStartTimeChange = onStartTimeChange,
+                        onEndTimeChange = onEndTimeChange,
+                    )
+                    PopupSelectionRow(
+                        label = "이름",
+                        labelColor = PhoneShimTheme.colors.textSecondary,
+                        onClick = {
+                            nameInput = draft.title
+                            isNameInputVisible = true
+                        },
+                    ) {
+                        if (draft.title.isNotBlank()) {
+                            Text(draft.title, style = PhoneShimType.KorCaption, color = PhoneShimTheme.colors.textPrimary)
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Icon(painterResource(R.drawable.ic_chevron_right_small), null, tint = Color.Unspecified, modifier = Modifier.size(16.dp))
+                    }
+                    PopupSelectionRow(
+                        label = "제한 선택",
+                        labelColor = PhoneShimTheme.colors.error,
+                        onClick = {
+                            showRestrictionTooltip = false
+                            isRestrictionPopupVisible = true
+                        },
+                    ) {
+                        RestrictionSelection(draft)
+                    }
+                    PopupActions(
+                        isEditing = draft.editingTaskId != null,
+                        onCancel = onDismiss,
+                        onDelete = onDelete,
+                        onSave = onSave,
+                        enabled = !isSubmitting,
+                    )
+                }
+                if (showRestrictionTooltip) {
+                    PhoneShimTooltip(
+                        text = "선택 시 설정한 시간동안 사용이 제한됩니다.",
+                        tailAlignment = TooltipTailAlignment.End,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(y = (-20).dp)
+                            .zIndex(2f),
+                    )
+                }
+                if (isRestrictionPopupVisible) {
+                    ReminderRestrictionPopup(
+                        draft = draft,
+                        onModeChange = onRestrictionModeChange,
+                        onToggleApp = onToggleApp,
+                        onDismiss = { isRestrictionPopupVisible = false },
+                    )
+                }
             }
-            if (isRestrictionPopupVisible) {
-                ReminderRestrictionPopup(
-                    draft = draft,
-                    onModeChange = onRestrictionModeChange,
-                    onToggleApp = onToggleApp,
-                    onDismiss = { isRestrictionPopupVisible = false },
-                )
-            }
+            PhoneShimBottomBarSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
     if (isNameInputVisible) {
