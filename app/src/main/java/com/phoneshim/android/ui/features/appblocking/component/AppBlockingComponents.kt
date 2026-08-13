@@ -41,7 +41,7 @@ fun BlockingOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PhoneShimPalette.Gray100.copy(alpha = 0.25f))
+            .background(PhoneShimPalette.Gray100)
             .padding(PhoneShimDimens.screenHorizontalPadding),
         contentAlignment = contentAlignment,
     ) { content() }
