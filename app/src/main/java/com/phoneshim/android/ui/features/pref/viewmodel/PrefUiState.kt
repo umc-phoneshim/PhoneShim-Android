@@ -23,6 +23,8 @@ data class AppGoal(
     val goalMinutes: Int,
     val isLimitEnabled: Boolean,
     val goalDescription: String,
+    val packageName: String = id,
+    val targetCount: Int = 1,
 )
 
 data class PrefSettings(
@@ -31,6 +33,7 @@ data class PrefSettings(
     val totalGoalMinutes: Int,
     val isTotalLimitEnabled: Boolean,
     val appGoals: List<AppGoal>,
+    val goalId: String? = null,
 )
 
 enum class SelectionPopup {
@@ -70,6 +73,10 @@ data class PrefUiState(
     val editingAppId: String? = null,
     val appDescriptionInput: String = "",
     val validation: PrefValidationResult = PrefValidationResult(),
+    val isLoading: Boolean = true,
+    val hasGoalData: Boolean = false,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null,
 ) : UiState {
     val hasUnsavedChanges: Boolean
         get() = draftSettings != savedSettings

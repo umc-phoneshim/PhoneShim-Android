@@ -16,17 +16,17 @@ import retrofit2.http.POST
  */
 interface TotalGoalApi {
 
-    /** 상태: 예정. 이미 있으면 409 TOTAL_GOAL_ALREADY_EXISTS. */
+    /** 상태: 구현완료. 이미 있으면 409 TOTAL_GOAL_ALREADY_EXISTS. */
     @POST("api/total-goals")
     suspend fun createTotalGoal(
         @Body request: TotalGoalCreateRequest,
     ): ApiResponse<TotalGoalResponse>
 
-    /** 상태: 예정. 목표가 없으면 404 TOTAL_GOAL_NOT_FOUND. */
+    /** 상태: 구현완료. 목표가 없으면 404 TOTAL_GOAL_NOT_FOUND. */
     @GET("api/total-goals")
     suspend fun getTotalGoal(): ApiResponse<TotalGoalResponse>
 
-    /** 상태: 예정. 수정 가능한 필드가 하나도 없으면 400 VALIDATION_ERROR. */
+    /** 상태: 구현완료. 수정 가능한 필드가 하나도 없으면 400 VALIDATION_ERROR. */
     @PATCH("api/total-goals")
     suspend fun updateTotalGoal(
         @Body request: TotalGoalUpdateRequest,

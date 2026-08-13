@@ -1,5 +1,7 @@
 package com.phoneshim.android.ui.features.mypage.viewmodel
 
+import com.phoneshim.android.domain.model.AppGoal
+import com.phoneshim.android.domain.model.Goal
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.UserStatus
 import com.phoneshim.android.domain.model.WithdrawalResult
@@ -29,10 +31,34 @@ data class MyPageUiState(
 
     /** 탈퇴 요청이 접수돼 14일 유예 상태가 된 경우의 결과. */
     val withdrawal: WithdrawalResult? = null,
+
+    /** 마이페이지 "목표" 카드에 보여줄 요약. 아직 목표를 세우지 않았으면 null. */
+    val goal: Goal? = null,
 ) : UiState {
     val name: String get() = user?.nickname.orEmpty()
     val email: String get() = user?.email.orEmpty()
     val motivation: String get() = user?.motivation.orEmpty()
+
+    val hasGoal: Boolean get() = goal != null && goal.dailyGoalMinutes > 0
+
+    /** 하루 총 목표. 예) "3시간 30분" */
+    val dailyGoalLabel: String
+        get() {
+            val minutes = goal?.dailyGoalMinutes ?: return ""
+            val hours = minutes / MINUTES_PER_HOUR
+            val remainder = minutes % MINUTES_PER_HOUR
+            return when {
+                hours > 0 && remainder > 0 -> "${hours}시간 ${remainder}분"
+                hours > 0 -> "${hours}시간"
+                else -> "${remainder}분"
+            }
+        }
+
+    /** 목표를 세운 주의 앱 목록. 카드가 길어지지 않게 앞의 몇 개만 보여줍니다. */
+    val goalApps: List<AppGoal> get() = goal?.apps.orEmpty().take(MAX_GOAL_APPS)
+
+    val hiddenGoalAppCount: Int
+        get() = (goal?.apps.orEmpty().size - MAX_GOAL_APPS).coerceAtLeast(0)
 
     val isProfileReady: Boolean get() = user != null
 
@@ -57,6 +83,11 @@ data class MyPageUiState(
     val canSave: Boolean
         get() = isEditing && !isSaving && nameError == null && motivationError == null &&
             nameDraft.isNotBlank()
+
+    private companion object {
+        const val MINUTES_PER_HOUR = 60
+        const val MAX_GOAL_APPS = 3
+    }
 }
 
 sealed interface MyPageUiEvent : UiEvent {

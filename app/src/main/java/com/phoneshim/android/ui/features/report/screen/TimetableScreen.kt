@@ -1,5 +1,7 @@
 package com.phoneshim.android.ui.features.report.screen
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Icon
@@ -26,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
@@ -35,6 +39,7 @@ import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.features.report.component.AlarmSettingDialog
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
 import com.phoneshim.android.ui.features.report.component.ReportTab
@@ -87,8 +92,6 @@ fun TimetableRoute(
                     message = effect.message,
                     type = effect.type,
                 )
-                // TODO: 알림 설정 화면이 추가되면 연결하세요.
-                ReportUiEffect.NavigateToAlarmSettings -> Unit
             }
         }
     }
@@ -110,6 +113,10 @@ fun TimetableRoute(
         onEntryClick = { viewModel.onEvent(ReportUiEvent.TimetableEntryClicked(it)) },
         onEditView = { viewModel.onEvent(ReportUiEvent.RestSuggestionClicked) },
         onAlarmSettings = { viewModel.onEvent(ReportUiEvent.AlarmSettingsClicked) },
+        onAlarmDialogDismiss = { viewModel.onEvent(ReportUiEvent.AlarmDialogDismissed) },
+        onAlarmHourChange = { viewModel.onEvent(ReportUiEvent.AlarmHourChanged(it)) },
+        onAlarmMinuteChange = { viewModel.onEvent(ReportUiEvent.AlarmMinuteChanged(it)) },
+        onAlarmConfirm = { viewModel.onEvent(ReportUiEvent.AlarmConfirmed) },
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -130,6 +137,10 @@ fun TimetableScreen(
     onEntryClick: (String) -> Unit = {},
     onEditView: () -> Unit = {},
     onAlarmSettings: () -> Unit = {},
+    onAlarmDialogDismiss: () -> Unit = {},
+    onAlarmHourChange: (String) -> Unit = {},
+    onAlarmMinuteChange: (String) -> Unit = {},
+    onAlarmConfirm: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToMyPage: () -> Unit = {},
     onPrevDate: () -> Unit = {},
@@ -207,12 +218,27 @@ fun TimetableScreen(
                     )
                     Spacer(modifier = Modifier.height(PhoneShimDimens.spacing16))
 
-                    Row {
-                        TimetableChart(
-                            hours = state.hourUsages,
-                            onSegmentClick = onEntryClick,
-                            modifier = Modifier.weight(1f),
-                        )
+                    Row(verticalAlignment = Alignment.Top) {
+                        // 타임테이블도 "사용 어플" 카드와 같은 흰 카드 안에 넣습니다.
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    PhoneShimTheme.colors.surface,
+                                    RoundedCornerShape(16.dp),
+                                )
+                                .border(
+                                    1.dp,
+                                    PhoneShimTheme.colors.divider,
+                                    RoundedCornerShape(16.dp),
+                                )
+                                .padding(PhoneShimDimens.spacing12),
+                        ) {
+                            TimetableChart(
+                                hours = state.hourUsages,
+                                onSegmentClick = onEntryClick,
+                            )
+                        }
                         Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
                         // 알림 설정은 상단으로 올라가서 사이드에는 사용 어플 카드만 남깁니다.
                         UsedAppsCard(
@@ -243,6 +269,17 @@ fun TimetableScreen(
             onPreviousMonth = onPickerPreviousMonth,
             onNextMonth = onPickerNextMonth,
             onDismiss = onDatePickerDismiss,
+        )
+    }
+
+    if (state.isAlarmDialogVisible) {
+        AlarmSettingDialog(
+            hour = state.alarmHourDraft,
+            minute = state.alarmMinuteDraft,
+            onHourChange = onAlarmHourChange,
+            onMinuteChange = onAlarmMinuteChange,
+            onConfirm = onAlarmConfirm,
+            onDismiss = onAlarmDialogDismiss,
         )
     }
 }

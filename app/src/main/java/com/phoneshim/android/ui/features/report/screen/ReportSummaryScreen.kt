@@ -39,6 +39,7 @@ import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
 import com.phoneshim.android.ui.features.report.component.AppUsageBubbleChart
 import com.phoneshim.android.ui.features.report.component.CategoryUsageBarChart
+import com.phoneshim.android.ui.features.report.component.AlarmSettingDialog
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
 import com.phoneshim.android.ui.features.report.component.ReportCard
@@ -95,7 +96,6 @@ fun ReportSummaryRoute(
                 // 요약 화면에서는 발생하지 않는 이펙트입니다. (타임테이블 전용)
                 is ReportUiEffect.NavigateToUsageReasonInput -> Unit
                 ReportUiEffect.NavigateToRestSuggestion -> Unit
-                ReportUiEffect.NavigateToAlarmSettings -> Unit
             }
         }
     }
@@ -116,6 +116,10 @@ fun ReportSummaryRoute(
         onTabSelected = { viewModel.onEvent(ReportUiEvent.TabSelected(it)) },
         onPeriodSelected = { viewModel.onEvent(ReportUiEvent.PeriodSelected(it)) },
         onAlarmSettings = { viewModel.onEvent(ReportUiEvent.AlarmSettingsClicked) },
+        onAlarmDialogDismiss = { viewModel.onEvent(ReportUiEvent.AlarmDialogDismissed) },
+        onAlarmHourChange = { viewModel.onEvent(ReportUiEvent.AlarmHourChanged(it)) },
+        onAlarmMinuteChange = { viewModel.onEvent(ReportUiEvent.AlarmMinuteChanged(it)) },
+        onAlarmConfirm = { viewModel.onEvent(ReportUiEvent.AlarmConfirmed) },
         onTooltipDismiss = { viewModel.onEvent(ReportUiEvent.CalendarTooltipDismissed) },
         onBottomNavSelected = { tab ->
             when (tab) {
@@ -145,6 +149,10 @@ fun ReportSummaryScreen(
     onPickerPreviousMonth: () -> Unit = {},
     onPickerNextMonth: () -> Unit = {},
     onAlarmSettings: () -> Unit = {},
+    onAlarmDialogDismiss: () -> Unit = {},
+    onAlarmHourChange: (String) -> Unit = {},
+    onAlarmMinuteChange: (String) -> Unit = {},
+    onAlarmConfirm: () -> Unit = {},
     onTooltipDismiss: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -308,6 +316,17 @@ fun ReportSummaryScreen(
             onPreviousMonth = onPickerPreviousMonth,
             onNextMonth = onPickerNextMonth,
             onDismiss = onDatePickerDismiss,
+        )
+    }
+
+    if (state.isAlarmDialogVisible) {
+        AlarmSettingDialog(
+            hour = state.alarmHourDraft,
+            minute = state.alarmMinuteDraft,
+            onHourChange = onAlarmHourChange,
+            onMinuteChange = onAlarmMinuteChange,
+            onConfirm = onAlarmConfirm,
+            onDismiss = onAlarmDialogDismiss,
         )
     }
 }

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.phoneshim.android.data.database.entity.ReminderRestrictionEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -25,6 +26,21 @@ interface ReminderRestrictionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(restriction: ReminderRestrictionEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(restrictions: List<ReminderRestrictionEntity>)
+
     @Query("DELETE FROM reminder_restriction_cache WHERE taskId = :taskId")
     suspend fun delete(taskId: String)
+
+    @Query("DELETE FROM reminder_restriction_cache WHERE date = :epochDay")
+    suspend fun deleteForDate(epochDay: Long)
+
+    @Transaction
+    suspend fun replaceDate(
+        epochDay: Long,
+        restrictions: List<ReminderRestrictionEntity>,
+    ) {
+        deleteForDate(epochDay)
+        if (restrictions.isNotEmpty()) upsertAll(restrictions)
+    }
 }

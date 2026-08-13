@@ -72,6 +72,8 @@ fun SetGoalStartScreen(
         verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
     ) {
         // 캐릭터 '쉼이' (Figma 04. 목표 설정 시작 — Frame 3 328×320 안에 225dp)
+        // 시작·완료 화면의 마스코트는 포즈가 다르다(여기는 안경+책, 04-6 은 윙크+엄지척).
+        // 한 파일을 공유하면 한쪽이 반드시 디자인과 어긋나서 화면별로 나눠 둔다.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -79,7 +81,7 @@ fun SetGoalStartScreen(
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter = painterResource(R.drawable.setgoal_mascot),
+                painter = painterResource(R.drawable.setgoal_mascot_start),
                 contentDescription = null,
                 modifier = Modifier.size(225.dp),
             )

@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.phoneshim.android.R
@@ -261,6 +262,35 @@ fun ReportDatePickerDialog(
     }
 }
 
+@Preview(name = "날짜 + 달력 + 알림 설정", showBackground = true)
+@Composable
+private fun ReportDateNavigatorPreview() {
+    PhoneShimTheme {
+        ReportDateNavigator(
+            dateLabel = "7.11",
+            onPrevDate = {},
+            onNextDate = {},
+            onCalendarClick = {},
+            onAlarmSettingsClick = {},
+        )
+    }
+}
+
+@Preview(name = "툴팁 노출 상태", showBackground = true)
+@Composable
+private fun ReportDateNavigatorTooltipPreview() {
+    PhoneShimTheme {
+        ReportDateNavigator(
+            dateLabel = "7.11",
+            onPrevDate = {},
+            onNextDate = {},
+            onCalendarClick = {},
+            onAlarmSettingsClick = {},
+            showCalendarTooltip = true,
+        )
+    }
+}
+
 enum class ReportTab(val label: String) {
     SUMMARY("어플 사용 통계"),
     TIMETABLE("타임테이블"),
@@ -281,7 +311,7 @@ fun ReportTabRow(
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        ReportTab.values().forEach { tab ->
+        ReportTab.entries.forEach { tab ->
             val isSelected = tab == selected
             Box(
                 modifier = Modifier

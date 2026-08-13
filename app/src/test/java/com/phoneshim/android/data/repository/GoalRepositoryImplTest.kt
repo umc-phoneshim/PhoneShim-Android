@@ -74,12 +74,12 @@ class GoalRepositoryImplTest {
     // ── 저장 ────────────────────────────────────────────────────────
 
     @Test
-    fun `서버가 실패해도 로컬 캐시에는 목표가 저장된다`() = runTest {
+    fun `서버가 실패하면 로컬 캐시는 보존하고 저장 실패를 호출부에 전달한다`() = runTest {
         monitoredAppApi.failWith = HttpException(errorResponse(401, "UNAUTHORIZED"))
 
         val result = repository.saveGoal(sampleGoal())
 
-        assertTrue(result.isSuccess)
+        assertTrue(result.isFailure)
         assertEquals(210, goalDao.phoneGoal?.goalMinutes)
         assertEquals(true, goalDao.phoneGoal?.limitEnabled)
         assertEquals(2, goalDao.appGoals.size)

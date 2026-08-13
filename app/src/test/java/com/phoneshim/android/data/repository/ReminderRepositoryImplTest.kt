@@ -11,15 +11,25 @@ import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.api.common.ApiResponse
 import com.phoneshim.android.data.database.dao.ReminderCacheEntry
 import com.phoneshim.android.data.database.dao.ReminderDao
+import com.phoneshim.android.data.database.dao.ReminderRestrictionDao
 import com.phoneshim.android.data.database.dao.ReminderWithRestrictedApps
+import com.phoneshim.android.data.database.entity.ReminderRestrictionEntity
 import com.phoneshim.android.data.database.entity.ReminderSyncStateEntity
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.ReminderRestrictionMode
 import com.phoneshim.android.domain.model.ReminderDataSource
+import com.phoneshim.android.domain.model.MonitoredApp
+import com.phoneshim.android.domain.model.ResolvedRestrictedApps
+import com.phoneshim.android.domain.repository.MonitoredAppRepository
+import com.phoneshim.android.domain.schedule.ReminderScheduleCoordinator
+import com.phoneshim.android.domain.usecase.ResolveRestrictedPackageNamesUseCase
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.flowOf
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -30,7 +40,17 @@ import retrofit2.Response
 class ReminderRepositoryImplTest {
     private val api = FakeReminderApi()
     private val dao = FakeReminderDao()
-    private val repository = ReminderRepositoryImpl(api, ApiCallExecutor(Gson()), dao)
+    private val restrictionDao = FakeReminderRestrictionDao()
+    private val coordinator = FakeReminderScheduleCoordinator(restrictionDao)
+    private val monitoredAppRepository = FakeMonitoredAppRepository()
+    private val repository = ReminderRepositoryImpl(
+        api,
+        ApiCallExecutor(Gson()),
+        dao,
+        restrictionDao,
+        ResolveRestrictedPackageNamesUseCase(monitoredAppRepository),
+        coordinator,
+    )
 
     @Test
     fun `비즈니스 오류 코드를 유지한다`() = runTest {
@@ -92,6 +112,20 @@ class ReminderRepositoryImplTest {
         assertEquals(ReminderDataSource.REMOTE, result.source)
         assertEquals("reminder-1", dao.getForDate(date.toEpochDay()).single().reminder.id)
         assertTrue(dao.getSyncState(date.toEpochDay()) != null)
+        assertEquals("reminder-1", restrictionDao.getForDate(date.toEpochDay()).single().taskId)
+        assertEquals(listOf("refresh:cached"), coordinator.calls)
+    }
+
+    @Test
+    fun `서버 빈 목록 조회 성공 시 해당 날짜 엔진 캐시를 삭제한다`() = runTest {
+        val date = LocalDate.of(2026, 7, 16)
+        repository.getReminders(date).getOrThrow()
+        api.getRemindersResult = ApiResponse(success = true, data = emptyList())
+
+        repository.getReminders(date).getOrThrow()
+
+        assertTrue(restrictionDao.getForDate(date.toEpochDay()).isEmpty())
+        assertEquals("refresh:empty", coordinator.calls.last())
     }
 
     @Test
@@ -104,6 +138,8 @@ class ReminderRepositoryImplTest {
 
         assertEquals(ReminderDataSource.CACHE, result.source)
         assertEquals("reminder-1", result.reminders.single().id)
+        assertEquals(1, coordinator.calls.size)
+        assertEquals("reminder-1", restrictionDao.getForDate(date.toEpochDay()).single().taskId)
     }
 
     @Test
@@ -119,13 +155,37 @@ class ReminderRepositoryImplTest {
     fun `생성 수정 삭제 성공을 캐시에 반영한다`() = runTest {
         val created = repository.createReminder(command()).getOrThrow()
         assertEquals(created.id, dao.getById(created.id)?.reminder?.id)
+        assertEquals(created.id, restrictionDao.getForDate(created.date.toEpochDay()).single().taskId)
+        assertEquals("schedule:${created.id}:cached", coordinator.calls.last())
 
         repository.updateReminder(created.id, com.phoneshim.android.domain.model.UpdateReminderCommand(title = "수정"))
             .getOrThrow()
         assertEquals(created.id, dao.getById(created.id)?.reminder?.id)
+        assertEquals("reschedule:${created.id}:cached", coordinator.calls.last())
 
         repository.deleteReminder(created.id).getOrThrow()
         assertTrue(dao.getById(created.id) == null)
+        assertTrue(restrictionDao.getForDate(created.date.toEpochDay()).isEmpty())
+        assertEquals("cancel:${created.id}:empty", coordinator.calls.last())
+    }
+
+    @Test
+    fun `특정 앱 제한 UUID를 packageName으로 변환해 엔진 캐시에 저장한다`() = runTest {
+        api.createResult = ApiResponse(
+            success = true,
+            data = reminderResponse(
+                restrictMode = "SPECIFIC_APP",
+                restrictedAppIds = listOf("monitored-youtube"),
+            ),
+        )
+
+        val created = repository.createReminder(command()).getOrThrow()
+
+        val cached = restrictionDao.getForDate(created.date.toEpochDay()).single()
+        assertEquals("SPECIFIC_APP", cached.restrictionMode)
+        assertEquals("com.google.android.youtube", cached.restrictedPackages)
+        assertEquals(600, cached.startMinutes)
+        assertEquals(660, cached.endMinutes)
     }
 
     private fun command() = CreateReminderCommand(
@@ -137,6 +197,77 @@ class ReminderRepositoryImplTest {
     )
 }
 
+private class FakeReminderRestrictionDao : ReminderRestrictionDao {
+    private val entries = linkedMapOf<String, ReminderRestrictionEntity>()
+
+    override suspend fun getForDate(epochDay: Long): List<ReminderRestrictionEntity> =
+        entries.values.filter { it.date == epochDay }
+
+    override fun observeForDate(epochDay: Long): Flow<List<ReminderRestrictionEntity>> =
+        flowOf(entries.values.filter { it.date == epochDay })
+
+    override suspend fun upsert(restriction: ReminderRestrictionEntity) {
+        entries[restriction.taskId] = restriction
+    }
+
+    override suspend fun upsertAll(restrictions: List<ReminderRestrictionEntity>) {
+        restrictions.forEach { entries[it.taskId] = it }
+    }
+
+    override suspend fun delete(taskId: String) {
+        entries.remove(taskId)
+    }
+
+    override suspend fun deleteForDate(epochDay: Long) {
+        entries.entries.removeAll { it.value.date == epochDay }
+    }
+}
+
+private class FakeReminderScheduleCoordinator(
+    private val dao: ReminderRestrictionDao,
+) : ReminderScheduleCoordinator {
+    val calls = mutableListOf<String>()
+
+    override suspend fun schedule(taskId: String) {
+        calls += "schedule:$taskId:${cacheState()}"
+    }
+
+    override suspend fun reschedule(taskId: String) {
+        calls += "reschedule:$taskId:${cacheState()}"
+    }
+
+    override suspend fun cancel(taskId: String) {
+        calls += "cancel:$taskId:${cacheState()}"
+    }
+
+    override suspend fun refreshToday() {
+        calls += "refresh:${cacheState()}"
+    }
+
+    private suspend fun cacheState(): String =
+        if (dao.getForDate(LocalDate.of(2026, 7, 16).toEpochDay()).isEmpty()) "empty" else "cached"
+}
+
+private class FakeMonitoredAppRepository : MonitoredAppRepository {
+    private val apps = listOf(
+        MonitoredApp("monitored-youtube", "com.google.android.youtube", "YouTube"),
+    )
+
+    override suspend fun getMonitoredApps(): Result<List<MonitoredApp>> = Result.success(apps)
+    override suspend fun refreshMonitoredApps(): Result<List<MonitoredApp>> = Result.success(apps)
+    override suspend fun resolveMonitoredAppId(packageName: String): Result<String?> =
+        Result.success(apps.firstOrNull { it.packageName == packageName }?.id)
+    override suspend fun resolvePackageNames(monitoredAppIds: List<String>): Result<ResolvedRestrictedApps> {
+        val byId = apps.associateBy(MonitoredApp::id)
+        return Result.success(
+            ResolvedRestrictedApps(
+                packageNames = monitoredAppIds.mapNotNull { byId[it]?.packageName },
+                unresolvedIds = monitoredAppIds.filterNot(byId::containsKey),
+            ),
+        )
+    }
+}
+
 private class FakeReminderDao : ReminderDao {
     private val entries = linkedMapOf<String, ReminderCacheEntry>()
     private val syncStates = mutableMapOf<Long, ReminderSyncStateEntity>()
@@ -146,6 +277,10 @@ private class FakeReminderDao : ReminderDao {
             .filter { it.reminder.dateEpochDay == dateEpochDay }
             .sortedBy { it.reminder.startTimeEpochMillis }
             .map { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }
+
+    // 이 테스트는 suspend 조회 경로만 검증하므로, 현재 스냅샷을 한 번 emit하는 것으로 충분하다.
+    override fun observeForDate(dateEpochDay: Long): Flow<List<ReminderWithRestrictedApps>> =
+        flow { emit(getForDate(dateEpochDay)) }
 
     override suspend fun getById(id: String): ReminderWithRestrictedApps? =
         entries[id]?.let { ReminderWithRestrictedApps(it.reminder, it.restrictedApps) }
@@ -215,7 +350,10 @@ private class FakeReminderApi : ReminderApi {
     override suspend fun deleteReminder(id: String): Response<Unit> = deleteResult
 }
 
-private fun reminderResponse(restrictMode: String = "NONE") = ReminderResponse(
+private fun reminderResponse(
+    restrictMode: String = "NONE",
+    restrictedAppIds: List<String> = emptyList(),
+) = ReminderResponse(
     id = "reminder-1",
     userId = "user-1",
     date = "2026-07-16",
@@ -223,6 +361,7 @@ private fun reminderResponse(restrictMode: String = "NONE") = ReminderResponse(
     startTime = "2026-07-16T01:00:00Z",
     endTime = "2026-07-16T02:00:00Z",
     restrictMode = restrictMode,
+    restrictedAppIds = restrictedAppIds,
     createdAt = "2026-07-15T12:00:00Z",
     updatedAt = "2026-07-15T12:00:00Z",
 )

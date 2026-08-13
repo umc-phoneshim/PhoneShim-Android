@@ -1,10 +1,10 @@
 package com.phoneshim.android.data.repository
 
 import com.google.gson.Gson
-import com.phoneshim.android.data.api.UsageAppStatusResponse
 import com.phoneshim.android.data.api.UsageLogApi
-import com.phoneshim.android.data.api.UsageLogEntryResponse
+import com.phoneshim.android.data.api.UsageLogResponse
 import com.phoneshim.android.data.api.UsageLogUpsertRequest
+import com.phoneshim.android.data.api.UsageStatusResponse
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.data.api.common.ApiError
 import com.phoneshim.android.data.api.common.ApiException
@@ -27,7 +27,7 @@ class UsageLogRepositoryImplTest {
         api.statusResponse = ApiResponse(
             success = true,
             data = listOf(
-                UsageAppStatusResponse(
+                UsageStatusResponse(
                     monitoredAppId = "m-1",
                     appName = "카카오톡",
                     packageName = "com.kakao.talk",
@@ -60,15 +60,15 @@ class UsageLogRepositoryImplTest {
     }
 
     private class FakeUsageLogApi : UsageLogApi {
-        lateinit var statusResponse: ApiResponse<List<UsageAppStatusResponse>>
+        lateinit var statusResponse: ApiResponse<List<UsageStatusResponse>>
 
-        override suspend fun getUsageLogs(date: String?): ApiResponse<List<UsageLogEntryResponse>> =
+        override suspend fun getUsageLogs(date: String?): ApiResponse<List<UsageLogResponse>> =
             throw UnsupportedOperationException()
 
-        override suspend fun getUsageStatus(): ApiResponse<List<UsageAppStatusResponse>> = statusResponse
+        override suspend fun getUsageStatus(): ApiResponse<List<UsageStatusResponse>> = statusResponse
 
         override suspend fun putUsageLog(
             request: UsageLogUpsertRequest,
-        ): ApiResponse<UsageLogEntryResponse> = throw UnsupportedOperationException()
+        ): ApiResponse<UsageLogResponse> = throw UnsupportedOperationException()
     }
 }

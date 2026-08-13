@@ -10,6 +10,7 @@ import com.phoneshim.android.domain.model.UpdateReminderCommand
 import com.phoneshim.android.domain.usecase.CreateReminderUseCase
 import com.phoneshim.android.domain.usecase.DeleteReminderUseCase
 import com.phoneshim.android.domain.usecase.GetRemindersUseCase
+import com.phoneshim.android.domain.usecase.GetMonitoredAppsUseCase
 import com.phoneshim.android.domain.usecase.UpdateReminderUseCase
 import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
@@ -21,28 +22,36 @@ import java.time.ZoneId
 import java.time.YearMonth
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 @HiltViewModel
 class ReminderViewModel @Inject constructor(
     private val getReminders: GetRemindersUseCase,
+    private val getMonitoredApps: GetMonitoredAppsUseCase,
     private val createReminder: CreateReminderUseCase,
     private val updateReminder: UpdateReminderUseCase,
     private val deleteReminder: DeleteReminderUseCase,
 ) : BaseViewModel<ReminderUiState, ReminderUiEvent, ReminderUiEffect>(
     ReminderUiState(todayDate = LocalDate.now(KOREA_ZONE_ID)),
 ) {
-    private var loadJob: Job? = null
+    private var selectedDateLoadJob: Job? = null
+    private var monthLoadJob: Job? = null
 
     init {
-        loadSelectedDate()
+        loadMonitoredApps()
+        loadMonth(currentState.visibleMonth)
     }
 
     override fun handleEvent(event: ReminderUiEvent) {
         when (event) {
             is ReminderUiEvent.DateSelected -> selectDate(event)
             is ReminderUiEvent.MonthMoved -> moveMonth(event)
-            ReminderUiEvent.RetryClicked -> loadSelectedDate()
+            ReminderUiEvent.RetryClicked -> loadMonth(currentState.visibleMonth)
             ReminderUiEvent.AddTaskClicked -> openAddPopup()
             is ReminderUiEvent.EditTaskClicked -> openEditPopup(event)
             is ReminderUiEvent.TaskMoved -> moveTask(event)
@@ -60,13 +69,22 @@ class ReminderViewModel @Inject constructor(
     private fun selectDate(event: ReminderUiEvent.DateSelected) {
         if (event.date == currentState.selectedDate && currentState.loadErrorMessage == null) return
         setState {
-            copy(selectedDate = event.date, visibleMonth = YearMonth.from(event.date))
+            val cached = event.date in cachedDates
+            copy(
+                selectedDate = event.date,
+                visibleMonth = YearMonth.from(event.date),
+                isShowingCachedData = cached,
+                syncWarningMessage = if (cached) CACHE_WARNING_MESSAGE else null,
+                loadErrorMessage = null,
+            )
         }
         loadSelectedDate()
     }
 
-    private fun moveMonth(event: ReminderUiEvent.MonthMoved) = setState {
-        copy(visibleMonth = visibleMonth.plusMonths(event.offset))
+    private fun moveMonth(event: ReminderUiEvent.MonthMoved) {
+        val month = currentState.visibleMonth.plusMonths(event.offset)
+        setState { copy(visibleMonth = month) }
+        loadMonth(month)
     }
 
     private fun openAddPopup() = setState {
@@ -163,6 +181,10 @@ class ReminderViewModel @Inject constructor(
             overlaps(state, start, end, draft.editingTaskId) -> DUPLICATE_SCHEDULE_MESSAGE
             else -> null
         }
+        if (draft.restrictionMode == RestrictionMode.SPECIFIC_APPS && draft.restrictedAppIds.isEmpty()) {
+            sendEffect(ReminderUiEffect.ShowMessage("제한할 앱을 선택해 주세요"))
+            return
+        }
         if (titleError != null || timeError != null) {
             setState {
                 copy(draft = draft.copy(titleError = titleError, timeError = timeError))
@@ -226,8 +248,8 @@ class ReminderViewModel @Inject constructor(
 
     private fun loadSelectedDate() {
         val date = currentState.selectedDate
-        loadJob?.cancel()
-        loadJob = viewModelScope.launch {
+        selectedDateLoadJob?.cancel()
+        selectedDateLoadJob = viewModelScope.launch {
             setState { copy(isLoading = true, loadErrorMessage = null) }
             getReminders(date)
                 .onSuccess { result ->
@@ -238,6 +260,7 @@ class ReminderViewModel @Inject constructor(
                             isLoading = false,
                             loadErrorMessage = null,
                             isShowingCachedData = isCache,
+                            cachedDates = if (isCache) cachedDates + date else cachedDates - date,
                             syncWarningMessage = if (isCache) CACHE_WARNING_MESSAGE else null,
                         )
                     }
@@ -253,6 +276,77 @@ class ReminderViewModel @Inject constructor(
                             )
                         }
                     }
+                }
+        }
+    }
+
+    private fun loadMonth(month: YearMonth) {
+        monthLoadJob?.cancel()
+        monthLoadJob = viewModelScope.launch {
+            val selectedDate = currentState.selectedDate
+            if (YearMonth.from(selectedDate) == month) {
+                setState { copy(isLoading = true, loadErrorMessage = null) }
+            }
+            val semaphore = Semaphore(MONTH_REQUEST_CONCURRENCY)
+            coroutineScope {
+                (1..month.lengthOfMonth()).map { day ->
+                    async {
+                        val date = month.atDay(day)
+                        val result = semaphore.withPermit { getReminders(date) }
+                        if (currentState.visibleMonth != month) return@async
+                        result.onSuccess { listResult ->
+                            val isCache = listResult.source == ReminderDataSource.CACHE
+                            setState {
+                                copy(
+                                    tasksByDate = tasksByDate +
+                                        (date to listResult.reminders.map(Reminder::toUiModel)),
+                                    cachedDates = if (isCache) cachedDates + date else cachedDates - date,
+                                    isLoading = if (date == selectedDate) false else isLoading,
+                                    loadErrorMessage = if (date == selectedDate) null else loadErrorMessage,
+                                    isShowingCachedData = if (date == selectedDate) isCache else isShowingCachedData,
+                                    syncWarningMessage = if (date == selectedDate && isCache) {
+                                        CACHE_WARNING_MESSAGE
+                                    } else if (date == selectedDate) {
+                                        null
+                                    } else {
+                                        syncWarningMessage
+                                    },
+                                )
+                            }
+                        }.onFailure { throwable ->
+                            if (date == selectedDate) {
+                                handleError(throwable) { error ->
+                                    setState {
+                                        copy(
+                                            isLoading = false,
+                                            loadErrorMessage = error.message,
+                                            isShowingCachedData = false,
+                                            syncWarningMessage = null,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
+    }
+
+    private fun loadMonitoredApps() {
+        viewModelScope.launch {
+            setState { copy(isMonitoredAppsLoading = true) }
+            getMonitoredApps()
+                .onSuccess { apps ->
+                    setState {
+                        copy(
+                            monitoredApps = apps.map { ReminderAppUiModel(it.id, it.packageName, it.appName) },
+                            isMonitoredAppsLoading = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    setState { copy(monitoredApps = emptyList(), isMonitoredAppsLoading = false) }
                 }
         }
     }
@@ -350,6 +444,7 @@ private const val CACHE_WARNING_MESSAGE = "네트워크에 연결할 수 없어 
 private const val OFFLINE_EDIT_MESSAGE = "네트워크 연결 후 일정을 변경해 주세요."
 private const val REMINDER_SAVED_MESSAGE = "저장되었습니다."
 private const val REMINDER_DELETED_MESSAGE = "삭제되었습니다."
+private const val MONTH_REQUEST_CONCURRENCY = 4
 
 internal fun timeRangesOverlap(newStart: Int, newEnd: Int, existingStart: Int, existingEnd: Int): Boolean =
     newStart < existingEnd && existingStart < newEnd

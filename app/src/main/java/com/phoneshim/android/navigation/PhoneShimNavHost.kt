@@ -17,7 +17,7 @@ import com.phoneshim.android.ui.features.setgoal.viewmodel.SetGoalViewModel
 import com.phoneshim.android.ui.features.auth.screen.LoginRoute
 import com.phoneshim.android.ui.features.auth.viewmodel.AuthSessionEffect
 import com.phoneshim.android.ui.features.auth.viewmodel.AuthSessionViewModel
-import com.phoneshim.android.ui.features.auth.screen.SplashScreen
+import com.phoneshim.android.ui.features.auth.screen.SplashRoute
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.features.main.screen.MainScreen
 import com.phoneshim.android.ui.features.mypage.screen.MyRoute
@@ -59,7 +59,7 @@ fun PhoneShimNavHost(navController: NavHostController) {
 
         // 인증(스플래시/로그인/회원가입) 화면
         composable(Routes.SPLASH) {
-            SplashScreen(
+            SplashRoute(
                 onAuthenticated = {
                     navController.navigate(Routes.MAIN) {
                         popUpTo(Routes.SPLASH) { inclusive = true }

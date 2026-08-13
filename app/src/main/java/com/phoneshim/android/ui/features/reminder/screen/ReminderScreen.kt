@@ -147,6 +147,8 @@ fun ReminderScreen(
             selectedDate = state.selectedDate,
             todayDate = state.todayDate,
             draft = state.draft,
+            monitoredApps = state.monitoredApps,
+            isMonitoredAppsLoading = state.isMonitoredAppsLoading,
             onDismiss = onDismissPopup,
             onTitleChange = onTitleChange,
             onStartTimeChange = onStartTimeChange,
