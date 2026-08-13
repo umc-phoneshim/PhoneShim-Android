@@ -61,8 +61,7 @@ import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
-import com.phoneshim.android.ui.common.PhoneShimButtonSize
-import com.phoneshim.android.ui.common.SecondaryButton
+import com.phoneshim.android.ui.common.PermissionConsentPopup
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
@@ -177,16 +176,21 @@ fun MainScreen(
     }
 
     // 앱 재설치 시 사용정보 접근/오버레이 권한이 초기화되는데, 지금 동의 UI는 온보딩에만
-    // 있어 재설치 후 다시 요청할 경로가 없다는 문제 대응. 설정 화면 쪽 UI가 준비되기 전까지
-    // 메인 화면에 최소 구현으로 배너를 둔다. isPreview는 SetGoalStartScreen.kt와 동일하게
-    // ActivityResult 런처를 만들 수 없는 프리뷰에서 권한 요청 훅을 건너뛰기 위함.
+    // 있어 재설치 후 다시 요청할 경로가 없다는 문제 대응. 온보딩(SetGoalStartScreen)과 동일한
+    // PermissionConsentPopup(ui/common)을 재사용해 메인 화면에서도 띄운다(#75 너울 리뷰).
+    // isPreview는 SetGoalStartScreen.kt와 동일하게 ActivityResult 런처를 만들 수 없는
+    // 프리뷰에서 권한 요청 훅을 건너뛰기 위함.
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
     var hasAllPermissions by remember(context, isPreview) {
         mutableStateOf(isPreview || BlockingPermissions.hasAll(context))
     }
+    // 팝업을 닫아도 hasAllPermissions는 건드리지 않는다 — 다음 ON_RESUME 재확인에서 값이
+    // 바뀌면(같은 false 값이 아니라 실제로 변경되면) 아래 remember가 새로 생성되어 팝업이
+    // 다시 노출된다.
+    var permissionPopupDismissed by remember(hasAllPermissions) { mutableStateOf(false) }
 
-    // 설정 화면 왕복 후 돌아왔을 때(ON_RESUME) 배너가 바로 갱신되도록 재확인한다.
+    // 설정 화면 왕복 후 돌아왔을 때(ON_RESUME) 팝업 노출 여부가 바로 갱신되도록 재확인한다.
     DisposableEffect(lifecycleOwner, context, isPreview) {
         if (isPreview) return@DisposableEffect onDispose {}
         val observer = LifecycleEventObserver { _, event ->
@@ -274,12 +278,6 @@ fun MainScreen(
                         }
                     }
                 } else {
-                    // 설정 완료 후 화면에서만 배너를 보여준다 — 설정 전(온보딩 흐름)에는 넣지 않는다.
-                    if (!hasAllPermissions) {
-                        item {
-                            PermissionRecheckBanner(onRecheckClick = { permissionRequest?.launch() })
-                        }
-                    }
                     item { GreetingCard(userName = state.userName, isSetupCompleted = state.isGoalSet) }
                     item { DailyUsageSection(dashboardSummary = state.dashboardSummary) }
                     item {
@@ -300,6 +298,14 @@ fun MainScreen(
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+
+    // 설정 완료 후 화면에서만 띄운다 — 설정 전(온보딩 흐름)에는 SetGoalStartScreen이 이미 처리한다.
+    if (state.isGoalSet && !hasAllPermissions && !permissionPopupDismissed) {
+        PermissionConsentPopup(
+            onAllowAll = { permissionRequest?.launch() },
+            onDismiss = { permissionPopupDismissed = true },
         )
     }
 }
@@ -441,41 +447,6 @@ fun EmptySetupCard(
                 )
             }
         }
-    }
-}
-
-/* ============================================================
- * 6-2. 권한 재확인 배너
- *  - 앱 재설치로 특수 권한(사용정보 접근/오버레이)이 초기화됐을 때, 온보딩 밖에서
- *    다시 요청할 경로가 없어 설정 완료 후 메인 화면에 임시로 배치.
- *  - TODO: 디자인팀 설정 화면 UI 확정 전 임시 구현. 배너 스타일(테두리 색/버튼)은
- *    기존 카드·SecondaryButton을 그대로 재사용한 것이라 확정 디자인이 나오면
- *    디자이너 리뷰 후 교체 필요.
- * ============================================================ */
-@Composable
-private fun PermissionRecheckBanner(onRecheckClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(PhoneShimTheme.colors.surface)
-            .border(1.dp, PhoneShimTheme.colors.warning, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = "일부 권한이 꺼져 있어 차단 기능이 동작하지 않아요",
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.textPrimary,
-        )
-        SecondaryButton(
-            text = "권한 다시 설정하기",
-            onClick = onRecheckClick,
-            size = PhoneShimButtonSize.Small,
-            fullWidth = false,
-            accentColor = PhoneShimTheme.colors.warning,
-            pressedAccentColor = PhoneShimTheme.colors.warning,
-        )
     }
 }
 
@@ -815,10 +786,10 @@ private fun MainScreenFilledPreview() {
     }
 }
 
-@Preview(name = "권한 재확인 배너 (임시 구현)", widthDp = 360, showBackground = true)
+@Preview(name = "권한 재확인 팝업", widthDp = 360, showBackground = true)
 @Composable
-private fun PermissionRecheckBannerPreview() {
+private fun MainScreenPermissionPopupPreview() {
     PhoneShimTheme {
-        PermissionRecheckBanner(onRecheckClick = {})
+        PermissionConsentPopup(onAllowAll = {}, onDismiss = {})
     }
 }
