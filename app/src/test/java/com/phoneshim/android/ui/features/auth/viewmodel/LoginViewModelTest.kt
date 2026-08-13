@@ -6,13 +6,16 @@ import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
 import com.phoneshim.android.domain.model.SocialLoginResult
+import com.phoneshim.android.domain.model.SocialCredential
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.CurrentUserRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
+import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.ui.features.auth.client.AuthClientResult
 import com.phoneshim.android.ui.features.auth.client.GoogleAuthClient
@@ -106,7 +109,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `withdrawal pending login exposes informational state without identity`() = runTest(dispatcher) {
+    fun `withdrawal pending login exposes recovery confirmation`() = runTest(dispatcher) {
         val viewModel = createViewModel(
             loginFailure = AuthException.WithdrawalPending,
         )
@@ -122,25 +125,76 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `acknowledging withdrawal pending clears informational state`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginFailure = AuthException.WithdrawalPending)
+    fun `confirming withdrawal recovery uses provider token and navigates to main`() = runTest(dispatcher) {
+        var recoveredCredential: SocialCredential? = null
+        val recoveringViewModel = createViewModel(
+            loginFailure = AuthException.WithdrawalPending,
+            recover = { credential ->
+                recoveredCredential = credential
+                Result.success(Unit)
+            },
+        )
+        val effect = async { recoveringViewModel.effect.first() }
 
-        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        recoveringViewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
         runCurrent()
-        viewModel.onEvent(LoginUiEvent.WithdrawalPendingAcknowledged)
+        recoveringViewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
 
-        assertFalse(viewModel.uiState.value.isWithdrawalPending)
+        assertEquals(
+            SocialCredential(SocialProvider.GOOGLE, "provider-token"),
+            recoveredCredential,
+        )
+        assertEquals(LoginUiEffect.NavigateToMain, effect.await())
+        assertFalse(recoveringViewModel.uiState.value.isWithdrawalPending)
     }
 
     @Test
     fun `dismissing withdrawal pending clears informational state`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginFailure = AuthException.WithdrawalPending)
+        var recoveryAttempts = 0
+        val viewModel = createViewModel(
+            loginFailure = AuthException.WithdrawalPending,
+            recover = {
+                recoveryAttempts++
+                Result.success(Unit)
+            },
+        )
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
         runCurrent()
         viewModel.onEvent(LoginUiEvent.WithdrawalPendingDismissed)
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
 
         assertFalse(viewModel.uiState.value.isWithdrawalPending)
+        assertEquals(0, recoveryAttempts)
+    }
+
+    @Test
+    fun `failed withdrawal recovery keeps credential for retry`() = runTest(dispatcher) {
+        var recoveryAttempts = 0
+        val viewModel = createViewModel(
+            loginFailure = AuthException.WithdrawalPending,
+            recover = {
+                recoveryAttempts++
+                if (recoveryAttempts == 1) {
+                    Result.failure(IllegalStateException("temporary failure"))
+                } else {
+                    Result.success(Unit)
+                }
+            },
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+
+        assertEquals(2, recoveryAttempts)
     }
 
     @Test
@@ -231,6 +285,7 @@ class LoginViewModelTest {
             override suspend fun authenticate(): AuthClientResult = authResult
         },
         canGoogleLogin: Boolean = true,
+        recover: suspend (SocialCredential) -> Result<Unit> = { Result.success(Unit) },
     ): LoginViewModel {
         val repository = object : AuthRepository {
             override suspend fun socialLogin(
@@ -243,6 +298,15 @@ class LoginViewModelTest {
             googleAuthClient = googleAuthClient,
             kakaoAuthClient = kakaoAuthClient,
             socialLoginUseCase = SocialLoginUseCase(repository),
+            recoverWithdrawalUseCase = RecoverWithdrawalUseCase(
+                object : PendingAuthRepository {
+                    override suspend fun logout() = Result.success(Unit)
+                    override suspend fun recoverWithdrawal(credential: SocialCredential) =
+                        recover(credential)
+                    override suspend fun linkAccount(credential: SocialCredential) =
+                        Result.success(Unit)
+                },
+            ),
             getMyInfoUseCase = GetMyInfoUseCase(
                 object : MyPageRepository {
                     override suspend fun getMyInfo() = Result.success(TEST_USER)

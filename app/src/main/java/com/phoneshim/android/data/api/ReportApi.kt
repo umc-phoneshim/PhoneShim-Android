@@ -9,16 +9,6 @@ import retrofit2.http.Query
  */
 interface ReportApi {
 
-    /** usageLogRouter: GET / — 구현완료. 앱별 일별 사용량. date 생략 시 KST 오늘. */
-    @GET("api/usage-logs")
-    suspend fun getUsageLogs(
-        @Query("date") date: String? = null,
-    ): ApiResponse<List<UsageLogResponse>>
-
-    /** usageLogRouter: GET /status — 구현완료. 오늘 사용 현황. 앱 이름/패키지명/목표 포함. */
-    @GET("api/usage-logs/status")
-    suspend fun getUsageStatus(): ApiResponse<List<UsageStatusResponse>>
-
     /** usageLogRouter: GET /calendar — 구현완료. 그 달에 전체 목표를 달성한 날짜 목록. */
     @GET("api/usage-logs/calendar")
     suspend fun getUsageCalendar(
@@ -57,27 +47,6 @@ interface ReportApi {
 
 // Gson 은 Kotlin 기본값을 적용하지 않아 응답에 없는 필드가 null 로 들어옵니다.
 // 그래서 아래 DTO 는 전부 nullable 로 받고 도메인 변환에서 보정합니다.
-
-data class UsageLogResponse(
-    val id: String? = null,
-    val userId: String? = null,
-    val monitoredAppId: String? = null,
-    val date: String? = null,
-    val usedMinutes: Int? = null,
-    val entryCount: Int? = null,
-)
-
-data class UsageStatusResponse(
-    val monitoredAppId: String? = null,
-    val appName: String? = null,
-    val packageName: String? = null,
-    val appIcon: String? = null,
-    val sortOrder: Int? = null,
-    val targetMinutes: Int? = null,
-    val targetCount: Int? = null,
-    val usedMinutes: Int? = null,
-    val entryCount: Int? = null,
-)
 
 data class UsageCalendarResponse(
     val month: String? = null,

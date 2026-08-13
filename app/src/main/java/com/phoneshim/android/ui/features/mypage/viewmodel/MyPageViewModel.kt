@@ -3,10 +3,13 @@ package com.phoneshim.android.ui.features.mypage.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.model.LogoutResult
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
 import com.phoneshim.android.domain.usecase.LogoutUseCase
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.toSnackbarMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -49,7 +52,7 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isLoading = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -108,12 +111,17 @@ class MyPageViewModel @Inject constructor(
             updateMyInfoUseCase(name = state.nameDraft, motivation = state.motivationDraft)
                 .onSuccess { user ->
                     setState { copy(user = user, isEditing = false, isSaving = false) }
-                    sendEffect(MyPageUiEffect.ShowMessage("저장했습니다."))
+                    sendEffect(
+                        MyPageUiEffect.ShowMessage(
+                            message = "저장했습니다.",
+                            type = PhoneShimSnackbarType.Info,
+                        ),
+                    )
                 }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -124,18 +132,22 @@ class MyPageViewModel @Inject constructor(
         setState { copy(isSaving = true) }
         viewModelScope.launch {
             logoutUseCase()
-                .onSuccess {
+                .onSuccess { result ->
                     setState { copy(isSaving = false) }
                     sendEffect(
                         MyPageUiEffect.NavigateToLogin(
-                            "서버 로그아웃 API가 준비 중이어서 이 기기의 세션만 종료했습니다.",
+                            when (result) {
+                                LogoutResult.ServerConfirmed -> "로그아웃되었습니다."
+                                LogoutResult.LocalOnly ->
+                                    "서버 연결을 확인하지 못했지만 이 기기의 세션은 종료했습니다."
+                            },
                         ),
                     )
                 }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -161,7 +173,7 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }

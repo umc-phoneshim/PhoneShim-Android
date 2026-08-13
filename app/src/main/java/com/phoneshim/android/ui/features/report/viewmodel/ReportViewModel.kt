@@ -2,13 +2,16 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
-import com.phoneshim.android.domain.model.DailyReportAlarm
+import com.phoneshim.android.domain.model.AlertSettingPolicy
 import com.phoneshim.android.domain.repository.ReportPreferencesRepository
+import com.phoneshim.android.domain.usecase.GetAlertSettingUseCase
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
 import com.phoneshim.android.domain.usecase.GetUsageSessionsUseCase
+import com.phoneshim.android.domain.usecase.UpdateAlertSettingUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.toSnackbarMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -22,6 +25,8 @@ class ReportViewModel @Inject constructor(
     private val getReportSummaryUseCase: GetReportSummaryUseCase,
     private val getRestSuggestionUseCase: GetRestSuggestionUseCase,
     private val reportPreferencesRepository: ReportPreferencesRepository,
+    private val getAlertSettingUseCase: GetAlertSettingUseCase,
+    private val updateAlertSettingUseCase: UpdateAlertSettingUseCase,
 ) : BaseViewModel<ReportUiState, ReportUiEvent, ReportUiEffect>(ReportUiState()) {
 
     override fun handleEvent(event: ReportUiEvent) {
@@ -45,9 +50,15 @@ class ReportViewModel @Inject constructor(
             ReportUiEvent.RestSuggestionRequested -> loadRestSuggestion()
 
             ReportUiEvent.AlarmSettingsClicked -> openAlarmDialog()
-            ReportUiEvent.AlarmDialogDismissed -> setState { copy(isAlarmDialogVisible = false) }
-            is ReportUiEvent.AlarmHourChanged -> setState { copy(alarmHourDraft = event.value) }
-            is ReportUiEvent.AlarmMinuteChanged -> setState { copy(alarmMinuteDraft = event.value) }
+            ReportUiEvent.AlarmDialogDismissed -> setState {
+                copy(isAlarmDialogVisible = false, alarmInputError = null)
+            }
+            is ReportUiEvent.AlarmHourChanged -> setState {
+                copy(alarmHourDraft = event.value, alarmInputError = null)
+            }
+            is ReportUiEvent.AlarmMinuteChanged -> setState {
+                copy(alarmMinuteDraft = event.value, alarmInputError = null)
+            }
             ReportUiEvent.AlarmConfirmed -> confirmAlarm()
 
             ReportUiEvent.Retry -> load()
@@ -60,24 +71,36 @@ class ReportViewModel @Inject constructor(
         load()
     }
 
-    // ---------------------------------------------------------------- 기기 로컬 설정
+    // ---------------------------------------------------------------- UI 로컬 설정 + 서버 AlertSetting
 
     /**
-     * 서버가 아니라 기기에 저장된 값들입니다.
-     * 툴팁은 한 번 닫으면 다시 안 뜨고, 알림 시각은 마지막에 설정한 값을 그대로 되살립니다.
+     * 달력 툴팁은 기기에 저장하고, 알림 시각은 계정별 서버 설정을 원본으로 사용합니다.
+     * 신규 사용자는 GET 시 서버가 22:00 기본 설정을 자동 생성합니다.
      */
     private fun loadPreferences() {
         viewModelScope.launch {
             val isTooltipDismissed = reportPreferencesRepository.isCalendarTooltipDismissed()
-            val alarm = reportPreferencesRepository.getDailyReportAlarm()
             setState {
                 copy(
                     isCalendarTooltipVisible = !isTooltipDismissed,
-                    dailyReportAlarm = alarm,
-                    alarmHourDraft = alarm?.hourLabel ?: alarmHourDraft,
-                    alarmMinuteDraft = alarm?.minuteLabel ?: alarmMinuteDraft,
+                    isAlertSettingLoading = true,
                 )
             }
+            getAlertSettingUseCase()
+                .onSuccess { setting ->
+                    setState {
+                        copy(
+                            alertSetting = setting,
+                            alarmHourDraft = setting.hourLabel,
+                            alarmMinuteDraft = setting.minuteLabel,
+                            isAlertSettingLoading = false,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    setState { copy(isAlertSettingLoading = false) }
+                    handleAlertSettingFailure(error, "알림 설정을 불러오지 못했습니다.")
+                }
         }
     }
 
@@ -90,30 +113,55 @@ class ReportViewModel @Inject constructor(
     private fun openAlarmDialog() = setState {
         copy(
             isAlarmDialogVisible = true,
-            alarmHourDraft = dailyReportAlarm?.hourLabel ?: "00",
-            alarmMinuteDraft = dailyReportAlarm?.minuteLabel ?: "00",
+            alarmHourDraft = alertSetting?.hourLabel ?: DEFAULT_ALERT_HOUR,
+            alarmMinuteDraft = alertSetting?.minuteLabel ?: DEFAULT_ALERT_MINUTE,
+            alarmInputError = null,
         )
     }
 
     /**
      * 알림 시각 저장.
      *
-     * TODO: 실제 알림 예약은 아직 없습니다. 알림 도메인이 준비되면 저장 직후
-     *  AlarmManager/WorkManager 예약을 붙이고, 서버 저장 API 가 생기면 여기서 함께 호출하세요.
+     * 서버가 허용하는 KST 22:00~23:59 범위를 로컬에서 먼저 검증하고 PATCH 합니다.
+     * 성공 응답 전체 객체를 화면 상태의 새 원본으로 사용합니다.
      */
     private fun confirmAlarm() {
-        val state = currentState
-        val alarm = DailyReportAlarm.of(
-            hour = state.alarmHourDraft.toIntOrNull() ?: 0,
-            minute = state.alarmMinuteDraft.toIntOrNull() ?: 0,
-        )
-        setState { copy(isAlarmDialogVisible = false, dailyReportAlarm = alarm) }
+        val minutes = currentState.draftAlertTimeMinutes
+        if (minutes == null || !AlertSettingPolicy.isValid(minutes)) {
+            setState { copy(alarmInputError = INVALID_ALERT_TIME_MESSAGE) }
+            return
+        }
+        if (currentState.isAlertSettingSaving) return
+        setState { copy(isAlertSettingSaving = true, alarmInputError = null) }
         viewModelScope.launch {
-            reportPreferencesRepository.saveDailyReportAlarm(alarm)
+            updateAlertSettingUseCase(minutes)
+                .onSuccess { setting ->
+                    setState {
+                        copy(
+                            alertSetting = setting,
+                            alarmHourDraft = setting.hourLabel,
+                            alarmMinuteDraft = setting.minuteLabel,
+                            isAlarmDialogVisible = false,
+                            isAlertSettingSaving = false,
+                        )
+                    }
+                    sendEffect(
+                        ReportUiEffect.ShowMessage(
+                            "${setting.hourLabel}:${setting.minuteLabel}에 리포트 알림을 보내드릴게요.",
+                        ),
+                    )
+                }
+                .onFailure { error ->
+                    setState { copy(isAlertSettingSaving = false) }
+                    handleAlertSettingFailure(error, "알림 시간을 저장하지 못했습니다.")
+                }
+        }
+    }
+
+    private fun handleAlertSettingFailure(throwable: Throwable, fallback: String) {
+        handleError(throwable) { error ->
             sendEffect(
-                ReportUiEffect.ShowMessage(
-                    "${alarm.hourLabel}:${alarm.minuteLabel}에 리포트 알림을 보내드릴게요.",
-                ),
+                ReportUiEffect.ShowMessage(error.message.takeIf { it.isNotBlank() } ?: fallback),
             )
         }
     }
@@ -246,7 +294,9 @@ class ReportViewModel @Inject constructor(
             } else {
                 setState { copy(isLoading = false) }
                 sendEffect(
-                    ReportUiEffect.ShowMessage(error.message.takeIf { it.isNotBlank() } ?: fallback),
+                    ReportUiEffect.ShowMessage(
+                        message = if (error.isRetryable) error.toSnackbarMessage() else fallback,
+                    ),
                 )
             }
         }
@@ -254,5 +304,8 @@ class ReportViewModel @Inject constructor(
 
     private companion object {
         const val DEFAULT_INSUFFICIENT_MESSAGE = "아직 분석할 기록이 충분하지 않아요."
+        const val DEFAULT_ALERT_HOUR = "22"
+        const val DEFAULT_ALERT_MINUTE = "00"
+        const val INVALID_ALERT_TIME_MESSAGE = "알림 시간은 22:00~23:59 사이로 설정해 주세요."
     }
 }

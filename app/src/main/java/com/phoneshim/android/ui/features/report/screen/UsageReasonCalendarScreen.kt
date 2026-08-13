@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phoneshim.android.ui.common.CalendarGrid
 import com.phoneshim.android.ui.common.DateNavigator
+import com.phoneshim.android.ui.common.PhoneShimSnackbarHost
 import com.phoneshim.android.ui.common.TopAppBar
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.ui.features.report.component.ReportCard
 import com.phoneshim.android.ui.features.report.component.ReportColorGreen
@@ -69,7 +70,10 @@ fun UsageReasonCalendarRoute(
             when (effect) {
                 is UsageReasonCalendarUiEffect.NavigateToReport -> onNavigateToReport(effect.date)
                 is UsageReasonCalendarUiEffect.ShowMessage ->
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showPhoneShimSnackbar(
+                        message = effect.message,
+                        type = effect.type,
+                    )
             }
         }
     }
@@ -96,7 +100,7 @@ fun UsageReasonCalendarScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = PhoneShimTheme.colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { PhoneShimSnackbarHost(snackbarHostState) },
         topBar = { TopAppBar(title = "목표 달성 기록", titleStyle = PhoneShimType.KorH3) },
     ) { innerPadding ->
         Column(

@@ -1,12 +1,15 @@
 package com.phoneshim.android.domain.usecase
 
 import com.phoneshim.android.domain.model.LogoutResult
+import com.phoneshim.android.domain.model.AuthSessionState
+import com.phoneshim.android.domain.model.SocialCredential
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.UserStatus
 import com.phoneshim.android.domain.model.WithdrawalResult
 import com.phoneshim.android.domain.repository.AuthSessionRepository
 import com.phoneshim.android.domain.repository.CurrentUserRepository
 import com.phoneshim.android.domain.repository.MyPageRepository
+import com.phoneshim.android.domain.repository.PendingAuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -41,11 +44,31 @@ class SessionTerminationUseCaseTest {
     }
 
     @Test
-    fun `로그아웃은 서버 API 없이 로컬 토큰과 사용자 캐시를 삭제한다`() = runTest {
+    fun `server confirmed logout clears local token and cached user`() = runTest {
         val session = RecordingSessionRepository()
         val currentUser = RecordingCurrentUserRepository()
 
-        val result = LogoutUseCase(session, currentUser)()
+        val result = LogoutUseCase(
+            SuccessfulPendingAuthRepository(),
+            session,
+            currentUser,
+        )()
+
+        assertEquals(LogoutResult.ServerConfirmed, result.getOrThrow())
+        assertFalse(session.hasSession())
+        assertNull(currentUser.user.value)
+    }
+
+    @Test
+    fun `server logout failure still clears local session`() = runTest {
+        val session = RecordingSessionRepository()
+        val currentUser = RecordingCurrentUserRepository()
+
+        val result = LogoutUseCase(
+            FailingPendingAuthRepository(),
+            session,
+            currentUser,
+        )()
 
         assertEquals(LogoutResult.LocalOnly, result.getOrThrow())
         assertFalse(session.hasSession())
@@ -71,12 +94,17 @@ class SessionTerminationUseCaseTest {
 
     private class RecordingSessionRepository : AuthSessionRepository {
         private var active = true
+        override val sessionState = MutableStateFlow(AuthSessionState.AUTHENTICATED)
         override suspend fun restoreSession() = active
-        override suspend fun clearSession() { active = false }
+        override suspend fun clearSession() {
+            active = false
+            sessionState.value = AuthSessionState.UNAUTHENTICATED
+        }
         override fun hasSession() = active
     }
 
     private class FailingSessionRepository : AuthSessionRepository {
+        override val sessionState = MutableStateFlow(AuthSessionState.AUTHENTICATED)
         override suspend fun restoreSession() = true
         override suspend fun clearSession() = error("token deletion failed")
         override fun hasSession() = true
@@ -99,5 +127,15 @@ class SessionTerminationUseCaseTest {
         override suspend fun updateUserProfile(gender: String, ageGroup: String): Result<User> =
             error("unused")
         override suspend fun withdraw() = Result.success(result)
+    }
+
+    private open class SuccessfulPendingAuthRepository : PendingAuthRepository {
+        override suspend fun logout() = Result.success(Unit)
+        override suspend fun recoverWithdrawal(credential: SocialCredential) = error("unused")
+        override suspend fun linkAccount(credential: SocialCredential) = error("unused")
+    }
+
+    private class FailingPendingAuthRepository : SuccessfulPendingAuthRepository() {
+        override suspend fun logout() = Result.failure<Unit>(IllegalStateException("offline"))
     }
 }

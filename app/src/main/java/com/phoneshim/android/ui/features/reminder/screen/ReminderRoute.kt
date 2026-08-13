@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
+import com.phoneshim.android.ui.common.showPhoneShimSnackbar
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEffect
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderUiEvent
 import com.phoneshim.android.ui.features.reminder.viewmodel.ReminderViewModel
@@ -38,8 +39,9 @@ fun ReminderRoute(
                 is ReminderUiEffect.ShowMessage -> withTimeoutOrNull(
                     REMINDER_SNACKBAR_DURATION_MILLIS,
                 ) {
-                    snackbarHostState.showSnackbar(
+                    snackbarHostState.showPhoneShimSnackbar(
                         message = effect.message,
+                        type = effect.type,
                         duration = SnackbarDuration.Indefinite,
                     )
                 }

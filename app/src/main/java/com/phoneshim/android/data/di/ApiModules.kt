@@ -1,6 +1,7 @@
 package com.phoneshim.android.data.di
 
 import com.phoneshim.android.data.api.AppGoalApi
+import com.phoneshim.android.data.api.AlertSettingApi
 import com.phoneshim.android.data.api.DashboardApi
 import com.phoneshim.android.data.api.DeviceUsageApi
 import com.phoneshim.android.data.api.HealthApi
@@ -76,6 +77,15 @@ object ReminderApiModule {
     @Provides
     @Singleton
     fun provideReminderApi(retrofit: Retrofit): ReminderApi = retrofit.create(ReminderApi::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AlertSettingApiModule {
+    @Provides
+    @Singleton
+    fun provideAlertSettingApi(retrofit: Retrofit): AlertSettingApi =
+        retrofit.create(AlertSettingApi::class.java)
 }
 
 @Module

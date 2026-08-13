@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.reminder.viewmodel
 
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
 import com.phoneshim.android.ui.common.base.UiState
@@ -76,5 +77,8 @@ sealed interface ReminderUiEvent : UiEvent {
 }
 
 sealed interface ReminderUiEffect : UiEffect {
-    data class ShowMessage(val message: String) : ReminderUiEffect
+    data class ShowMessage(
+        val message: String,
+        val type: PhoneShimSnackbarType = PhoneShimSnackbarType.Error,
+    ) : ReminderUiEffect
 }

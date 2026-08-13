@@ -92,6 +92,12 @@ class BlockPolicyEngine @Inject constructor(
             "com.android.mms",
             "com.samsung.android.messaging",
             "com.google.android.apps.messaging",
+            // 앱이 띄우는 시스템 인증·권한 화면. 사용자가 직접 여는 앱이 아니라
+            // 폰쉼 안에서 로그인·권한 허용을 하면 포그라운드로 잡히는 것들이다.
+            // 막으면 전체 폰 차단 중 로그인 자체가 불가능해진다.
+            "com.android.credentialmanager",
+            "com.google.android.gms",
+            "com.google.android.permissioncontroller",
         )
     }
 }
