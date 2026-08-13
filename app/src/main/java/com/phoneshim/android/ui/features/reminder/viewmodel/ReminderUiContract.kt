@@ -20,6 +20,12 @@ data class ReminderTaskUiModel(
     val restrictedAppIds: Set<String> = emptySet(),
 )
 
+data class ReminderAppUiModel(
+    val id: String,
+    val packageName: String,
+    val label: String,
+)
+
 data class ReminderDraft(
     val editingTaskId: String? = null,
     val title: String = "",
@@ -36,6 +42,9 @@ data class ReminderUiState(
     val selectedDate: LocalDate = todayDate,
     val visibleMonth: YearMonth = YearMonth.from(selectedDate),
     val tasksByDate: Map<LocalDate, List<ReminderTaskUiModel>> = emptyMap(),
+    val monitoredApps: List<ReminderAppUiModel> = emptyList(),
+    val isMonitoredAppsLoading: Boolean = false,
+    val cachedDates: Set<LocalDate> = emptySet(),
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val loadErrorMessage: String? = null,
