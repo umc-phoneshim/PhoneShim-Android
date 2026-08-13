@@ -327,6 +327,8 @@ fun ReportSummaryScreen(
             onMinuteChange = onAlarmMinuteChange,
             onConfirm = onAlarmConfirm,
             onDismiss = onAlarmDialogDismiss,
+            errorMessage = state.alarmInputError,
+            isSaving = state.isAlertSettingSaving,
         )
     }
 }
