@@ -15,7 +15,7 @@ interface UsageReasonApi {
     /**
      * usageReasonRouter: POST / — 구현완료. 응답은 201.
      * 고른 사유 코드마다 행이 하나씩 생성돼 배열로 돌아옵니다.
-     * 입력 가능 시간대(KST 당일 22:00~익일 10:00)를 벗어나면 USAGE_REASON_TIME_FORBIDDEN.
+     * 차단 팝업 입력은 시간 제한 없이 같은 API로 저장합니다.
      */
     @POST("api/usage-reasons")
     suspend fun submitUsageReason(

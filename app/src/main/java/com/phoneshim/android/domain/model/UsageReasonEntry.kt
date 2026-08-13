@@ -6,8 +6,8 @@ package com.phoneshim.android.domain.model
  * 사유는 자유 입력이 아니라 [UsageReasonCode] 5개 중에서 고르며, 한 시간 블록에
  * 여러 개를 선택할 수 있습니다. 서버는 고른 코드마다 행을 하나씩 저장합니다.
  *
- * 입력 가능 시간은 KST 기준 당일 22:00 ~ 익일 10:00 이며, 벗어나면 서버가
- * USAGE_REASON_TIME_FORBIDDEN 을 내려줍니다.
+ * 리포트의 사후 입력과 차단 팝업의 즉시 입력이 같은 API를 사용합니다.
+ * 차단 팝업 입력은 시간 제한 없이 저장하는 것이 백엔드 계약입니다.
  */
 data class UsageReasonEntry(
     val monitoredAppId: String,
@@ -29,10 +29,10 @@ data class UsageReasonEntry(
     }
 
     companion object {
-        /** 입력 가능 시작 시각(KST, 시). */
+        /** 리포트 사후 입력 UI에서 안내하는 기존 입력 시작 시각(KST, 시). */
         const val INPUT_WINDOW_START_HOUR = 22
 
-        /** 입력 가능 종료 시각(익일 KST, 시). */
+        /** 리포트 사후 입력 UI에서 안내하는 기존 입력 종료 시각(익일 KST, 시). */
         const val INPUT_WINDOW_END_HOUR = 10
     }
 }

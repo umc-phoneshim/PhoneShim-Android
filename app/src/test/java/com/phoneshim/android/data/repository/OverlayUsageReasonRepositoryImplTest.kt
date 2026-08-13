@@ -30,7 +30,7 @@ class OverlayUsageReasonRepositoryImplTest {
     }
 
     @Test
-    fun `현재 KST 시각을 한 시간 구간으로 변환한다`() {
+    fun `팝업 제출 시각을 1분 구간으로 변환한다`() {
         val repository = OverlayUsageReasonRepositoryImpl(
             packageResolver = Resolver(Result.success("monitored-1")),
             reportUsageReasonRepository = RecordingReportRepository(),
@@ -43,8 +43,8 @@ class OverlayUsageReasonRepositoryImplTest {
         )
 
         assertEquals("2026-08-13", entry.date)
-        assertEquals("2026-08-13T21:00", entry.timeRangeStart)
-        assertEquals("2026-08-13T22:00", entry.timeRangeEnd)
+        assertEquals("2026-08-13T21:47:32", entry.timeRangeStart)
+        assertEquals("2026-08-13T21:48:32", entry.timeRangeEnd)
         assertEquals("COMMUTE", entry.reasonCodes.single().name)
     }
 

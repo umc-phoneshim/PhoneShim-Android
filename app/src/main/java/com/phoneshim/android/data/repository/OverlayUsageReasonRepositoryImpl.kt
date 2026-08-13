@@ -8,7 +8,6 @@ import com.phoneshim.android.domain.repository.ReportUsageReasonRepository
 import com.phoneshim.android.domain.repository.UsageReasonRepository
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /** 차단 오버레이의 packageName 기반 입력을 실제 사용 사유 API 계약으로 변환합니다. */
@@ -38,7 +37,9 @@ class OverlayUsageReasonRepositoryImpl @Inject constructor(
         monitoredAppId: String,
         now: LocalDateTime = LocalDateTime.now(KST),
     ): UsageReasonEntry {
-        val start = now.truncatedTo(ChronoUnit.HOURS)
+        // 차단 팝업 시점에는 실제 사용 종료 시각을 알 수 없으므로 백엔드 계약에 따라
+        // 제출 시각부터 1분 구간을 기록합니다. 나노초는 ISO payload를 안정적으로 유지하도록 제거합니다.
+        val start = now.withNano(0)
         val reasonCode = UsageReasonCode.entries.firstOrNull { code ->
             submission.reason == code.label || submission.reason in code.overlayLabels
         } ?: error("지원하지 않는 사용 이유입니다: ${submission.reason}")
@@ -47,7 +48,7 @@ class OverlayUsageReasonRepositoryImpl @Inject constructor(
             monitoredAppId = monitoredAppId,
             date = start.toLocalDate().toString(),
             timeRangeStart = start.toString(),
-            timeRangeEnd = start.plusHours(1).toString(),
+            timeRangeEnd = start.plusMinutes(1).toString(),
             reasonCodes = listOf(reasonCode),
         )
     }
