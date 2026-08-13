@@ -1,7 +1,6 @@
 package com.phoneshim.android.data.repository
 
 import com.phoneshim.android.data.api.ReportApi
-import com.phoneshim.android.data.api.UsageLogApi
 import com.phoneshim.android.data.api.common.ApiCallExecutor
 import com.phoneshim.android.domain.model.DailyReport
 import com.phoneshim.android.domain.model.ReasonAppUsage
@@ -14,6 +13,7 @@ import com.phoneshim.android.domain.model.SuggestionType
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageSession
 import com.phoneshim.android.domain.repository.ReportRepository
+import com.phoneshim.android.domain.repository.UsageLogRepository
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -21,38 +21,39 @@ import javax.inject.Inject
 
 class ReportRepositoryImpl @Inject constructor(
     private val reportApi: ReportApi,
-    // 앱별 사용량은 폴의 UsageLogApi 로 일원화했습니다(3단계 교차연동).
-    private val usageLogApi: UsageLogApi,
     private val apiCallExecutor: ApiCallExecutor,
+    private val usageLogRepository: UsageLogRepository,
 ) : ReportRepository {
 
     override suspend fun getDailyReport(date: String, isToday: Boolean): Result<DailyReport> =
         if (isToday) {
             // 오늘은 앱 이름/패키지명/목표까지 함께 내려오는 status 를 사용합니다.
-            apiCallExecutor.executeAsResult { usageLogApi.getUsageStatus() }.map { responses ->
-                val usages = responses.map { response ->
+            // UsageLogApi.getUsageStatus()와 완전히 같은 엔드포인트라 폴의 UsageLogRepository를 재사용합니다.
+            usageLogRepository.getUsageStatus().map { statuses ->
+                val usages = statuses.map { status ->
                     ReportAppUsage(
-                        monitoredAppId = response.monitoredAppId.orEmpty(),
-                        appName = response.appName.orEmpty(),
-                        packageName = response.packageName.orEmpty(),
-                        usedMinutes = response.usedMinutes ?: 0,
-                        entryCount = response.entryCount ?: 0,
-                        targetMinutes = response.targetMinutes,
-                        targetCount = response.targetCount,
+                        monitoredAppId = status.monitoredAppId,
+                        appName = status.appName,
+                        packageName = status.packageName,
+                        usedMinutes = status.usedMinutes,
+                        entryCount = status.entryCount,
+                        targetMinutes = status.targetMinutes,
+                        targetCount = status.targetCount,
                     )
                 }
                 DailyReport(date = date, appUsages = usages)
             }
         } else {
-            apiCallExecutor.executeAsResult { usageLogApi.getUsageLogs(date) }.map { responses ->
+            // UsageLogApi.getUsageLogs()와 완전히 같은 엔드포인트라 폴의 UsageLogRepository를 재사용합니다.
+            usageLogRepository.getUsageLogs(date).map { logs ->
                 // 과거 날짜는 앱 이름/패키지명이 내려오지 않습니다.
                 // TODO: GET /api/monitored-apps 와 조인하면 과거 날짜에도 아이콘을 띄울 수 있습니다.
                 //  해당 API는 MonitoredApp 도메인 담당입니다.
-                val usages = responses.map { response ->
+                val usages = logs.map { log ->
                     ReportAppUsage(
-                        monitoredAppId = response.monitoredAppId.orEmpty(),
-                        usedMinutes = response.usedMinutes ?: 0,
-                        entryCount = response.entryCount ?: 0,
+                        monitoredAppId = log.monitoredAppId,
+                        usedMinutes = log.usedMinutes,
+                        entryCount = log.entryCount,
                     )
                 }
                 DailyReport(date = date, appUsages = usages)

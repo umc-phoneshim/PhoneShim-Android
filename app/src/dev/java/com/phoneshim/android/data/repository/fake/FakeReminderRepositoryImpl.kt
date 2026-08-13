@@ -20,6 +20,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -113,6 +115,10 @@ class FakeReminderRepositoryImpl @Inject constructor(
             reminderDao.deleteById(id)
         }
     }
+
+    // devDebug에서도 CRUD가 reminderDao에 즉시 반영되므로 실제 구현과 동일하게 Room을 그대로 관찰한다.
+    override fun observeReminders(date: LocalDate): Flow<List<Reminder>> =
+        reminderDao.observeForDate(date.toEpochDay()).map { list -> list.map { it.toDomain() } }
 
     private fun validate(
         startTime: Instant,

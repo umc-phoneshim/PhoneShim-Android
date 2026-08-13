@@ -39,24 +39,23 @@ class UsageLogRepositoryImpl @Inject constructor(
         )
     }.map { Unit }
 
-    // DTO 가 전부 nullable 이라(Gson 이 Kotlin 기본값을 무시함) 여기서 기본값으로 보정합니다.
     private fun UsageLogResponse.toDomain(): DailyUsageLog = DailyUsageLog(
-        id = id.orEmpty(),
-        monitoredAppId = monitoredAppId.orEmpty(),
-        date = date.orEmpty(),
-        usedMinutes = usedMinutes ?: 0,
-        entryCount = entryCount ?: 0,
+        id = id,
+        monitoredAppId = monitoredAppId,
+        date = date,
+        usedMinutes = usedMinutes,
+        entryCount = entryCount,
     )
 
     private fun UsageStatusResponse.toDomain(): UsageStatus = UsageStatus(
-        monitoredAppId = monitoredAppId.orEmpty(),
-        appName = appName.orEmpty(),
-        packageName = packageName.orEmpty(),
+        monitoredAppId = monitoredAppId,
+        appName = appName,
+        packageName = packageName,
         appIcon = appIcon,
-        sortOrder = sortOrder ?: 0,
+        sortOrder = sortOrder,
         targetMinutes = targetMinutes,
         targetCount = targetCount,
-        usedMinutes = usedMinutes ?: 0,
-        entryCount = entryCount ?: 0,
+        usedMinutes = usedMinutes,
+        entryCount = entryCount,
     )
 }
