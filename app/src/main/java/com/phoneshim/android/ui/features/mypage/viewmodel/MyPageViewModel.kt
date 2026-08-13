@@ -5,7 +5,9 @@ import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
 import com.phoneshim.android.domain.usecase.LogoutUseCase
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.toSnackbarMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -47,7 +49,7 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isLoading = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -107,12 +109,17 @@ class MyPageViewModel @Inject constructor(
                             isMotivationTooltipVisible = false,
                         )
                     }
-                    sendEffect(MyPageUiEffect.ShowMessage("저장했습니다."))
+                    sendEffect(
+                        MyPageUiEffect.ShowMessage(
+                            message = "저장했습니다.",
+                            type = PhoneShimSnackbarType.Info,
+                        ),
+                    )
                 }
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -134,7 +141,7 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }
@@ -160,7 +167,7 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { throwable ->
                     handleError(throwable) { error ->
                         setState { copy(isSaving = false) }
-                        sendEffect(MyPageUiEffect.ShowMessage(error.message))
+                        sendEffect(MyPageUiEffect.ShowMessage(error.toSnackbarMessage()))
                     }
                 }
         }

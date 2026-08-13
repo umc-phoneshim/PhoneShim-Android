@@ -1,4 +1,4 @@
-package com.phoneshim.android.ui.features.setgoal.component
+package com.phoneshim.android.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.phoneshim.android.ui.common.PhoneShimDialog
-import com.phoneshim.android.ui.common.PermissionNoticeItem
-import com.phoneshim.android.ui.common.PrimaryButton
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType

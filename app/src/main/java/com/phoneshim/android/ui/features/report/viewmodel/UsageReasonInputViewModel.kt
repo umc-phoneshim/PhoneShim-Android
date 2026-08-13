@@ -5,6 +5,7 @@ import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.domain.model.UsageReasonCode
 import com.phoneshim.android.domain.model.UsageReasonEntry
 import com.phoneshim.android.domain.usecase.SubmitUsageReasonUseCase
+import com.phoneshim.android.ui.common.PhoneShimSnackbarType
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -56,7 +57,10 @@ sealed interface UsageReasonInputUiEvent : UiEvent {
 sealed interface UsageReasonInputUiEffect : UiEffect {
     /** 저장 완료. TODO: 포인트 리워드 팝업 정책이 정해지면 여기서 함께 처리하세요. */
     data object Submitted : UsageReasonInputUiEffect
-    data class ShowMessage(val message: String) : UsageReasonInputUiEffect
+    data class ShowMessage(
+        val message: String,
+        val type: PhoneShimSnackbarType = PhoneShimSnackbarType.Error,
+    ) : UsageReasonInputUiEffect
 }
 
 @HiltViewModel

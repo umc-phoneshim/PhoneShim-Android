@@ -10,6 +10,7 @@ import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
 import com.phoneshim.android.domain.usecase.GetUsageSessionsUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
+import com.phoneshim.android.ui.common.base.toSnackbarMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -275,7 +276,9 @@ class ReportViewModel @Inject constructor(
             } else {
                 setState { copy(isLoading = false) }
                 sendEffect(
-                    ReportUiEffect.ShowMessage(error.message.takeIf { it.isNotBlank() } ?: fallback),
+                    ReportUiEffect.ShowMessage(
+                        message = if (error.isRetryable) error.toSnackbarMessage() else fallback,
+                    ),
                 )
             }
         }

@@ -32,12 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -49,12 +53,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.phoneshim.android.R
+import com.phoneshim.android.blocking.detection.BlockingPermissions
+import com.phoneshim.android.blocking.permission.rememberBlockingPermissionRequest
 import com.phoneshim.android.domain.model.DashboardSummary
 import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.UsageStatus
 import com.phoneshim.android.ui.common.BottomBar
 import com.phoneshim.android.ui.common.BottomBarTab
 import com.phoneshim.android.ui.common.BottomBarDefaults
+import com.phoneshim.android.ui.common.PermissionConsentPopup
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.DurationDisplay
 import com.phoneshim.android.ui.common.TodoRow
@@ -168,6 +175,39 @@ fun MainScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // 앱 재설치 시 사용정보 접근/오버레이 권한이 초기화되는데, 지금 동의 UI는 온보딩에만
+    // 있어 재설치 후 다시 요청할 경로가 없다는 문제 대응. 온보딩(SetGoalStartScreen)과 동일한
+    // PermissionConsentPopup(ui/common)을 재사용해 메인 화면에서도 띄운다(#75 너울 리뷰).
+    // isPreview는 SetGoalStartScreen.kt와 동일하게 ActivityResult 런처를 만들 수 없는
+    // 프리뷰에서 권한 요청 훅을 건너뛰기 위함.
+    val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+    var hasAllPermissions by remember(context, isPreview) {
+        mutableStateOf(isPreview || BlockingPermissions.hasAll(context))
+    }
+    // 팝업을 닫아도 hasAllPermissions는 건드리지 않는다 — 다음 ON_RESUME 재확인에서 값이
+    // 바뀌면(같은 false 값이 아니라 실제로 변경되면) 아래 remember가 새로 생성되어 팝업이
+    // 다시 노출된다.
+    var permissionPopupDismissed by remember(hasAllPermissions) { mutableStateOf(false) }
+
+    // 설정 화면 왕복 후 돌아왔을 때(ON_RESUME) 팝업 노출 여부가 바로 갱신되도록 재확인한다.
+    DisposableEffect(lifecycleOwner, context, isPreview) {
+        if (isPreview) return@DisposableEffect onDispose {}
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAllPermissions = BlockingPermissions.hasAll(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val permissionRequest = if (isPreview) {
+        null
+    } else {
+        rememberBlockingPermissionRequest { hasAllPermissions = BlockingPermissions.hasAll(context) }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -258,6 +298,14 @@ fun MainScreen(
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+
+    // 설정 완료 후 화면에서만 띄운다 — 설정 전(온보딩 흐름)에는 SetGoalStartScreen이 이미 처리한다.
+    if (state.isGoalSet && !hasAllPermissions && !permissionPopupDismissed) {
+        PermissionConsentPopup(
+            onAllowAll = { permissionRequest?.launch() },
+            onDismiss = { permissionPopupDismissed = true },
         )
     }
 }
@@ -735,5 +783,13 @@ private fun MainScreenFilledPreview() {
             CautionAppSection(apps = previewApps.map { it.toCautionAppItem() })
             TodoSection(todos = List(2) { MainTodoItem("과제하기", "10:00 ~ 11:00") })
         }
+    }
+}
+
+@Preview(name = "권한 재확인 팝업", widthDp = 360, showBackground = true)
+@Composable
+private fun MainScreenPermissionPopupPreview() {
+    PhoneShimTheme {
+        PermissionConsentPopup(onAllowAll = {}, onDismiss = {})
     }
 }
