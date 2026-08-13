@@ -12,14 +12,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.phoneshim.android.ui.common.InteractiveTimeSegmentInput
 import com.phoneshim.android.ui.features.setgoal.component.MAX_HOUR_VALUE
 import com.phoneshim.android.ui.features.setgoal.component.MAX_MINUTE_VALUE
@@ -30,8 +34,9 @@ import com.phoneshim.android.ui.theme.PhoneShimType
 private val TimeCellRestingWidth = 56.dp
 private val TimeCellActiveWidth = 64.dp
 private val TimeCellHeight = 48.dp
-private val ActionButtonWidth = 88.dp
-private val ActionButtonHeight = 36.dp
+private val DialogMaxWidth = 328.dp
+private val ActionButtonWidth = 72.dp
+private val ActionButtonHeight = 24.dp
 
 /**
  * 데일리 리포트 알림 설정 팝업.
@@ -49,23 +54,30 @@ fun AlarmSettingDialog(
     onMinuteChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    errorMessage: String? = null,
+    isSaving: Boolean = false,
     modifier: Modifier = Modifier,
     title: String = DEFAULT_TITLE,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = { if (!isSaving) onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Column(
             modifier = modifier
+                .padding(horizontal = PhoneShimDimens.spacing16)
                 .fillMaxWidth()
-                .background(PhoneShimTheme.colors.surface, RoundedCornerShape(20.dp))
-                .padding(PhoneShimDimens.spacing20),
+                .widthIn(max = DialogMaxWidth)
+                .background(PhoneShimTheme.colors.surface, RoundedCornerShape(12.dp))
+                .padding(PhoneShimDimens.spacing24),
         ) {
             Text(
                 text = title,
-                style = PhoneShimType.KorBodyM,
+                style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.textPrimary,
             )
 
-            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -82,15 +94,35 @@ fun AlarmSettingDialog(
                 TimeSegment(value = minute, maxValue = MAX_MINUTE_VALUE, onValueChange = onMinuteChange)
             }
 
-            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing24))
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    style = PhoneShimType.KorLabel,
+                    color = PhoneShimTheme.colors.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(PhoneShimDimens.spacing12))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                DialogButton(text = "취소", isPrimary = false, onClick = onDismiss)
-                Spacer(modifier = Modifier.width(PhoneShimDimens.spacing8))
-                DialogButton(text = "설정", isPrimary = true, onClick = onConfirm)
+                DialogButton(
+                    text = "취소",
+                    isPrimary = false,
+                    enabled = !isSaving,
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(PhoneShimDimens.spacing12))
+                DialogButton(
+                    text = if (isSaving) "저장 중" else "설정",
+                    isPrimary = true,
+                    enabled = !isSaving,
+                    onClick = onConfirm,
+                )
             }
         }
     }
@@ -112,7 +144,12 @@ private fun TimeSegment(value: String, maxValue: Int, onValueChange: (String) ->
 
 /** 팝업 하단 버튼. 취소는 테두리만, 설정은 브랜드 색으로 채웁니다. */
 @Composable
-private fun DialogButton(text: String, isPrimary: Boolean, onClick: () -> Unit) {
+private fun DialogButton(
+    text: String,
+    isPrimary: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .width(ActionButtonWidth)
@@ -130,12 +167,13 @@ private fun DialogButton(text: String, isPrimary: Boolean, onClick: () -> Unit) 
                 color = PhoneShimTheme.colors.brand,
                 shape = RoundedCornerShape(8.dp),
             )
-            .clickable(onClick = onClick),
+            .alpha(if (enabled) 1f else 0.6f)
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            style = PhoneShimType.KorCaption,
+            style = PhoneShimType.KorLabel,
             color = if (isPrimary) {
                 PhoneShimTheme.colors.onBrand
             } else {

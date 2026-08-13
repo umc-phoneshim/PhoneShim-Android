@@ -2,7 +2,8 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.compose.ui.graphics.Color
 import com.phoneshim.android.domain.model.DailyReport
-import com.phoneshim.android.domain.model.DailyReportAlarm
+import com.phoneshim.android.domain.model.AlertSetting
+import com.phoneshim.android.domain.model.AlertSettingPolicy
 import com.phoneshim.android.domain.model.ReportRange
 import com.phoneshim.android.domain.model.ReportSummary
 import com.phoneshim.android.domain.model.RestSuggestion
@@ -67,11 +68,14 @@ data class ReportUiState(
 
     /** 알림 설정 팝업 노출 여부와 팝업 안에서 편집 중인 시/분. */
     val isAlarmDialogVisible: Boolean = false,
-    val alarmHourDraft: String = "00",
+    val alarmHourDraft: String = "22",
     val alarmMinuteDraft: String = "00",
+    val alarmInputError: String? = null,
+    val isAlertSettingLoading: Boolean = false,
+    val isAlertSettingSaving: Boolean = false,
 
-    /** 저장된 알림 시각. 아직 설정한 적 없으면 null. */
-    val dailyReportAlarm: DailyReportAlarm? = null,
+    /** 계정에 저장된 서버 AlertSetting. 신규 사용자는 GET에서 기본값이 자동 생성됩니다. */
+    val alertSetting: AlertSetting? = null,
 
     /**
      * 집계할 기록이 부족하거나 아직 준비되지 않은 상태의 안내 문구.
@@ -95,6 +99,17 @@ data class ReportUiState(
     val canGoNextDate: Boolean get() = date.isBefore(today)
 
     val isDataInsufficient: Boolean get() = insufficientDataMessage != null
+
+    val canSaveAlertSetting: Boolean
+        get() = !isAlertSettingSaving && draftAlertTimeMinutes?.let(AlertSettingPolicy::isValid) == true
+
+    val draftAlertTimeMinutes: Int?
+        get() {
+            val hour = alarmHourDraft.toIntOrNull() ?: return null
+            val minute = alarmMinuteDraft.toIntOrNull() ?: return null
+            if (minute !in 0..59) return null
+            return hour * 60 + minute
+        }
 
     // ---------------------------------------------------------------- 어플 사용 분포
 

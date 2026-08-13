@@ -4,6 +4,7 @@ import android.util.Log
 import com.phoneshim.android.blocking.detection.AppUsageSnapshot
 import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
+import com.phoneshim.android.blocking.detection.UsageSessionSnapshot
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.data.local.TokenProvider
@@ -23,14 +24,6 @@ data class UsageUploadPayload(
     val date: String,
     val phoneMinutes: Int,
     val apps: List<AppUsageSnapshot>,
-    /**
-     * 주의앱 사용 구간. 리포트 타임테이블의 데이터 소스입니다.
-     *
-     * 보존 전송(PendingUsageUploadStore)에는 담기지 않습니다. 구간은 합계와 달리
-     * 덮어쓰기가 아니라 누적이라, 실패한 걸 나중에 다시 올리면 중복 위험이 있습니다.
-     * 대신 아직 안 끝난 세션이 다음 주기에 더 긴 구간으로 다시 올라가면서 자연히 복구됩니다.
-     */
-    val sessions: List<UsageSessionUpload> = emptyList(),
 )
 
 /**
@@ -50,6 +43,7 @@ class UsageUploader @Inject constructor(
     private val uploadUsageLog: UploadUsageLogUseCase,
     private val uploadDeviceUsage: UploadDeviceUsageUseCase,
     private val uploadUsageSessions: UploadUsageSessionsUseCase,
+    private val sentSessionStore: SentUsageSessionStore,
     private val pendingStore: PendingUsageUploadStore,
     private val tokenProvider: TokenProvider,
     private val restoreAuthSession: RestoreAuthSessionUseCase,
@@ -106,24 +100,21 @@ class UsageUploader @Inject constructor(
             watchedPackages = watched,
         )
 
+        // 사용 구간은 누적 사용량과 수명이 다르다.
+        // 누적값은 같으면 보낼 이유가 없지만(아래 lastSent 비교), 구간은 "아직 안 보낸 것" 이
+        // 남아 있으면 보내야 한다. 그래서 lastSent 비교보다 앞에 둔다.
+        uploadPendingSessions(today, snapshot.watchedSessions)
+
         val payload = UsageUploadPayload(
             date = today,
             phoneMinutes = snapshot.phoneMinutes,
             apps = snapshot.watchedApps,
-            sessions = snapshot.watchedSessions.map { session ->
-                UsageSessionUpload(
-                    packageName = session.packageName,
-                    startedAt = session.startedAt,
-                    endedAt = session.endedAt,
-                )
-            },
         )
         // 값이 그대로면 보낼 이유가 없다. 화면이 꺼져 있으면 사용량도 늘지 않는다.
         if (payload == lastSent) return@withLock
 
         // 보내기 전에 남긴다. 전송 중 프로세스가 죽어도 이 값이 남아야 보전 전송이 된다.
-        // 구간은 재전송 시 중복 위험이 있어 보존 대상에서 뺀다(UsageUploadPayload.sessions 참고).
-        pendingStore.save(payload.copy(sessions = emptyList()))
+        pendingStore.save(payload)
         if (send(payload)) {
             pendingStore.remove(today)
             lastSent = payload
@@ -146,14 +137,37 @@ class UsageUploader @Inject constructor(
             uploadUsageLog(app.packageName, app.usedMinutes, app.entryCount, payload.date)
                 .onFailure { retryable = retryable or handleFailure(app.packageName, payload.date, it) }
         }
-
-        // 리포트 타임테이블용 사용 구간. 실패해도 재전송하지 않는다(중복 위험).
-        // 아직 안 끝난 세션은 다음 주기에 더 긴 구간으로 다시 올라간다.
-        val sessionFailures = uploadUsageSessions(payload.sessions)
-        if (sessionFailures > 0) {
-            Log.w(TAG, "사용 구간 업로드 일부 실패: $sessionFailures/${payload.sessions.size} ${payload.date}")
-        }
         return !retryable
+    }
+
+    /**
+     * 아직 안 올린 사용 구간만 전송한다.
+     *
+     * 서버가 겹치는 구간을 409 로 거부하므로 같은 구간을 두 번 보내면 안 된다.
+     * 성공한 것만 기록하고, 실패분은 기록하지 않아 다음 주기에 다시 시도된다.
+     * 이 재시도는 누적 사용량의 lastSent / pendingStore 와 완전히 분리돼 있다.
+     */
+    private suspend fun uploadPendingSessions(
+        date: String,
+        sessions: List<UsageSessionSnapshot>,
+    ) {
+        val unsent = sessions
+            .filterNot { sentSessionStore.isSent(date, it.uploadKey) }
+            .map { session ->
+                UsageSessionUpload(
+                    packageName = session.packageName,
+                    startedAt = session.startedAt,
+                    endedAt = session.endedAt,
+                    uploadKey = session.uploadKey,
+                )
+            }
+        if (unsent.isEmpty()) return
+
+        val uploaded = uploadUsageSessions(unsent)
+        uploaded.forEach { key -> sentSessionStore.markSent(date, key) }
+
+        val failed = unsent.size - uploaded.size
+        if (failed > 0) Log.i(TAG, "사용 구간 $failed 건 보류. 다음 주기에 재시도 $date")
     }
 
     /**

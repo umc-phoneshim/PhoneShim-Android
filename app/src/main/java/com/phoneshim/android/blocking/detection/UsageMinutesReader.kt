@@ -123,6 +123,10 @@ class UsageMinutesReader @Inject constructor(
         val switched = HashSet<String>()       // 이 구간에 전환 이벤트가 한 번이라도 관측된 패키지
 
         // 리포트 타임테이블용 개별 사용 구간. 합계와 달리 시각을 그대로 보존한다.
+        //
+        // 종료된 세션만 담는다. 서버가 겹치는 구간을 409 USAGE_SESSION_OVERLAP 으로 거부해서,
+        // 진행 중인 세션을 "지금까지" 로 올리면 다음 주기에 더 긴 구간이 겹쳐 거부된다.
+        // 아직 열려 있는 세션은 닫히는 순간 한 번만 올라간다.
         val sessions = mutableListOf<UsageSessionSnapshot>()
 
         val events = usm.queryEvents(start, now)
@@ -162,10 +166,10 @@ class UsageMinutesReader @Inject constructor(
         // 열려 있는 세션은 아직 끝나지 않았으므로 지금 시각을 잠정 종료로 둔다.
         // 다음 주기에 같은 세션이 더 긴 구간으로 다시 올라가고, 서버가 같은 시작 시각으로
         // 덮어쓰기 때문에 중복으로 쌓이지 않는다.
+        // 여기서는 sessions 에 담지 않는다. 아직 안 끝난 세션이라 종료 시각이 확정되지 않았다.
         for ((pkg, from) in openedAt) {
             val counted = countedMs(pkg, from, now, blockedIntervals)
             if (counted > 0L) usedMs[pkg] = (usedMs[pkg] ?: 0L) + counted
-            sessions += UsageSessionSnapshot(pkg, from, now)
         }
 
         val aggregates = (usedMs.keys + entries.keys).associateWith { pkg ->
@@ -272,16 +276,19 @@ data class UsageSnapshot(
 )
 
 /**
- * 앱 사용 구간 한 건. epoch millis.
+ * 종료된 앱 사용 구간 한 건. epoch millis.
  *
- * 아직 끝나지 않은 세션은 [endedAt] 이 조회 시각으로 잠정 기록된다.
- * 다음 업로드에서 같은 [startedAt] 으로 더 긴 구간이 올라가고 서버가 덮어쓴다.
+ * 진행 중인 세션은 담기지 않는다. 서버가 겹치는 구간을 거부하기 때문에
+ * 종료 시각이 확정된 뒤 한 번만 올려야 한다.
  */
 data class UsageSessionSnapshot(
     val packageName: String,
     val startedAt: Long,
     val endedAt: Long,
-)
+) {
+    /** 이미 올린 세션인지 판별하는 키. 같은 앱이 같은 시각에 두 번 열릴 수는 없다. */
+    val uploadKey: String get() = "$packageName@$startedAt"
+}
 
 /**
  * 오늘(기기 자정)부터 현재까지 누적된 주의앱 하나의 사용량.
