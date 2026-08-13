@@ -9,6 +9,7 @@ import com.phoneshim.android.domain.model.UsageSession
 import com.phoneshim.android.domain.repository.AlertSettingRepository
 import com.phoneshim.android.domain.repository.ReportPreferencesRepository
 import com.phoneshim.android.domain.repository.ReportRepository
+import com.phoneshim.android.domain.usecase.GetAchievedDatesUseCase
 import com.phoneshim.android.domain.usecase.GetAlertSettingUseCase
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
@@ -47,6 +48,7 @@ class ReportAlertSettingViewModelTest {
             getUsageSessionsUseCase = GetUsageSessionsUseCase(reportRepository),
             getReportSummaryUseCase = GetReportSummaryUseCase(reportRepository),
             getRestSuggestionUseCase = GetRestSuggestionUseCase(reportRepository),
+            getAchievedDatesUseCase = GetAchievedDatesUseCase(reportRepository),
             reportPreferencesRepository = FakeReportPreferencesRepository(),
             getAlertSettingUseCase = GetAlertSettingUseCase(alertRepository),
             updateAlertSettingUseCase = UpdateAlertSettingUseCase(alertRepository),
