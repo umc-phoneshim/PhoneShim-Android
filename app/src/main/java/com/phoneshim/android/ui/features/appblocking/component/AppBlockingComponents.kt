@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.appblocking.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -29,11 +31,6 @@ import com.phoneshim.android.ui.common.PhoneShimButtonSize
 import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimDimens
-
-enum class BlockingTitlePlacement {
-    BeforeIllustration,
-    AfterIllustration,
-}
 
 @Composable
 fun BlockingOverlay(
@@ -56,7 +53,8 @@ fun BlockingDialog(
     descriptions: List<String>,
     buttonText: String,
     onConfirm: () -> Unit,
-    titlePlacement: BlockingTitlePlacement = BlockingTitlePlacement.AfterIllustration,
+    @DrawableRes illustrationRes: Int? = null,
+    illustrationContentDescription: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -67,9 +65,14 @@ fun BlockingDialog(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing24),
     ) {
-        if (titlePlacement == BlockingTitlePlacement.BeforeIllustration) BlockingTitle(title)
-        RestIllustration(Modifier.size(PhoneShimDimens.blockingDialogIllustrationSize))
-        if (titlePlacement == BlockingTitlePlacement.AfterIllustration) BlockingTitle(title)
+        illustrationRes?.let { drawableRes ->
+            BlockingIllustration(
+                illustrationRes = drawableRes,
+                contentDescription = illustrationContentDescription,
+                modifier = Modifier.size(PhoneShimDimens.blockingDialogIllustrationSize),
+            )
+        }
+        BlockingTitle(title)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
@@ -103,12 +106,16 @@ fun BlockingTitle(title: String) {
 }
 
 @Composable
-fun RestIllustration(modifier: Modifier = Modifier) {
-    Icon(
-        painter = painterResource(R.drawable.ic_rest_illustration),
-        contentDescription = null,
+fun BlockingIllustration(
+    @DrawableRes illustrationRes: Int,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    Image(
+        painter = painterResource(illustrationRes),
+        contentDescription = contentDescription,
         modifier = modifier,
-        tint = Color.Unspecified,
+        contentScale = ContentScale.Fit,
     )
 }
 
@@ -155,16 +162,21 @@ private fun BlockingDialogPreview() {
                 ),
                 buttonText = "좋아요",
                 onConfirm = {},
+                illustrationRes = R.drawable.appblocking_mascot_daily_goal,
             )
         }
     }
 }
 
-@Preview(name = "Rest illustration", showBackground = true, backgroundColor = 0xFFFFFDF7)
+@Preview(name = "Blocking illustration", showBackground = true, backgroundColor = 0xFFFFFDF7)
 @Composable
-private fun RestIllustrationPreview() {
+private fun BlockingIllustrationPreview() {
     com.phoneshim.android.ui.theme.PhoneShimTheme {
-        RestIllustration(Modifier.size(PhoneShimDimens.blockingDialogIllustrationSize))
+        BlockingIllustration(
+            illustrationRes = R.drawable.appblocking_mascot_daily_goal,
+            contentDescription = null,
+            modifier = Modifier.size(PhoneShimDimens.blockingDialogIllustrationSize),
+        )
     }
 }
 
