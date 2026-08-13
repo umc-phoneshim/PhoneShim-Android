@@ -287,6 +287,9 @@ class MainViewModelTest {
 
         override suspend fun updateMyInfo(name: String?, motivation: String?) = throw UnsupportedOperationException()
 
+        override suspend fun updateUserProfile(gender: String, ageGroup: String) =
+            throw UnsupportedOperationException()
+
         override suspend fun withdraw(): Result<WithdrawalResult> = throw UnsupportedOperationException()
     }
 

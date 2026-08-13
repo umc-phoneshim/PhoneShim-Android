@@ -22,6 +22,12 @@ interface MyPageApi {
     @PATCH("api/users/me")
     suspend fun updateMyInfo(@Body request: UpdateUserRequest): ApiResponse<UserResponse>
 
+    /** 온보딩과 PREF에서 성별·연령대를 저장하는 서버 전용 endpoint. */
+    @PATCH("api/users/me/onboarding")
+    suspend fun updateUserProfile(
+        @Body request: UpdateUserProfileRequest,
+    ): ApiResponse<UserResponse>
+
     /**
      * authController: DELETE /withdraw — 구현완료.
      * 204 가 아니라 200 + body 를 반환하며, 계정은 14일 유예(WITHDRAWAL_PENDING) 상태가 됩니다.
@@ -52,6 +58,11 @@ data class UserResponse(
 data class UpdateUserRequest(
     val name: String? = null,
     val motivation: String? = null,
+)
+
+data class UpdateUserProfileRequest(
+    val gender: String,
+    val ageGroup: String,
 )
 
 /** withdrawUserService 반환값. withdrawalRequestedAt 은 ISO 8601 문자열입니다. */

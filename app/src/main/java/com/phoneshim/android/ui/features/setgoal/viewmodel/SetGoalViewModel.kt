@@ -5,6 +5,7 @@ import com.phoneshim.android.domain.model.GoalLimits
 import com.phoneshim.android.domain.model.InstalledApp
 import com.phoneshim.android.domain.repository.InstalledAppsRepository
 import com.phoneshim.android.domain.usecase.SetGoalUseCase
+import com.phoneshim.android.domain.usecase.UpdateUserProfileUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
 import com.phoneshim.android.ui.common.base.UiEvent
@@ -101,6 +102,7 @@ sealed interface SetGoalEffect : UiEffect {
 class SetGoalViewModel @Inject constructor(
     private val setGoalUseCase: SetGoalUseCase,
     private val installedAppsRepository: InstalledAppsRepository,
+    private val updateUserProfileUseCase: UpdateUserProfileUseCase,
 ) : BaseViewModel<SetGoalUiState, SetGoalEvent, SetGoalEffect>(SetGoalUiState()) {
 
     init {
@@ -231,9 +233,36 @@ class SetGoalViewModel @Inject constructor(
     // 04-5. 확인 → 목표 저장 (UiState를 도메인 Goal로 매핑해 UseCase 호출)
     private fun submitGoal() {
         viewModelScope.launch {
+            val state = currentState
+            val gender = state.gender.toServerGender()
+            val ageGroup = state.ageGroup.toServerAgeGroup()
+            if (gender == null || ageGroup == null) {
+                sendEffect(SetGoalEffect.ShowMessage("성별과 나이 정보를 다시 확인해 주세요"))
+                return@launch
+            }
+            updateUserProfileUseCase(gender, ageGroup)
+                .onFailure {
+                    sendEffect(SetGoalEffect.ShowMessage("사용자 정보 저장에 실패했어요"))
+                    return@launch
+                }
             setGoalUseCase(currentState.toGoal())
                 .onSuccess { sendEffect(SetGoalEffect.NavigateNext) }
                 .onFailure { sendEffect(SetGoalEffect.ShowMessage("목표 저장에 실패했어요")) }
         }
     }
+}
+
+private fun String?.toServerGender(): String? = when (this) {
+    "남", "MALE" -> "MALE"
+    "여", "FEMALE" -> "FEMALE"
+    else -> null
+}
+
+private fun String?.toServerAgeGroup(): String? = when (this) {
+    "10대", "TEENS" -> "TEENS"
+    "20대", "TWENTIES" -> "TWENTIES"
+    "30대", "THIRTIES" -> "THIRTIES"
+    "40대", "FORTIES" -> "FORTIES"
+    "50대 이상", "FIFTIES_PLUS", "FIFTIES_OR_MORE" -> "FIFTIES_PLUS"
+    else -> null
 }

@@ -75,6 +75,8 @@ data class PrefUiState(
     val validation: PrefValidationResult = PrefValidationResult(),
     val isLoading: Boolean = true,
     val hasGoalData: Boolean = false,
+    /** GET /users/me에 성별·연령대가 모두 존재하는지. null이면 다음 저장 때 서버에 보충합니다. */
+    val hasServerUserProfile: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
 ) : UiState {

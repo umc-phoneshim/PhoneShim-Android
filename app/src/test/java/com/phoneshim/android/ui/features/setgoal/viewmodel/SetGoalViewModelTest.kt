@@ -147,6 +147,8 @@ class SetGoalViewModelTest {
     fun `목표 저장 성공 후에만 완료 화면으로 이동한다`() = runTest {
         val successViewModel = createViewModel(saveResult = Result.success(Unit))
         advanceUntilIdle()
+        successViewModel.onEvent(SetGoalEvent.SelectGender("남"))
+        successViewModel.onEvent(SetGoalEvent.SelectAgeGroup("20대"))
         assertEquals(
             SetGoalEffect.NavigateNext,
             effectFor(successViewModel, SetGoalEvent.SubmitGoal),
@@ -156,6 +158,8 @@ class SetGoalViewModelTest {
             saveResult = Result.failure(IllegalStateException("save failed")),
         )
         advanceUntilIdle()
+        failureViewModel.onEvent(SetGoalEvent.SelectGender("남"))
+        failureViewModel.onEvent(SetGoalEvent.SelectAgeGroup("20대"))
         assertEquals(
             SetGoalEffect.ShowMessage("목표 저장에 실패했어요"),
             effectFor(failureViewModel, SetGoalEvent.SubmitGoal),
@@ -173,6 +177,15 @@ class SetGoalViewModelTest {
         return SetGoalViewModel(
             setGoalUseCase = SetGoalUseCase(goalRepository),
             installedAppsRepository = installedAppsRepository,
+            updateUserProfileUseCase = com.phoneshim.android.domain.usecase.UpdateUserProfileUseCase(
+                object : com.phoneshim.android.domain.repository.MyPageRepository {
+                    override suspend fun getMyInfo() = error("unused")
+                    override suspend fun updateMyInfo(name: String?, motivation: String?) = error("unused")
+                    override suspend fun updateUserProfile(gender: String, ageGroup: String) =
+                        Result.success(com.phoneshim.android.domain.model.User("", "", ""))
+                    override suspend fun withdraw() = error("unused")
+                },
+            ),
         )
     }
 

@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.pref.viewmodel
 
 import com.phoneshim.android.domain.model.Goal
+import com.phoneshim.android.domain.model.User
 
 internal fun Goal.toPrefSettings(fallback: PrefSettings): PrefSettings = PrefSettings(
     gender = gender.toGenderOrNull() ?: fallback.gender,
@@ -39,8 +40,23 @@ internal fun PrefSettings.toGoal(): Goal = Goal(
     },
 )
 
+internal fun PrefSettings.withUserProfile(user: User): PrefSettings = copy(
+    gender = user.gender.toGenderOrNull() ?: gender,
+    ageGroup = user.ageGroup.toAgeGroupOrNull() ?: ageGroup,
+)
+
+internal fun Gender.toServerValue(): String = name
+
+internal fun AgeGroup.toServerValue(): String = when (this) {
+    AgeGroup.FIFTIES_OR_MORE -> "FIFTIES_PLUS"
+    else -> name
+}
+
 private fun String?.toGenderOrNull(): Gender? =
     this?.let { value -> Gender.entries.firstOrNull { it.name == value } }
 
 private fun String?.toAgeGroupOrNull(): AgeGroup? =
-    this?.let { value -> AgeGroup.entries.firstOrNull { it.name == value } }
+    when (this) {
+        "FIFTIES_PLUS", "FIFTIES_OR_MORE" -> AgeGroup.FIFTIES_OR_MORE
+        else -> this?.let { value -> AgeGroup.entries.firstOrNull { it.name == value } }
+    }
