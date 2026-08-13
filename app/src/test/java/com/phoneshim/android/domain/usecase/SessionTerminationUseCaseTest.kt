@@ -1,6 +1,7 @@
 package com.phoneshim.android.domain.usecase
 
 import com.phoneshim.android.domain.model.LogoutResult
+import com.phoneshim.android.domain.model.AuthSessionState
 import com.phoneshim.android.domain.model.User
 import com.phoneshim.android.domain.model.UserStatus
 import com.phoneshim.android.domain.model.WithdrawalResult
@@ -71,12 +72,17 @@ class SessionTerminationUseCaseTest {
 
     private class RecordingSessionRepository : AuthSessionRepository {
         private var active = true
+        override val sessionState = MutableStateFlow(AuthSessionState.AUTHENTICATED)
         override suspend fun restoreSession() = active
-        override suspend fun clearSession() { active = false }
+        override suspend fun clearSession() {
+            active = false
+            sessionState.value = AuthSessionState.UNAUTHENTICATED
+        }
         override fun hasSession() = active
     }
 
     private class FailingSessionRepository : AuthSessionRepository {
+        override val sessionState = MutableStateFlow(AuthSessionState.AUTHENTICATED)
         override suspend fun restoreSession() = true
         override suspend fun clearSession() = error("token deletion failed")
         override fun hasSession() = true

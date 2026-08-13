@@ -1,5 +1,6 @@
 package com.phoneshim.android.ui.features.auth.viewmodel
 
+import com.phoneshim.android.domain.model.AuthSessionState
 import com.phoneshim.android.domain.repository.AuthSessionRepository
 import com.phoneshim.android.domain.usecase.RestoreAuthSessionUseCase
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -48,6 +50,7 @@ class SplashViewModelTest {
 
     private fun createViewModel(hasSession: Boolean): SplashViewModel {
         val repository = object : AuthSessionRepository {
+            override val sessionState = MutableStateFlow(AuthSessionState.RESTORING)
             override suspend fun restoreSession(): Boolean = hasSession
             override suspend fun clearSession() = Unit
             override fun hasSession(): Boolean = hasSession
