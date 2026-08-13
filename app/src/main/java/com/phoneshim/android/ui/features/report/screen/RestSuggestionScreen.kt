@@ -72,7 +72,6 @@ fun RestSuggestionRoute(
                 is ReportUiEffect.NavigateToUsageReasonInput -> Unit
                 is ReportUiEffect.NavigateToTab -> Unit
                 ReportUiEffect.NavigateToRestSuggestion -> Unit
-                ReportUiEffect.NavigateToAlarmSettings -> Unit
             }
         }
     }

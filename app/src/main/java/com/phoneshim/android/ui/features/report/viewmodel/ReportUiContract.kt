@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.compose.ui.graphics.Color
 import com.phoneshim.android.domain.model.DailyReport
+import com.phoneshim.android.domain.model.DailyReportAlarm
 import com.phoneshim.android.domain.model.ReportRange
 import com.phoneshim.android.domain.model.ReportSummary
 import com.phoneshim.android.domain.model.RestSuggestion
@@ -52,10 +53,18 @@ data class ReportUiState(
 
     /**
      * 달력 버튼 안내 툴팁 노출 여부.
-     * 첫 진입 화면(어플 사용 통계)에서만 보이고, 닫으면 이 세션 동안 다시 뜨지 않습니다.
-     * TODO: "다시 보지 않기"를 영구 저장하려면 DataStore 연동이 필요합니다.
+     * 첫 진입 화면(어플 사용 통계)에서만 보이고, 한 번 닫으면 DataStore 에 기록해
+     * 앱을 다시 켜도 뜨지 않습니다. 로딩 전에는 깜빡임을 막으려고 false 로 시작합니다.
      */
-    val isCalendarTooltipVisible: Boolean = true,
+    val isCalendarTooltipVisible: Boolean = false,
+
+    /** 알림 설정 팝업 노출 여부와 팝업 안에서 편집 중인 시/분. */
+    val isAlarmDialogVisible: Boolean = false,
+    val alarmHourDraft: String = "00",
+    val alarmMinuteDraft: String = "00",
+
+    /** 저장된 알림 시각. 아직 설정한 적 없으면 null. */
+    val dailyReportAlarm: DailyReportAlarm? = null,
 
     /**
      * 집계할 기록이 부족하거나 아직 준비되지 않은 상태의 안내 문구.
@@ -224,7 +233,14 @@ sealed interface ReportUiEvent : UiEvent {
     data class TimetableEntryClicked(val entryId: String) : ReportUiEvent
     data object RestSuggestionClicked : ReportUiEvent
     data object RestSuggestionRequested : ReportUiEvent
+
+    /** 알림 설정 팝업. 별도 화면이 아니라 리포트 화면 위에 뜹니다. */
     data object AlarmSettingsClicked : ReportUiEvent
+    data object AlarmDialogDismissed : ReportUiEvent
+    data class AlarmHourChanged(val value: String) : ReportUiEvent
+    data class AlarmMinuteChanged(val value: String) : ReportUiEvent
+    data object AlarmConfirmed : ReportUiEvent
+
     data object Retry : ReportUiEvent
 }
 
@@ -239,7 +255,6 @@ data class UsageReasonTarget(
 sealed interface ReportUiEffect : UiEffect {
     data class NavigateToUsageReasonInput(val target: UsageReasonTarget) : ReportUiEffect
     data object NavigateToRestSuggestion : ReportUiEffect
-    data object NavigateToAlarmSettings : ReportUiEffect
     data class NavigateToTab(val tab: ReportTab) : ReportUiEffect
     data class ShowMessage(val message: String) : ReportUiEffect
 }

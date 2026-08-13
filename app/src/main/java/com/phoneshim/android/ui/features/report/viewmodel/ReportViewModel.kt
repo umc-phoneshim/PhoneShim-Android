@@ -2,6 +2,8 @@ package com.phoneshim.android.ui.features.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.common.ApiErrorCodes
+import com.phoneshim.android.domain.model.DailyReportAlarm
+import com.phoneshim.android.domain.repository.ReportPreferencesRepository
 import com.phoneshim.android.domain.usecase.GetDailyReportUseCase
 import com.phoneshim.android.domain.usecase.GetReportSummaryUseCase
 import com.phoneshim.android.domain.usecase.GetRestSuggestionUseCase
@@ -19,6 +21,7 @@ class ReportViewModel @Inject constructor(
     private val getUsageSessionsUseCase: GetUsageSessionsUseCase,
     private val getReportSummaryUseCase: GetReportSummaryUseCase,
     private val getRestSuggestionUseCase: GetRestSuggestionUseCase,
+    private val reportPreferencesRepository: ReportPreferencesRepository,
 ) : BaseViewModel<ReportUiState, ReportUiEvent, ReportUiEffect>(ReportUiState()) {
 
     override fun handleEvent(event: ReportUiEvent) {
@@ -30,9 +33,7 @@ class ReportViewModel @Inject constructor(
                 copy(isDatePickerVisible = true, pickerMonth = YearMonth.from(date))
             }
             ReportUiEvent.DatePickerDismissed -> setState { copy(isDatePickerVisible = false) }
-            ReportUiEvent.CalendarTooltipDismissed -> setState {
-                copy(isCalendarTooltipVisible = false)
-            }
+            ReportUiEvent.CalendarTooltipDismissed -> dismissCalendarTooltip()
             is ReportUiEvent.DatePicked -> pickDate(event)
             is ReportUiEvent.PickerMonthMoved -> setState {
                 copy(pickerMonth = pickerMonth.plusMonths(event.offset))
@@ -42,14 +43,79 @@ class ReportViewModel @Inject constructor(
             is ReportUiEvent.TimetableEntryClicked -> openUsageReasonInput(event)
             ReportUiEvent.RestSuggestionClicked -> sendEffect(ReportUiEffect.NavigateToRestSuggestion)
             ReportUiEvent.RestSuggestionRequested -> loadRestSuggestion()
-            ReportUiEvent.AlarmSettingsClicked -> sendEffect(ReportUiEffect.NavigateToAlarmSettings)
+
+            ReportUiEvent.AlarmSettingsClicked -> openAlarmDialog()
+            ReportUiEvent.AlarmDialogDismissed -> setState { copy(isAlarmDialogVisible = false) }
+            is ReportUiEvent.AlarmHourChanged -> setState { copy(alarmHourDraft = event.value) }
+            is ReportUiEvent.AlarmMinuteChanged -> setState { copy(alarmMinuteDraft = event.value) }
+            ReportUiEvent.AlarmConfirmed -> confirmAlarm()
+
             ReportUiEvent.Retry -> load()
         }
     }
 
     private fun enterScreen(event: ReportUiEvent.ScreenEntered) {
         setState { copy(selectedTab = event.tab) }
+        loadPreferences()
         load()
+    }
+
+    // ---------------------------------------------------------------- 기기 로컬 설정
+
+    /**
+     * 서버가 아니라 기기에 저장된 값들입니다.
+     * 툴팁은 한 번 닫으면 다시 안 뜨고, 알림 시각은 마지막에 설정한 값을 그대로 되살립니다.
+     */
+    private fun loadPreferences() {
+        viewModelScope.launch {
+            val isTooltipDismissed = reportPreferencesRepository.isCalendarTooltipDismissed()
+            val alarm = reportPreferencesRepository.getDailyReportAlarm()
+            setState {
+                copy(
+                    isCalendarTooltipVisible = !isTooltipDismissed,
+                    dailyReportAlarm = alarm,
+                    alarmHourDraft = alarm?.hourLabel ?: alarmHourDraft,
+                    alarmMinuteDraft = alarm?.minuteLabel ?: alarmMinuteDraft,
+                )
+            }
+        }
+    }
+
+    private fun dismissCalendarTooltip() {
+        setState { copy(isCalendarTooltipVisible = false) }
+        viewModelScope.launch { reportPreferencesRepository.dismissCalendarTooltip() }
+    }
+
+    /** 팝업은 저장된 값에서 시작해야 사용자가 지금 설정을 확인하고 고칠 수 있습니다. */
+    private fun openAlarmDialog() = setState {
+        copy(
+            isAlarmDialogVisible = true,
+            alarmHourDraft = dailyReportAlarm?.hourLabel ?: "00",
+            alarmMinuteDraft = dailyReportAlarm?.minuteLabel ?: "00",
+        )
+    }
+
+    /**
+     * 알림 시각 저장.
+     *
+     * TODO: 실제 알림 예약은 아직 없습니다. 알림 도메인이 준비되면 저장 직후
+     *  AlarmManager/WorkManager 예약을 붙이고, 서버 저장 API 가 생기면 여기서 함께 호출하세요.
+     */
+    private fun confirmAlarm() {
+        val state = currentState
+        val alarm = DailyReportAlarm.of(
+            hour = state.alarmHourDraft.toIntOrNull() ?: 0,
+            minute = state.alarmMinuteDraft.toIntOrNull() ?: 0,
+        )
+        setState { copy(isAlarmDialogVisible = false, dailyReportAlarm = alarm) }
+        viewModelScope.launch {
+            reportPreferencesRepository.saveDailyReportAlarm(alarm)
+            sendEffect(
+                ReportUiEffect.ShowMessage(
+                    "${alarm.hourLabel}:${alarm.minuteLabel}에 리포트 알림을 보내드릴게요.",
+                ),
+            )
+        }
     }
 
     private fun moveDate(offsetDays: Long) {

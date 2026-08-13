@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.mypage.viewmodel
 
 import androidx.lifecycle.viewModelScope
+import com.phoneshim.android.domain.usecase.GetGoalUseCase
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
 import com.phoneshim.android.domain.usecase.UpdateMyInfoUseCase
 import com.phoneshim.android.domain.usecase.WithdrawUseCase
@@ -13,6 +14,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
     private val getMyInfoUseCase: GetMyInfoUseCase,
+    private val getGoalUseCase: GetGoalUseCase,
     private val updateMyInfoUseCase: UpdateMyInfoUseCase,
     private val withdrawUseCase: WithdrawUseCase,
     private val logoutUseCase: LogoutUseCase,
@@ -50,6 +52,21 @@ class MyPageViewModel @Inject constructor(
                         sendEffect(MyPageUiEffect.ShowMessage(error.message))
                     }
                 }
+        }
+        loadGoal()
+    }
+
+    /**
+     * 마이페이지 "목표" 카드용 요약.
+     *
+     * 프로필과 별개로 실패해도 화면 전체를 막지 않습니다.
+     * 목표는 없을 수도 있는 값이라(온보딩 전) 실패 시 안내 문구만 카드에 남깁니다.
+     */
+    private fun loadGoal() {
+        viewModelScope.launch {
+            getGoalUseCase()
+                .onSuccess { goal -> setState { copy(goal = goal) } }
+                .onFailure { setState { copy(goal = null) } }
         }
     }
 

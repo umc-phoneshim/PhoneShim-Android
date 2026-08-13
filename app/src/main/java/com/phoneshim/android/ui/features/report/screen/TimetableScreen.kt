@@ -38,6 +38,7 @@ import com.phoneshim.android.ui.common.BottomBarDefaults
 import com.phoneshim.android.ui.common.TopAppBar
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
 import com.phoneshim.android.R
+import com.phoneshim.android.ui.features.report.component.AlarmSettingDialog
 import com.phoneshim.android.ui.features.report.component.ReportDateNavigator
 import com.phoneshim.android.ui.features.report.component.ReportDatePickerDialog
 import com.phoneshim.android.ui.features.report.component.ReportTab
@@ -87,8 +88,6 @@ fun TimetableRoute(
                 is ReportUiEffect.NavigateToTab ->
                     if (effect.tab == ReportTab.SUMMARY) onNavigateToSummary()
                 is ReportUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
-                // TODO: 알림 설정 화면이 추가되면 연결하세요.
-                ReportUiEffect.NavigateToAlarmSettings -> Unit
             }
         }
     }
@@ -110,6 +109,10 @@ fun TimetableRoute(
         onEntryClick = { viewModel.onEvent(ReportUiEvent.TimetableEntryClicked(it)) },
         onEditView = { viewModel.onEvent(ReportUiEvent.RestSuggestionClicked) },
         onAlarmSettings = { viewModel.onEvent(ReportUiEvent.AlarmSettingsClicked) },
+        onAlarmDialogDismiss = { viewModel.onEvent(ReportUiEvent.AlarmDialogDismissed) },
+        onAlarmHourChange = { viewModel.onEvent(ReportUiEvent.AlarmHourChanged(it)) },
+        onAlarmMinuteChange = { viewModel.onEvent(ReportUiEvent.AlarmMinuteChanged(it)) },
+        onAlarmConfirm = { viewModel.onEvent(ReportUiEvent.AlarmConfirmed) },
         onBottomNavSelected = { tab ->
             when (tab) {
                 BottomBarTab.MAIN -> onNavigateToMain()
@@ -130,6 +133,10 @@ fun TimetableScreen(
     onEntryClick: (String) -> Unit = {},
     onEditView: () -> Unit = {},
     onAlarmSettings: () -> Unit = {},
+    onAlarmDialogDismiss: () -> Unit = {},
+    onAlarmHourChange: (String) -> Unit = {},
+    onAlarmMinuteChange: (String) -> Unit = {},
+    onAlarmConfirm: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToMyPage: () -> Unit = {},
     onPrevDate: () -> Unit = {},
@@ -255,6 +262,17 @@ fun TimetableScreen(
             onPreviousMonth = onPickerPreviousMonth,
             onNextMonth = onPickerNextMonth,
             onDismiss = onDatePickerDismiss,
+        )
+    }
+
+    if (state.isAlarmDialogVisible) {
+        AlarmSettingDialog(
+            hour = state.alarmHourDraft,
+            minute = state.alarmMinuteDraft,
+            onHourChange = onAlarmHourChange,
+            onMinuteChange = onAlarmMinuteChange,
+            onConfirm = onAlarmConfirm,
+            onDismiss = onAlarmDialogDismiss,
         )
     }
 }

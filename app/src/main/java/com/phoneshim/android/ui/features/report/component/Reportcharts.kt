@@ -38,8 +38,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import com.phoneshim.android.ui.common.PhoneShimIcon
-import com.phoneshim.android.ui.common.PhoneShimIconType
 import com.phoneshim.android.ui.common.SectionCard
 import com.phoneshim.android.ui.theme.PhoneShimDimens
 import com.phoneshim.android.ui.theme.PhoneShimPalette
@@ -373,64 +371,8 @@ private fun TimetableSegment(segment: UsageSegment, onSegmentClick: (String) -> 
 /** 리포트 화면 오른쪽 사이드 카드의 공통 폭. */
 val ReportSideCardWidth = 104.dp
 
-/**
- * 타임테이블 오른쪽 액션 묶음.
- *
- * 알림 설정이 상단 날짜 네비게이터로 옮겨가면서 현재는 쓰이지 않습니다.
- * TODO: 계속 안 쓰이면 제거하세요.
- */
-@Composable
-fun ReportSideActionCard(
-    onSuggestionClick: () -> Unit,
-    onAlarmSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(PhoneShimTheme.colors.brandSubtle, RoundedCornerShape(16.dp))
-            .padding(vertical = PhoneShimDimens.spacing8),
-        verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing4),
-    ) {
-        SideActionRow(text = "제안 보기", icon = PhoneShimIconType.Info, onClick = onSuggestionClick)
-        SideActionRow(text = "알림 설정", icon = PhoneShimIconType.Bell, onClick = onAlarmSettingsClick)
-    }
-}
-
-@Composable
-private fun SideActionRow(
-    text: String,
-    icon: PhoneShimIconType,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = PhoneShimDimens.spacing8, vertical = PhoneShimDimens.spacing8),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .background(PhoneShimTheme.colors.surface, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            PhoneShimIcon(
-                type = icon,
-                contentDescription = text,
-                tint = PhoneShimTheme.colors.brandStrong,
-                modifier = Modifier.size(14.dp),
-            )
-        }
-        Text(
-            text = text,
-            style = PhoneShimType.KorCaption,
-            color = PhoneShimTheme.colors.brandStrong,
-        )
-    }
-}
+// "제안 보기 / 알림 설정" 사이드 카드(ReportSideActionCard)는 제거했습니다.
+// 제안은 상단 쉼이의 제안 카드로, 알림 설정은 날짜 네비게이터 버튼으로 옮겨가서 호출부가 없어졌습니다.
 
 /** 타임테이블 오른쪽 "사용 어플" 카드. */
 @Composable
