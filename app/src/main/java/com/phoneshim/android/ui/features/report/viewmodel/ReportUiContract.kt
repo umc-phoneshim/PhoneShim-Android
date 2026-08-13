@@ -179,8 +179,11 @@ data class ReportUiState(
                 val hour = (TIMETABLE_START_HOUR + offset) % HOURS_IN_DAY
                 val segments = byHour[hour].orEmpty().map { session ->
                     val startRatio = session.startTime.minute / MINUTES_IN_HOUR
+                    // 시간 끝에 가깝게 시작한 세션은 남은 폭이 최소 표시 폭보다 좁을 수 있다.
+                    // 그대로 coerceIn 에 넘기면 하한 > 상한 이라 예외가 난다.
+                    val maxRatio = (1f - startRatio).coerceAtLeast(MIN_SEGMENT_RATIO)
                     val lengthRatio = (session.durationMinutes / MINUTES_IN_HOUR)
-                        .coerceIn(MIN_SEGMENT_RATIO, 1f - startRatio)
+                        .coerceIn(MIN_SEGMENT_RATIO, maxRatio)
                     UsageSegment(
                         color = colors[session.monitoredAppId] ?: ReportColorGreen,
                         ratio = lengthRatio,
