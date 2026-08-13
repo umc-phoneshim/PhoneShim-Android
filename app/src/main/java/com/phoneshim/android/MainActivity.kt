@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import com.phoneshim.android.blocking.BlockingStarter
 import com.phoneshim.android.navigation.PhoneShimNavHost
 import com.phoneshim.android.ui.features.auth.client.ForegroundActivityProvider
+import com.phoneshim.android.data.realtime.ReminderSocketSessionCoordinator
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -15,6 +16,8 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject
     lateinit var foregroundActivityProvider: ForegroundActivityProvider
+    @Inject
+    lateinit var reminderSocketSessionCoordinator: ReminderSocketSessionCoordinator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,7 +26,10 @@ class MainActivity : ComponentActivity() {
         BlockingStarter.startIfPermitted(this)
         setContent {
             PhoneShimTheme {
-                PhoneShimNavHost(navController = rememberNavController())
+                PhoneShimNavHost(
+                    navController = rememberNavController(),
+                    reminderSocketSessionCoordinator = reminderSocketSessionCoordinator,
+                )
             }
         }
     }
@@ -31,6 +37,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         foregroundActivityProvider.attach(this)
+        reminderSocketSessionCoordinator.onAppForegrounded()
     }
 
     override fun onStop() {

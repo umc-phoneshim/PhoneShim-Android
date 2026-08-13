@@ -38,6 +38,7 @@ class ReminderRepositoryImpl @Inject constructor(
 ) : ReminderRepository {
     override suspend fun getReminders(date: LocalDate): Result<ReminderListResult> =
         try {
+            val previousRestrictions = reminderRestrictionDao.getForDate(date.toEpochDay())
             val reminders = apiCallExecutor.execute { reminderApi.getReminders(date.toString()) }
                 .map { it.toDomain() }
             val restrictions = reminders.toRestrictionEntities()
@@ -50,6 +51,16 @@ class ReminderRepositoryImpl @Inject constructor(
                 epochDay = date.toEpochDay(),
                 restrictions = restrictions,
             )
+            val activeTaskIds = restrictions
+                .filterNot { it.restrictionMode == ReminderRestrictionMode.NONE.name }
+                .mapTo(mutableSetOf(), ReminderRestrictionEntity::taskId)
+            previousRestrictions
+                .asSequence()
+                .filterNot { it.restrictionMode == ReminderRestrictionMode.NONE.name }
+                .map(ReminderRestrictionEntity::taskId)
+                .filterNot(activeTaskIds::contains)
+                .distinct()
+                .forEach { scheduleCoordinator.cancel(it) }
             scheduleCoordinator.refreshToday()
             Result.success(ReminderListResult(reminders, ReminderDataSource.REMOTE))
         } catch (error: CancellationException) {

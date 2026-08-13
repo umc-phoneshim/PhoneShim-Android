@@ -50,11 +50,13 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://api.phoneshim.com/\"")
+            buildConfigField("String", "SOCKET_URL", "\"http://52.79.234.34:3000/\"")
             buildConfigField("boolean", "ENABLE_NETWORK_BODY_LOGGING", "true")
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"http://52.79.234.34:3000/\"")
+            buildConfigField("String", "SOCKET_URL", "\"http://52.79.234.34:3000/\"")
             buildConfigField("boolean", "ENABLE_NETWORK_BODY_LOGGING", "false")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
             buildConfigField("boolean", "GOOGLE_ID_TOKEN_LOGIN_ENABLED", googleIdTokenLoginEnabled.toString())

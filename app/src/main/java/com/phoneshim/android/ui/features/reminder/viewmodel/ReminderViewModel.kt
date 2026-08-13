@@ -2,6 +2,7 @@ package com.phoneshim.android.ui.features.reminder.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.phoneshim.android.data.api.ReminderErrorCodes
+import com.phoneshim.android.data.realtime.ReminderRealtimeUpdateSource
 import com.phoneshim.android.domain.model.CreateReminderCommand
 import com.phoneshim.android.domain.model.Reminder
 import com.phoneshim.android.domain.model.ReminderDataSource
@@ -36,6 +37,7 @@ class ReminderViewModel @Inject constructor(
     private val createReminder: CreateReminderUseCase,
     private val updateReminder: UpdateReminderUseCase,
     private val deleteReminder: DeleteReminderUseCase,
+    private val reminderRealtimeUpdateSource: ReminderRealtimeUpdateSource,
 ) : BaseViewModel<ReminderUiState, ReminderUiEvent, ReminderUiEffect>(
     ReminderUiState(todayDate = LocalDate.now(KOREA_ZONE_ID)),
 ) {
@@ -45,6 +47,30 @@ class ReminderViewModel @Inject constructor(
     init {
         loadMonitoredApps()
         loadMonth(currentState.visibleMonth)
+        observeRealtimeUpdates()
+    }
+
+    private fun observeRealtimeUpdates() {
+        viewModelScope.launch {
+            reminderRealtimeUpdateSource.updates.collect { result ->
+                val today = LocalDate.now(KOREA_ZONE_ID)
+                setState {
+                    copy(
+                        tasksByDate = tasksByDate + (today to result.reminders.map(Reminder::toUiModel)),
+                        cachedDates = if (result.source == ReminderDataSource.CACHE) {
+                            cachedDates + today
+                        } else {
+                            cachedDates - today
+                        },
+                        isShowingCachedData = if (selectedDate == today) {
+                            result.source == ReminderDataSource.CACHE
+                        } else {
+                            isShowingCachedData
+                        },
+                    )
+                }
+            }
+        }
     }
 
     override fun handleEvent(event: ReminderUiEvent) {

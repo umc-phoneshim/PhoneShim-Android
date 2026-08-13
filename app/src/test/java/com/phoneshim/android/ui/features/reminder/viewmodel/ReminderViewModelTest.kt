@@ -28,6 +28,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableSharedFlow
+import com.phoneshim.android.data.realtime.ReminderRealtimeUpdateSource
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -260,6 +262,9 @@ class ReminderViewModelTest {
         CreateReminderUseCase(repository),
         UpdateReminderUseCase(repository),
         DeleteReminderUseCase(repository),
+        object : ReminderRealtimeUpdateSource {
+            override val updates = MutableSharedFlow<ReminderListResult>()
+        },
     )
 
     private fun prepareNewTask(title: String, start: String, end: String) {
