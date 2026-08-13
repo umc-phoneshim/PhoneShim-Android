@@ -151,13 +151,50 @@ class LoginViewModelTest {
 
     @Test
     fun `dismissing withdrawal pending clears informational state`() = runTest(dispatcher) {
-        val viewModel = createViewModel(loginFailure = AuthException.WithdrawalPending)
+        var recoveryAttempts = 0
+        val viewModel = createViewModel(
+            loginFailure = AuthException.WithdrawalPending,
+            recover = {
+                recoveryAttempts++
+                Result.success(Unit)
+            },
+        )
 
         viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
         runCurrent()
         viewModel.onEvent(LoginUiEvent.WithdrawalPendingDismissed)
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
 
         assertFalse(viewModel.uiState.value.isWithdrawalPending)
+        assertEquals(0, recoveryAttempts)
+    }
+
+    @Test
+    fun `failed withdrawal recovery keeps credential for retry`() = runTest(dispatcher) {
+        var recoveryAttempts = 0
+        val viewModel = createViewModel(
+            loginFailure = AuthException.WithdrawalPending,
+            recover = {
+                recoveryAttempts++
+                if (recoveryAttempts == 1) {
+                    Result.failure(IllegalStateException("temporary failure"))
+                } else {
+                    Result.success(Unit)
+                }
+            },
+        )
+
+        viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.GOOGLE))
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+        viewModel.onEvent(LoginUiEvent.WithdrawalRecoveryConfirmed)
+        runCurrent()
+
+        assertEquals(2, recoveryAttempts)
     }
 
     @Test

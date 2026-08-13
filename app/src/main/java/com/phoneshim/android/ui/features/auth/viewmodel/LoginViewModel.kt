@@ -133,7 +133,6 @@ class LoginViewModel @Inject constructor(
 
     private fun recoverPendingAccount() {
         val credential = pendingRecoveryCredential ?: return
-        pendingRecoveryCredential = null
         setState {
             copy(
                 isWithdrawalPending = false,
@@ -146,6 +145,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             recoverWithdrawalUseCase(credential)
                 .onSuccess {
+                    pendingRecoveryCredential = null
                     if (authFeatureAvailability.shouldLoadRemoteProfile) {
                         loadExistingUserProfile()
                     } else {
