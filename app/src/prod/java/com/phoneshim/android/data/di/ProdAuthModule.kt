@@ -3,7 +3,7 @@ package com.phoneshim.android.data.di
 import com.phoneshim.android.BuildConfig
 import com.phoneshim.android.data.api.AuthApi
 import com.phoneshim.android.data.repository.AuthRepositoryImpl
-import com.phoneshim.android.data.repository.UnavailablePendingAuthRepositoryImpl
+import com.phoneshim.android.data.repository.PendingAuthRepositoryImpl
 import com.phoneshim.android.domain.repository.AuthRepository
 import com.phoneshim.android.domain.repository.PendingAuthRepository
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
@@ -52,7 +52,7 @@ abstract class ProdAuthBindingModule {
 
     @Binds @Singleton
     abstract fun bindPendingAuthRepository(
-        implementation: UnavailablePendingAuthRepositoryImpl,
+        implementation: PendingAuthRepositoryImpl,
     ): PendingAuthRepository
 }
 

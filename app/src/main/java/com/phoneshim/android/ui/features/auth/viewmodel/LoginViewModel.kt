@@ -6,9 +6,11 @@ import com.phoneshim.android.data.api.common.ApiErrorCodes
 import com.phoneshim.android.data.api.common.ApiException
 import com.phoneshim.android.domain.model.AuthException
 import com.phoneshim.android.domain.model.AuthFeatureAvailability
+import com.phoneshim.android.domain.model.SocialCredential
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.domain.repository.CurrentUserRepository
 import com.phoneshim.android.domain.usecase.GetMyInfoUseCase
+import com.phoneshim.android.domain.usecase.RecoverWithdrawalUseCase
 import com.phoneshim.android.domain.usecase.SocialLoginUseCase
 import com.phoneshim.android.ui.common.base.BaseViewModel
 import com.phoneshim.android.ui.common.base.UiEffect
@@ -25,6 +27,7 @@ class LoginViewModel @Inject constructor(
     private val googleAuthClient: GoogleAuthClient,
     private val kakaoAuthClient: KakaoAuthClient,
     private val socialLoginUseCase: SocialLoginUseCase,
+    private val recoverWithdrawalUseCase: RecoverWithdrawalUseCase,
     private val getMyInfoUseCase: GetMyInfoUseCase,
     private val currentUserRepository: CurrentUserRepository,
     private val authFeatureAvailability: AuthFeatureAvailability,
@@ -34,16 +37,14 @@ class LoginViewModel @Inject constructor(
             canGoogleLogin = authFeatureAvailability.canGoogleLogin,
         ),
     ) {
+    private var pendingRecoveryCredential: SocialCredential? = null
 
     override fun handleEvent(event: LoginUiEvent) {
         when (event) {
             is LoginUiEvent.LoginClicked -> startLogin(event.provider)
             LoginUiEvent.ErrorDismissed -> setState { copy(errorMessage = null) }
-            LoginUiEvent.WithdrawalPendingAcknowledged,
-            LoginUiEvent.WithdrawalPendingDismissed,
-            -> setState {
-                copy(isWithdrawalPending = false)
-            }
+            LoginUiEvent.WithdrawalRecoveryConfirmed -> recoverPendingAccount()
+            LoginUiEvent.WithdrawalPendingDismissed -> dismissWithdrawalPending()
         }
     }
 
@@ -92,7 +93,9 @@ class LoginViewModel @Inject constructor(
             }
             .onFailure { error ->
                 if (error is AuthException.WithdrawalPending) {
-                    showWithdrawalPending()
+                    showWithdrawalPending(
+                        SocialCredential(provider, authResult.providerToken),
+                    )
                 } else {
                     showError(error.toUserMessage(provider))
                 }
@@ -116,7 +119,8 @@ class LoginViewModel @Inject constructor(
             }
     }
 
-    private fun showWithdrawalPending() {
+    private fun showWithdrawalPending(credential: SocialCredential) {
+        pendingRecoveryCredential = credential
         setState {
             copy(
                 isLoading = false,
@@ -125,6 +129,37 @@ class LoginViewModel @Inject constructor(
                 isWithdrawalPending = true,
             )
         }
+    }
+
+    private fun recoverPendingAccount() {
+        val credential = pendingRecoveryCredential ?: return
+        setState {
+            copy(
+                isWithdrawalPending = false,
+                isLoading = true,
+                selectedProvider = credential.provider,
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            recoverWithdrawalUseCase(credential)
+                .onSuccess {
+                    pendingRecoveryCredential = null
+                    if (authFeatureAvailability.shouldLoadRemoteProfile) {
+                        loadExistingUserProfile()
+                    } else {
+                        finishLoading()
+                        sendEffect(LoginUiEffect.NavigateToMain)
+                    }
+                }
+                .onFailure { error -> showError(error.toUserMessage(credential.provider)) }
+        }
+    }
+
+    private fun dismissWithdrawalPending() {
+        pendingRecoveryCredential = null
+        setState { copy(isWithdrawalPending = false) }
     }
 
     private fun finishLoading() {
@@ -205,7 +240,7 @@ class LoginViewModel @Inject constructor(
 sealed interface LoginUiEvent : UiEvent {
     data class LoginClicked(val provider: SocialProvider) : LoginUiEvent
     data object ErrorDismissed : LoginUiEvent
-    data object WithdrawalPendingAcknowledged : LoginUiEvent
+    data object WithdrawalRecoveryConfirmed : LoginUiEvent
     data object WithdrawalPendingDismissed : LoginUiEvent
 }
 
