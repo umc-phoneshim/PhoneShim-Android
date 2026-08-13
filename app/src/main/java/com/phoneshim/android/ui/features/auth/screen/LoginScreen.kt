@@ -22,7 +22,6 @@ import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.IconButton
 import com.phoneshim.android.ui.features.auth.viewmodel.LoginUiState
 import com.phoneshim.android.ui.theme.PhoneShimDimens
-import com.phoneshim.android.ui.theme.PhoneShimPalette
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 import com.phoneshim.android.ui.theme.PhoneShimType
 
@@ -36,13 +35,12 @@ fun LoginScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = PhoneShimPalette.SoftCream,
+        color = PhoneShimTheme.colors.background,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = PhoneShimDimens.screenHorizontalPadding)
-                .padding(vertical = PhoneShimDimens.spacing16),
+                .padding(horizontal = PhoneShimDimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(
                 PhoneShimDimens.spacing32,
                 Alignment.CenterVertically,
@@ -68,15 +66,15 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing12),
                 ) {
-                    Text(
-                        text = "폰쉼",
-                        color = PhoneShimPalette.Primary600,
-                        style = PhoneShimType.KorDisplay,
+                    Image(
+                        painter = painterResource(R.drawable.phoneshim_wordmark),
+                        contentDescription = null,
+                        modifier = Modifier.size(width = 88.dp, height = 39.dp),
                     )
                     Text(
                         text = "잠시, 폰을 쉬게 하다",
-                        color = PhoneShimPalette.Gray700,
-                        style = PhoneShimType.KorBodyM,
+                        color = PhoneShimTheme.colors.brandStrong,
+                        style = PhoneShimType.KorCaption,
                     )
                 }
             }
@@ -91,8 +89,8 @@ fun LoginScreen(
                     ) "구글 로그인 중" else "구글로 계속하기",
                     icon = R.drawable.google_logo,
                     iconWidth = 16.dp,
-                    backgroundColor = PhoneShimPalette.Gray100,
-                    contentColor = PhoneShimPalette.LoginButtonText,
+                    backgroundColor = PhoneShimTheme.colors.loginGoogleBackground,
+                    contentColor = PhoneShimTheme.colors.loginButtonContent,
                     onClick = onGoogleLogin,
                     enabled = uiState.canGoogleLogin && !uiState.isLoading,
                     isLoading = uiState.selectedProvider == SocialProvider.GOOGLE && uiState.isLoading,
@@ -103,8 +101,8 @@ fun LoginScreen(
                     ) "카카오 로그인 중" else "카카오톡으로 계속하기",
                     icon = R.drawable.kakao_logo,
                     iconWidth = 17.dp,
-                    backgroundColor = PhoneShimPalette.KakaoYellow,
-                    contentColor = PhoneShimPalette.LoginButtonText,
+                    backgroundColor = PhoneShimTheme.colors.loginKakaoBackground,
+                    contentColor = PhoneShimTheme.colors.loginButtonContent,
                     onClick = onKakaoLogin,
                     enabled = !uiState.isLoading,
                     isLoading = uiState.selectedProvider == SocialProvider.KAKAO && uiState.isLoading,
@@ -113,7 +111,7 @@ fun LoginScreen(
                     Text(
                         text = message,
                         modifier = Modifier.fillMaxWidth(),
-                        color = PhoneShimPalette.Error,
+                        color = PhoneShimTheme.colors.error,
                         style = PhoneShimType.KorLabel,
                         textAlign = TextAlign.Center,
                     )
@@ -123,7 +121,7 @@ fun LoginScreen(
                         Text(
                             text = message,
                             modifier = Modifier.fillMaxWidth(),
-                            color = PhoneShimPalette.Gray700,
+                            color = PhoneShimTheme.colors.textSecondary,
                             style = PhoneShimType.KorLabel,
                             textAlign = TextAlign.Center,
                         )
@@ -136,7 +134,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = PhoneShimDimens.spacing24),
-                color = PhoneShimPalette.Gray500,
+                color = PhoneShimTheme.colors.textTertiary,
                 style = PhoneShimType.KorLabel,
                 textAlign = TextAlign.Center,
             )

@@ -65,4 +65,7 @@ data class PhoneShimColors(
     val snackbarInfo: Color = PhoneShimPalette.SnackbarInfo,
     val error: Color = PhoneShimPalette.Error,
     val onBrand: Color = PhoneShimPalette.White,
+    val loginGoogleBackground: Color = PhoneShimPalette.Gray100,
+    val loginKakaoBackground: Color = PhoneShimPalette.KakaoYellow,
+    val loginButtonContent: Color = PhoneShimPalette.LoginButtonText,
 )
