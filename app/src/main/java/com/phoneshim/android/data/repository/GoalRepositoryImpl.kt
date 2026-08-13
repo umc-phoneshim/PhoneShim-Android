@@ -34,10 +34,13 @@ import kotlinx.coroutines.CancellationException
  *   다음 저장 때 이 식별자가 있으면 POST 대신 PATCH 로 보내 409 중복을 피한다.
  *
  * [저장 순서]
- *   차단 엔진이 즉시 읽을 수 있도록 로컬 캐시를 먼저 갱신한 뒤 서버를 동기화한다.
+*   차단 엔진이 즉시 읽을 수 있도록 로컬 캐시를 먼저 갱신한 뒤 서버를 동기화한다.
  *   다만 온보딩·PREF의 저장 완료는 서버 성공을 기준으로 하므로 동기화 오류를 호출부에
  *   그대로 전달한다. 그래야 로컬에만 주의 앱이 남아 Reminder API가 요구하는
  *   monitoredAppId를 얻지 못하는 상태를 성공으로 오인하지 않는다.
+ *
+ *   서버가 거절할 값(목표 시간 범위 등)은 [com.phoneshim.android.domain.model.GoalLimits]
+ *   기준으로 화면에서 미리 걸러야, 불필요한 실패가 생기지 않는다.
  */
 class GoalRepositoryImpl @Inject constructor(
     private val monitoredAppApi: MonitoredAppApi,

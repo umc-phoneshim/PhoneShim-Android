@@ -33,22 +33,3 @@ object GoalErrorCodes {
     const val INVALID_TARGET_COUNT = "INVALID_TARGET_COUNT"
     const val INVALID_GOAL_REASON = "INVALID_GOAL_REASON"
 }
-
-/**
- * 서버가 검증하는 값 범위. 요청을 보내기 전에 클라에서 같은 기준으로 걸러
- * 불필요한 400 왕복을 줄입니다. 서버 명세가 바뀌면 여기부터 고칩니다.
- */
-object GoalLimits {
-    /** 주의 앱 최대 등록 개수. */
-    const val MAX_MONITORED_APPS = 5
-
-    /** 목표 사용 시간(분) 허용 범위. 10분 미만·1430분 초과는 400. */
-    const val MIN_TARGET_MINUTES = 10
-    const val MAX_TARGET_MINUTES = 1430
-
-    /** 앱별 목표 진입 횟수 최소값. */
-    const val MIN_TARGET_COUNT = 1
-
-    /** 목표 이유 최대 길이(공백 포함). */
-    const val MAX_GOAL_REASON_LENGTH = 100
-}
