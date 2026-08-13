@@ -130,6 +130,12 @@ class ReportAlertSettingViewModelTest {
         override suspend fun getUsageSessions(date: String): Result<List<UsageSession>> =
             Result.success(emptyList())
 
+        override suspend fun uploadUsageSession(
+            monitoredAppId: String,
+            startTime: String,
+            endTime: String,
+        ): Result<Unit> = Result.success(Unit)
+
         override suspend fun getReportSummary(
             range: ReportRange,
             date: String?,
