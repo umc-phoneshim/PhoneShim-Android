@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- 시스템 시작 창은 Compose보다 먼저 생성되므로 PhoneShimPalette.SoftCream과 동기화합니다. -->
+    <color name="splash_background">#FFFDF7</color>
 </resources>

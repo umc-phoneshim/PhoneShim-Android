@@ -22,6 +22,8 @@ object PhoneShimDimens {
     val buttonHeight = primaryButtonHeight
     val textFieldHeight = 46.dp
 
+    val splashLogoCanvasSize = 288.dp
+
     val blockingDialogIllustrationSize = 160.dp
     val blockingHeroIllustrationSize = 240.dp
     val blockingActionSize = 120.dp
