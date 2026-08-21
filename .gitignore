@@ -17,3 +17,8 @@ build/
 tmp/
 backend/
 backend/
+
+*.apk
+*.aab
+app/prod/release/
+**/build/
