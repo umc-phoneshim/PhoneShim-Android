@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">폰쉼</string>
+    <string name="privacy_policy_url">https://app.notion.com/p/3bf1a5d070e98086ba71fc2298e3aca7</string>
+    <string name="login_consent_prefix">로그인하면 이용약관 및</string>
+    <string name="privacy_policy_label">개인정보 처리방침</string>
+    <string name="login_consent_suffix">에 동의하게 됩니다.</string>
 </resources>

@@ -5,7 +5,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoneshim.android.R
 import com.phoneshim.android.domain.model.SocialProvider
 import com.phoneshim.android.ui.common.ConfirmationDialog
 import com.phoneshim.android.ui.common.base.CollectCommonEffect
@@ -23,6 +26,8 @@ fun LoginRoute(
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val uriHandler = LocalUriHandler.current
+    val privacyPolicyUrl = stringResource(R.string.privacy_policy_url)
     CollectCommonEffect(viewModel, onAuthExpired)
 
     LaunchedEffect(viewModel) {
@@ -43,6 +48,7 @@ fun LoginRoute(
         onKakaoLogin = {
             viewModel.onEvent(LoginUiEvent.LoginClicked(SocialProvider.KAKAO))
         },
+        onPrivacyPolicyClick = { uriHandler.openUri(privacyPolicyUrl) },
         modifier = modifier,
     )
 

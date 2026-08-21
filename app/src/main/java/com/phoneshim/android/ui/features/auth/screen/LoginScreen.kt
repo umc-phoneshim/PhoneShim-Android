@@ -1,6 +1,7 @@
 package com.phoneshim.android.ui.features.auth.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
@@ -31,6 +37,7 @@ fun LoginScreen(
     noticeMessage: String? = null,
     onGoogleLogin: () -> Unit,
     onKakaoLogin: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -129,18 +136,46 @@ fun LoginScreen(
                 }
             }
 
-            Text(
-                text = "로그인하면 이용약관 및 개인정보 처리방침에 동의하게 됩니다.",
+            val consentPrefix = stringResource(R.string.login_consent_prefix)
+            val privacyPolicyLabel = stringResource(R.string.privacy_policy_label)
+            val consentSuffix = stringResource(R.string.login_consent_suffix)
+            val privacyPolicyLinkColor = PhoneShimTheme.colors.brandStrong
+            val consentText = buildAnnotatedString {
+                append(consentPrefix)
+                append(' ')
+                pushStringAnnotation(tag = PRIVACY_POLICY_TAG, annotation = PRIVACY_POLICY_TAG)
+                withStyle(
+                    SpanStyle(
+                        color = privacyPolicyLinkColor,
+                        textDecoration = TextDecoration.Underline,
+                    ),
+                ) {
+                    append(privacyPolicyLabel)
+                }
+                pop()
+                append(consentSuffix)
+            }
+            @Suppress("DEPRECATION")
+            ClickableText(
+                text = consentText,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = PhoneShimDimens.spacing24),
-                color = PhoneShimTheme.colors.textTertiary,
-                style = PhoneShimType.KorLabel,
-                textAlign = TextAlign.Center,
+                style = PhoneShimType.KorLabel.copy(
+                    color = PhoneShimTheme.colors.textTertiary,
+                    textAlign = TextAlign.Center,
+                ),
+                onClick = { offset ->
+                    if (consentText.hasStringAnnotations(PRIVACY_POLICY_TAG, offset, offset)) {
+                        onPrivacyPolicyClick()
+                    }
+                },
             )
         }
     }
 }
+
+private const val PRIVACY_POLICY_TAG = "privacy_policy"
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
@@ -150,6 +185,7 @@ private fun LoginScreenPreview() {
             uiState = LoginUiState(),
             onGoogleLogin = {},
             onKakaoLogin = {},
+            onPrivacyPolicyClick = {},
         )
     }
 }
