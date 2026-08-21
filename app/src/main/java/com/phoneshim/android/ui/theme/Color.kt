@@ -33,6 +33,7 @@ object PhoneShimPalette {
     val GoogleButtonBackground = Color(0xFFF2F2F2)
     val GoogleButtonText = Color(0xFF1F1F1F)
     val KakaoYellow = Color(0xFFFEE500)
+    val KakaoButtonText = Color(0xD9000000)
 
     // Semantic
     val Success = Color(0xFF7DAA64)
@@ -69,4 +70,5 @@ data class PhoneShimColors(
     val loginGoogleBackground: Color = PhoneShimPalette.GoogleButtonBackground,
     val loginGoogleContent: Color = PhoneShimPalette.GoogleButtonText,
     val loginKakaoBackground: Color = PhoneShimPalette.KakaoYellow,
+    val loginKakaoContent: Color = PhoneShimPalette.KakaoButtonText,
 )
