@@ -74,14 +74,6 @@ import androidx.compose.material3.Text
 import com.phoneshim.android.ui.theme.PhoneShimType
 import com.phoneshim.android.ui.theme.PhoneShimTheme
 
-/* ============================================================
- * 1. DESIGN TOKENS - COLORS
- * ============================================================ */
-// TODO: 클론 디자인 시스템(PhoneShimColors)에 #FAF7F0(로컬 프로젝트의 BackgroundCream)에
-// 대응하는 시맨틱 토큰이 없습니다(가장 가까운 PhoneShimTheme.colors.background는 #FFFDF7).
-// 디자인 시스템 담당자 확인 후 Color.kt/Theme.kt에 정식 토큰으로 추가되면 이 로컬 상수는 제거하세요.
-private val BackgroundCream = Color(0xFFFAF7F0)
-
 // 섹션 타이틀: 피그마 시안 기준 KorBodyM 크기 + SemiBold 웨이트
 private val SectionTitleStyle = PhoneShimType.KorBodyM.copy(fontWeight = FontWeight.SemiBold)
 
@@ -210,14 +202,13 @@ fun MainScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundCream)
+            .background(PhoneShimTheme.colors.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // NOTE: 피그마엔 KOR/H3(Pretendard)로 찍혀 있으나 영문이므로 디자인 시스템 규칙(ENG=Inter)을 따름.
             TopAppBar(
                 title = "MAIN",
-                titleStyle = PhoneShimType.EngH3,
+                titleStyle = PhoneShimType.KorH3,
                 leadingAction = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
@@ -309,21 +300,13 @@ fun MainScreen(
 }
 
 /* ============================================================
- * 5. SECTION TITLE (▶ 8x10 + SectionTitle style)
+ * 5. SECTION TITLE
  * ============================================================ */
 @Composable
 fun SectionTitle(title: String) {
     SectionHeader(
         title = title,
         titleStyle = SectionTitleStyle,
-        leadingContent = {
-            Icon(
-                painter = painterResource(R.drawable.ic_disclosure_triangle),
-                contentDescription = null,
-                tint = PhoneShimTheme.colors.textPrimary,
-                modifier = Modifier.size(16.dp),
-            )
-        },
     )
 }
 
@@ -338,18 +321,17 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
             .clip(RoundedCornerShape(12.dp))
             .background(PhoneShimTheme.colors.brandSubtle)
             .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 8.dp),
+                .weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = "${userName}님, 오늘 하루 힘차게 시작 해봐요!",
-                style = PhoneShimType.KorBodyM,
+                style = PhoneShimType.KorCaption,
                 color = PhoneShimTheme.colors.brandStrong
             )
             Text(
@@ -359,7 +341,7 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
                 } else {
                     "아직 초기 설정이 완료되지 않았어요!"
                 },
-                style = PhoneShimType.KorH2,
+                style = PhoneShimType.KorH3,
                 color = PhoneShimTheme.colors.textPrimary
             )
         }
@@ -376,7 +358,7 @@ private fun GreetingCard(userName: String, isSetupCompleted: Boolean) {
             contentDescription = mascotDescription,
             contentScale = ContentScale.Fit,
             modifier = Modifier
-                .height(88.dp)
+                .height(72.dp)
                 .aspectRatio(mascotAspectRatio)
         )
     }
@@ -639,7 +621,7 @@ private fun CautionAppItem(app: MainCautionAppItem) {
             )
             Badge(
                 text = app.entryCount,
-                backgroundColor = BackgroundCream,
+                backgroundColor = PhoneShimTheme.colors.surfaceCream,
                 textColor = PhoneShimTheme.colors.textSecondary
             )
         }
@@ -714,7 +696,7 @@ private fun MainScreenEmptyPreview() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCream)
+                .background(PhoneShimTheme.colors.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
@@ -772,7 +754,7 @@ private fun MainScreenFilledPreview() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCream)
+                .background(PhoneShimTheme.colors.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
