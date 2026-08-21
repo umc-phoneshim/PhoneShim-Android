@@ -4,14 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,21 +47,12 @@ fun GoogleSignInButton(
         enabled = enabled,
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GoogleBrandLogo()
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = stringResource(R.string.google_sign_in_button_description),
-                color = PhoneShimTheme.colors.loginGoogleContent,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            )
-        }
+        SocialLoginButtonContent(
+            label = stringResource(R.string.google_sign_in_button_description),
+            labelColor = PhoneShimTheme.colors.loginGoogleContent,
+            labelFontWeight = FontWeight.Medium,
+            icon = { GoogleBrandLogo() },
+        )
     }
 }
 
@@ -79,10 +68,44 @@ fun KakaoLoginButton(
         enabled = enabled,
         modifier = modifier,
     ) {
-        Image(
-            painter = painterResource(R.drawable.kakao_login_button),
-            contentDescription = stringResource(R.string.kakao_login_button_description),
-            modifier = Modifier.size(width = 183.dp, height = 45.dp),
+        SocialLoginButtonContent(
+            label = stringResource(R.string.kakao_login_button_description),
+            labelColor = PhoneShimTheme.colors.loginKakaoContent,
+            labelFontWeight = FontWeight.Normal,
+            icon = { KakaoBrandLogo() },
+        )
+    }
+}
+
+/** 버튼 폭과 관계없이 브랜드 심볼은 왼쪽 16dp, 레이블은 컨테이너 중앙에 유지합니다. */
+@Composable
+private fun SocialLoginButtonContent(
+    label: String,
+    labelColor: Color,
+    labelFontWeight: FontWeight,
+    icon: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .align(Alignment.CenterStart),
+            contentAlignment = Alignment.Center,
+        ) {
+            icon()
+        }
+        Text(
+            text = label,
+            color = labelColor,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = labelFontWeight,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            modifier = Modifier.align(Alignment.Center),
         )
     }
 }
@@ -129,4 +152,14 @@ private fun GoogleBrandLogo() {
             modifier = Modifier.requiredSize(40.dp),
         )
     }
+}
+
+/** 카카오 공식 로그인 버튼 원본에서 분리한 20dp 말풍선 심볼입니다. */
+@Composable
+private fun KakaoBrandLogo() {
+    Image(
+        painter = painterResource(R.drawable.kakao_login_symbol),
+        contentDescription = null,
+        modifier = Modifier.size(20.dp),
+    )
 }
