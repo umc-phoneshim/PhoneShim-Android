@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +53,7 @@ fun SetGoalTopBar(
 ) {
     Row(
         modifier = modifier
+            .statusBarsPadding()
             .fillMaxWidth()
             .height(48.dp)
             .padding(horizontal = PhoneShimDimens.spacing16),
@@ -206,7 +209,9 @@ fun SetGoalBottomButtons(
     showBack: Boolean = true,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .navigationBarsPadding()
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PhoneShimDimens.spacing8),
     ) {
         if (showBack) {

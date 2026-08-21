@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -109,6 +110,7 @@ fun MySideMenuScreen(
                 .fillMaxHeight()
                 .width(240.dp)
                 .background(PhoneShimTheme.colors.surface)
+                .systemBarsPadding()
                 .padding(horizontal = PhoneShimDimens.spacing20, vertical = PhoneShimDimens.spacing24),
         ) {
             Spacer(modifier = Modifier.weight(1f))

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -167,6 +168,8 @@ fun TimetableScreen(
                 TopAppBar(
                     title = "DAILY REPORT",
                     titleStyle = PhoneShimType.KorH3,
+                    // Scaffold의 innerPadding이 이미 상태 표시줄 인셋을 포함합니다.
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     leadingAction = {
                         IconButton(onClick = onNavigateToSettings) {
                             Icon(
