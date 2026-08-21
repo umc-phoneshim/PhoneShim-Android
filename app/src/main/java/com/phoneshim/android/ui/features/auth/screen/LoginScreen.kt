@@ -1,7 +1,6 @@
 package com.phoneshim.android.ui.features.auth.screen
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,11 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.phoneshim.android.R
@@ -154,20 +155,23 @@ fun LoginScreen(
             val consentText = buildAnnotatedString {
                 append(consentPrefix)
                 append(' ')
-                pushStringAnnotation(tag = PRIVACY_POLICY_TAG, annotation = PRIVACY_POLICY_TAG)
-                withStyle(
-                    SpanStyle(
-                        color = privacyPolicyLinkColor,
-                        textDecoration = TextDecoration.Underline,
+                withLink(
+                    LinkAnnotation.Clickable(
+                        tag = PRIVACY_POLICY_TAG,
+                        styles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = privacyPolicyLinkColor,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                        ),
+                        linkInteractionListener = { onPrivacyPolicyClick() },
                     ),
                 ) {
                     append(privacyPolicyLabel)
                 }
-                pop()
                 append(consentSuffix)
             }
-            @Suppress("DEPRECATION")
-            ClickableText(
+            Text(
                 text = consentText,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -176,11 +180,6 @@ fun LoginScreen(
                     color = PhoneShimTheme.colors.textTertiary,
                     textAlign = TextAlign.Center,
                 ),
-                onClick = { offset ->
-                    if (consentText.hasStringAnnotations(PRIVACY_POLICY_TAG, offset, offset)) {
-                        onPrivacyPolicyClick()
-                    }
-                },
             )
         }
     }
