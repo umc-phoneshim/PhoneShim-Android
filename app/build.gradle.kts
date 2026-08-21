@@ -32,12 +32,12 @@ val googleIdTokenLoginEnabled = secretProperty("GOOGLE_ID_TOKEN_LOGIN_ENABLED")
 
 android {
     namespace = "com.phoneshim.android"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.phoneshim.android"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

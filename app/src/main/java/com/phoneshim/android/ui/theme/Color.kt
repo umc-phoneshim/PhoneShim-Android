@@ -30,8 +30,9 @@ object PhoneShimPalette {
     val Cream = Color(0xFFFAF7F0) // Figma Color System 명세에 맞춰 수정 (기존 #FCFAF2)
 
     // Login
+    val GoogleButtonBackground = Color(0xFFF2F2F2)
+    val GoogleButtonText = Color(0xFF1F1F1F)
     val KakaoYellow = Color(0xFFFEE500)
-    val LoginButtonText = Color(0xFF3A1D1D)
 
     // Semantic
     val Success = Color(0xFF7DAA64)
@@ -65,7 +66,7 @@ data class PhoneShimColors(
     val snackbarInfo: Color = PhoneShimPalette.SnackbarInfo,
     val error: Color = PhoneShimPalette.Error,
     val onBrand: Color = PhoneShimPalette.White,
-    val loginGoogleBackground: Color = PhoneShimPalette.Gray100,
+    val loginGoogleBackground: Color = PhoneShimPalette.GoogleButtonBackground,
+    val loginGoogleContent: Color = PhoneShimPalette.GoogleButtonText,
     val loginKakaoBackground: Color = PhoneShimPalette.KakaoYellow,
-    val loginButtonContent: Color = PhoneShimPalette.LoginButtonText,
 )

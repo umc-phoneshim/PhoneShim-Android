@@ -3,6 +3,7 @@ package com.phoneshim.android.ui.features.report.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -171,6 +172,8 @@ fun ReportSummaryScreen(
                 TopAppBar(
                     title = "DAILY REPORT",
                     titleStyle = PhoneShimType.KorH3,
+                    // Scaffold의 innerPadding이 이미 상태 표시줄 인셋을 포함합니다.
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     leadingAction = {
                         IconButton(onClick = onNavigateToSettings) {
                             Icon(

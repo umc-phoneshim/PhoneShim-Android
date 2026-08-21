@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ fun BlockingOverlay(
         modifier = modifier
             .fillMaxSize()
             .background(PhoneShimPalette.Gray100)
+            .systemBarsPadding()
             .padding(PhoneShimDimens.screenHorizontalPadding),
         contentAlignment = contentAlignment,
     ) { content() }
