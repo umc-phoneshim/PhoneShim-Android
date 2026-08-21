@@ -3,8 +3,9 @@ package com.phoneshim.android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
-import com.phoneshim.android.blocking.BlockingStarter
+import com.phoneshim.android.blocking.BlockingSessionCoordinator
 import com.phoneshim.android.navigation.PhoneShimNavHost
 import com.phoneshim.android.ui.features.auth.client.ForegroundActivityProvider
 import com.phoneshim.android.data.realtime.ReminderSocketSessionCoordinator
@@ -18,12 +19,14 @@ class MainActivity : ComponentActivity() {
     lateinit var foregroundActivityProvider: ForegroundActivityProvider
     @Inject
     lateinit var reminderSocketSessionCoordinator: ReminderSocketSessionCoordinator
+    @Inject
+    lateinit var blockingSessionCoordinator: BlockingSessionCoordinator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 권한이 이미 허용돼 있으면 차단 엔진 복구
-        // 권한이 없으면 아무 일도 하지 않는다.
-        BlockingStarter.startIfPermitted(this)
+        // 인증 세션이 복원된 뒤에만 차단 엔진을 시작하고,
+        // 로그아웃·세션 만료 시에는 실행 중인 서비스와 오버레이를 즉시 내립니다.
+        blockingSessionCoordinator.observe(lifecycleScope)
         setContent {
             PhoneShimTheme {
                 PhoneShimNavHost(

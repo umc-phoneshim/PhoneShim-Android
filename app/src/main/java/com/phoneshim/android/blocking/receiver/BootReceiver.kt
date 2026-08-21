@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.phoneshim.android.blocking.BlockingSessionGate
 import com.phoneshim.android.blocking.detection.BlockingPermissions
 import com.phoneshim.android.blocking.schedule.ReminderAlarmScheduler
 import com.phoneshim.android.blocking.service.BlockerService
@@ -30,6 +31,8 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
+        // 로그아웃 전에 받은 권한은 재부팅 후에도 남으므로 세션 게이트를 별도로 확인합니다.
+        if (!BlockingSessionGate.isEnabled(context)) return
         if (!BlockingPermissions.hasAll(context)) return
 
         ContextCompat.startForegroundService(

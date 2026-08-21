@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.phoneshim.android.blocking.BlockingSessionGate
 import com.phoneshim.android.blocking.service.BlockerService
 
 /**
@@ -15,6 +16,8 @@ import com.phoneshim.android.blocking.service.BlockerService
  */
 class ReminderAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        // 로그아웃 전에 예약된 알람이 나중에 도착해 차단 서비스를 되살리는 것을 막습니다.
+        if (!BlockingSessionGate.isEnabled(context)) return
         val edge = intent?.getStringExtra(ReminderAlarmScheduler.EXTRA_EDGE) ?: return
 
         // 시작이든 종료든, 서비스를 깨워 재판정하게 한다.
