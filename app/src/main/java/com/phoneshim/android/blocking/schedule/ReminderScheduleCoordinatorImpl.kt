@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.phoneshim.android.blocking.BlockingSessionGate
 import com.phoneshim.android.blocking.detection.BlockingPermissions
 import com.phoneshim.android.blocking.service.BlockerService
 import com.phoneshim.android.domain.schedule.ReminderScheduleCoordinator
@@ -64,6 +65,8 @@ class ReminderScheduleCoordinatorImpl @Inject constructor(
      * 권한이 없으면 서비스가 애초에 뜨지 않으므로 시도하지 않는다.
      */
     private fun requestReevaluate() {
+        // 로그아웃 상태에서는 재판정 요청 자체가 서비스를 다시 기동하지 않게 합니다.
+        if (!BlockingSessionGate.isEnabled(context)) return
         if (!BlockingPermissions.hasAll(context)) return
         runCatching {
             val intent = Intent(context, BlockerService::class.java).apply {

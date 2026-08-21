@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Telephony
 import android.telecom.TelecomManager
+import com.phoneshim.android.blocking.BlockingSessionGate
 import com.phoneshim.android.blocking.detection.BlockScope
 import com.phoneshim.android.blocking.detection.BlockedInterval
 import com.phoneshim.android.blocking.detection.ForegroundAppDetector
@@ -134,6 +135,11 @@ class BlockerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // START_STICKY 복구나 수신기와의 경합으로 서비스가 생성돼도 로그아웃 상태면 즉시 종료합니다.
+        if (!BlockingSessionGate.isEnabled(this)) {
+            stopSelf()
+            return
+        }
         powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         screenOnFlow.value = powerManager.isInteractive
         overlay = BlockOverlayManager(this, ::handleOverlayAction)
@@ -201,6 +207,11 @@ class BlockerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 생성 직후 세션이 종료된 경우에도 판정 루프를 실행하지 않고 재시작 불가 상태로 끝냅니다.
+        if (!BlockingSessionGate.isEnabled(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         // 리마인더 알람이 깨운 경우: 즉시 1회 재판정
         if (intent?.action == ACTION_REEVALUATE) {
             scope.launch { if (screenOnFlow.value) tick() }

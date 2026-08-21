@@ -23,6 +23,8 @@ import com.phoneshim.android.blocking.service.BlockerService
 object BlockingStarter {
 
     fun startIfPermitted(context: Context): Boolean {
+        // 권한이 남아 있어도 로그아웃 상태에서는 차단 서비스를 다시 시작하지 않습니다.
+        if (!BlockingSessionGate.isEnabled(context)) return false
         if (!BlockingPermissions.hasAll(context)) return false
         ContextCompat.startForegroundService(
             context,

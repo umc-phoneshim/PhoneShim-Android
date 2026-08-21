@@ -1,6 +1,8 @@
 package com.phoneshim.android.blocking.di
 
 import android.content.Context
+import com.phoneshim.android.blocking.AndroidBlockingSessionActions
+import com.phoneshim.android.blocking.BlockingSessionActions
 import com.phoneshim.android.blocking.detection.ForegroundAppDetector
 import com.phoneshim.android.blocking.detection.UsageMinutesReader
 import com.phoneshim.android.blocking.policy.BlockingPolicyProvider
@@ -43,6 +45,12 @@ object BlockingModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class BlockingPolicyBindModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindBlockingSessionActions(
+        impl: AndroidBlockingSessionActions,
+    ): BlockingSessionActions
 
     @Binds
     @Singleton
