@@ -46,26 +46,35 @@ class BlockPolicyEngine @Inject constructor(
         }
 
         // ── 2) 전체 폰 쿼터 ──
+        //
+        // 차단 모드면 여기서 끝난다. 폰 전체를 막는 판정이라 앱별 판정을 볼 이유가 없다.
+        //
+        // 알림만 모드는 다르다. 차단이 아니라 안내이므로 여기서 return 하면
+        // 아래 주의앱 차단까지 도달하지 못한다. 게다가 사용자가 안내를 확인하면
+        // BlockerService 가 그날치를 Allow 로 바꾸므로, 전체 폰 목표를 알림만으로 두면
+        // 그날 주의앱 차단이 통째로 무력화된다. 그래서 보류만 해 두고 아래를 계속 본다.
         val phoneGoal = goalProvider.phoneGoal()
+        var pendingPhoneNotice: BlockDecision? = null
         if (phoneGoal != null && phoneUsedMinutes >= phoneGoal.goalMinutes) {
-            return if (phoneGoal.limitEnabled) {
-                BlockDecision.PhoneBlocked
-            } else {
-                BlockDecision.PhoneGoalReached
-            }
+            if (phoneGoal.limitEnabled) return BlockDecision.PhoneBlocked
+            pendingPhoneNotice = BlockDecision.PhoneGoalReached
         }
 
         // ── 3) 주의앱 쿼터 ──
         val policy = goalProvider.watchedApps()
             .firstOrNull { it.packageName == foregroundPackage }
-            ?: return BlockDecision.Allow
+            ?: return pendingPhoneNotice ?: BlockDecision.Allow
+
+        // 차단은 안내보다 우선한다. 보류해 둔 전체 폰 안내가 있어도 이쪽이 이긴다.
+        if (appUsedMinutes >= policy.goalMinutes && policy.limitEnabled) {
+            return BlockDecision.AppBlocked(policy.packageName, policy.appLabel)
+        }
+
+        // 여기부터는 안내끼리의 순서다. 기존 동작대로 전체 폰 안내를 먼저 보여준다.
+        pendingPhoneNotice?.let { return it }
 
         if (appUsedMinutes >= policy.goalMinutes) {
-            return if (policy.limitEnabled) {
-                BlockDecision.AppBlocked(policy.packageName, policy.appLabel)
-            } else {
-                BlockDecision.AppGoalReached(policy.packageName, policy.appLabel)
-            }
+            return BlockDecision.AppGoalReached(policy.packageName, policy.appLabel)
         }
 
         // ── 4) 목표 전이면 진입 사유만 (한 번) ──
